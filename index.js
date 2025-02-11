@@ -2,7 +2,8 @@ import { config } from "dotenv";
 import express from "express";
 import http from "http";
 import cors from "cors";
-import socketIo from "socket.io";
+// import socketIo from "socket.io";
+import rootRouter from "./router/routes.js";
 import jwt from "jsonwebtoken";
 import path from "path";
 
@@ -13,7 +14,7 @@ const _dirname = path.dirname("")
 const buildpath = path.join(_dirname, "../frontend-flowchanger.ai/build")
 app.use(express.static(buildpath))
 
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 5000;
 
 app.use(
   cors({
@@ -25,7 +26,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-// app.use("/api/", rootRouter);
+app.use("/api/", rootRouter);
 
 // const server = http.createServer(app);
 
@@ -76,6 +77,6 @@ app.use(express.static("public"));
 //   });
 // });
 
-// server.listen(PORT, () => {
-//   console.log(`Server running on port ${PORT}`);
-// });
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

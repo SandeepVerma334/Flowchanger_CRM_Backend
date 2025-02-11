@@ -9,6 +9,44 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model StaffDetail {
+  id            String   @id @default(dbgenerated("gen_random_uuid()"))
+  name          String
+  jobTitle      String
+  branch        String
+  department    String
+  role          String
+  mobileNumber  String   @unique
+  loginOtp      Int
+  gender        String
+  officialEmail String   @unique
+  dateOfJoining DateTime @default(now())
+  address       String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  userId        String   @unique
+  User          User     @relation(fields: [userId], references: [id])
+}
+
+model User {
+  id    String       @id @default(dbgenerated("gen_random_uuid()"))
+  role  UserRole     @default(STAFF)
+  staff StaffDetail?
+}
+
+enum UserRole {
+  ADMIN
+  STAFF
+  CLIENT
+}
+
+enum UserType {
+  ADMIN
+  STAFF
+  CLIENT
 }
