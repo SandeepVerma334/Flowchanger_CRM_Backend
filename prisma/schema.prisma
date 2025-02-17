@@ -33,9 +33,18 @@ model StaffDetail {
   User          User     @relation(fields: [userId], references: [id])
 }
 
+model superAdminDetails {
+  id        String   @id @default(dbgenerated("gen_random_uuid()"))
+  email     String   @unique
+  password  String
+  role      UserType @default(SUPERADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+}
+
 model User {
   id    String       @id @default(dbgenerated("gen_random_uuid()"))
-  role  UserRole     @default(STAFF)
+  role  UserType     @default(STAFF)
   staff StaffDetail?
 }
 
@@ -51,16 +60,11 @@ enum PaymentStatus {
   SAVED
 }
 
-enum UserRole {
-  ADMIN
-  STAFF
-  CLIENT
-}
-
 enum UserType {
   ADMIN
   STAFF
   CLIENT
+  SUPERADMIN
 }
 
 enum MarkAttendenceType {
