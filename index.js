@@ -1,10 +1,12 @@
 import { config } from "dotenv";
 import express from "express";
-import http from "http";
+// import http from "http";
 import cors from "cors";
-import socketIo from "socket.io";
-import jwt from "jsonwebtoken";
+// import socketIo from "socket.io";
+// import jwt from "jsonwebtoken";
 import path from "path";
+import rootRouter from "./router/routes.js";
+
 
 config();
 
@@ -25,7 +27,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-// app.use("/api/", rootRouter);
+app.use("/api/", rootRouter);
 
 // const server = http.createServer(app);
 
@@ -79,3 +81,7 @@ app.use(express.static("public"));
 // server.listen(PORT, () => {
 //   console.log(`Server running on port ${PORT}`);
 // });
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

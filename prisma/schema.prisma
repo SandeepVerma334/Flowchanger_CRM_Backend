@@ -11,4 +11,48 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
+
+model Branch {
+  id        String   @id @default(dbgenerated("gen_random_uuid()"))
+  branchName      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Department {
+  id        String   @id @default(dbgenerated("gen_random_uuid()"))
+  departmentName      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Package {
+  id             String   @id @default(uuid())
+  packageName    String
+  packageNumber  String   @unique
+  numberOfProjects Int
+  price          Float
+  storageLimit   Int
+  unit           UnitType
+  numberOfClients Int
+  validityTerms  String // Can store values like "Monthly, Quarterly, Yearly"
+  description    String?
+  modules        Module[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Module {
+  id       String  @id @default(uuid())
+  name     String  @unique
+  packages Package[] 
+}
+
+enum UnitType {
+  GB
+  TB
+  MB
+}
+
