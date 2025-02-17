@@ -39,6 +39,18 @@ model User {
   staff StaffDetail?
 }
 
+enum PaymentType {
+  ADVANCE
+  SALARY
+}
+
+enum PaymentStatus {
+  PROCESSING
+  SUCCESS
+  FAILED
+  SAVED
+}
+
 enum UserRole {
   ADMIN
   STAFF
@@ -49,4 +61,65 @@ enum UserType {
   ADMIN
   STAFF
   CLIENT
+}
+
+enum MarkAttendenceType {
+  Office
+  Anywhere
+}
+
+enum VerificationStatus {
+  VERIFIED
+  PENDING
+  REJECTED
+}
+
+enum LeaveType {
+  MONTHLY
+  YEARLY
+}
+
+enum LeaveRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum FineType {
+  HOURLY
+  DAILY
+}
+
+enum PunchTime {
+  ANYTIME
+  ADDLIMIT
+}
+
+enum Day {
+  Mon
+  Tue
+  Wed
+  Thu
+  Fri
+  Sat
+  Sun
+}
+
+enum punchRecordStatus {
+  ABSENT
+  PRESENT
+  HALFDAY
+  PAIDLEAVE
+}
+
+enum PunchInMethod {
+  BIOMETRIC
+  QRSCAN
+  PHOTOCLICK
+}
+
+enum BreakMethod {
+  BIOMETRIC
+  QRSCAN
+  PHOTOCLICK
 }
