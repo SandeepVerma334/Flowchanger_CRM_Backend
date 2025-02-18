@@ -95,9 +95,47 @@ const superAdminLogin = async (req, res, next) => {
         });
     } catch (error) {
         next(error)
-        // console.error("Error logging in super admin:", error);
-        // return res.status(500).json({ message: "Internal server error", error: error.message });
     }
 };
 
-export { superAdminLogin, createSuperAdmin };
+// send email to admin for invite sign up
+const sendInviteToAdmin = async (req, res) => {
+    try {
+        const transporter = nodemailer.createTransport({
+            host: "smtp.gmail.com",
+            port: 465,
+            secure: true,
+            auth: {
+              user: process.env.EMAIL_USER,
+              pass: process.env.EMAIL_PASS,
+            },
+          });
+        const { email } = req.body;
+
+        // Validate email input
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required' });
+        }
+        const mailOptions = {
+            from: process.env.EMAIL,
+            to: email,
+            subject: 'Welcome to Flow Changer Agency',
+            text: 'Hello, you have been invited to join Flow Changer Agency. Please sign up using the provided link.\n\nhttps://docs.google.com/forms/d/e/1FAIpQLSfdvX-bMY_ZzIdtviTqIIKvDraQI9uloVSYnJHcpQyrSYjLXQ/viewform?pli=1&pli=1',            
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        res.status(200).json({ 
+            message: 'Email sent successfully',
+            response: {
+                subject: mailOptions.subject,
+                text: mailOptions.text,
+                link: mailOptions.link,
+            }
+        });
+    } catch (error) {
+        console.error('Error sending email:', error);
+        res.status(500).json({ error: 'Failed to send email', details: error.message });
+    }
+};
+
+export { superAdminLogin, createSuperAdmin, sendInviteToAdmin };
