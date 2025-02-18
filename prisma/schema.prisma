@@ -94,8 +94,16 @@ model AdminDetails {
   date_format   String?
   week_format   String?
   user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   Subscription Subscription[]
+}
+
+model superAdminDetails {
+  id        String   @id @default(dbgenerated("gen_random_uuid()"))
+  email     String   @unique
+  password  String
+  role      UserType @default(SUPERADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
 }
 
 model Branch {
@@ -1193,6 +1201,7 @@ enum UserType {
   ADMIN
   STAFF
   CLIENT
+  SUPERADMIN
 }
 
 enum MarkAttendenceType {

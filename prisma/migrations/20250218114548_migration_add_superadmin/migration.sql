@@ -17,7 +17,7 @@ CREATE TYPE "PaymentStatus" AS ENUM ('PROCESSING', 'SUCCESS', 'FAILED', 'SAVED')
 CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'STAFF', 'CLIENT');
 
 -- CreateEnum
-CREATE TYPE "UserType" AS ENUM ('ADMIN', 'STAFF', 'CLIENT');
+CREATE TYPE "UserType" AS ENUM ('ADMIN', 'STAFF', 'CLIENT', 'SUPERADMIN');
 
 -- CreateEnum
 CREATE TYPE "MarkAttendenceType" AS ENUM ('Office', 'Anywhere');
@@ -114,6 +114,18 @@ CREATE TABLE "AdminDetails" (
     "week_format" TEXT,
 
     CONSTRAINT "AdminDetails_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "superAdminDetails" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "role" "UserType" NOT NULL DEFAULT 'SUPERADMIN',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "superAdminDetails_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -1269,6 +1281,9 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "AdminDetails_userId_key" ON "AdminDetails"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "superAdminDetails_email_key" ON "superAdminDetails"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "StaffDetails_userId_key" ON "StaffDetails"("userId");
