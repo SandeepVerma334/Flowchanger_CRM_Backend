@@ -1130,7 +1130,7 @@ model Subscription {
   adminId       String // Reference to User model
   admin         AdminDetails @relation(fields: [adminId], references: [id], onDelete: Cascade)
   packageId     String // Reference to Package model
-  // package        Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  package        Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
   planType      String
   packageTenure String
   startDate     DateTime
@@ -1141,6 +1141,36 @@ model Subscription {
   price         Decimal      @default(0.00)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
+}
+
+model Package {
+  id             String   @id @default(uuid())
+  packageName    String
+  packageNumber  String   @unique
+  numberOfProjects Int
+  price          Float
+  storageLimit   Int
+  unit           UnitType
+  numberOfClients Int
+  validityTerms  String // Can store values like "Monthly, Quarterly, Yearly"
+  description    String?
+  modules        Module[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  Subscription Subscription[]
+}
+
+model Module {
+  id       String  @id @default(uuid())
+  name     String  @unique
+  packages Package[] 
+}
+
+enum UnitType {
+  GB
+  TB
+  MB
 }
 
 enum PaymentType {
