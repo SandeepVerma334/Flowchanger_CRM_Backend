@@ -1,37 +1,1119 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL")
 }
 
-model StaffDetail {
-  id            String   @id @default(dbgenerated("gen_random_uuid()"))
-  name          String
-  jobTitle      String
-  branch        String
-  department    String
-  role          String
-  mobileNumber  String   @unique
-  loginOtp      Int
-  gender        String
-  officialEmail String   @unique
-  dateOfJoining DateTime @default(now())
-  address       String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  userId        String   @unique
-  User          User     @relation(fields: [userId], references: [id])
+model User {
+  id            String         @id @default(dbgenerated("gen_random_uuid()"))
+  email         String         @unique
+  password      String?
+  name          String?
+  mobile        String?
+  role          UserRole       @default(STAFF)
+  is_verified   Boolean        @default(false)
+  otp           Int?
+  otpExpiresAt  DateTime?
+  adminDetails  AdminDetails?
+  clientDetails ClientDetails?
+  messages      Message[]      @relation("UserMessages")
+  staffDetails  StaffDetails?
+  rooms         ChatRoom[]     @relation("UserRooms")
+  // Self-Relation Fields
+  adminId       String? // Foreign key to reference a manager User
+  admin         User?          @relation("UserAdmin", fields: [adminId], references: [id], onDelete: Cascade) // One Admin
+  subordinates  User[]         @relation("UserAdmin") // Many subordinates
+
+  projects   Project[]
+  branch     Branch[]
+  department Department[]
+
+  roles           Role[]
+  shifts          Shifts[]
+  taskStatus      TaskStatus[]
+  taskPriority    TaskPriority[]
+  taskDetail      TaskDetail[]
+  projectStatus   ProjectStatus[]
+  projectPriority ProjectPriority[]
+  PaymentHistory  PaymentHistory[]
+  IncentiveType   IncentiveType[]
+  Incentive       Incentive[]
+  Reimbursement   Reimbursement[]
+  Lead            Lead[]
+  Notification    Notification[]
+  Activity        Activity[]
+  Event           Event[]           @relation("particepatsUsers")
+  SubTask         SubTask[]         @relation("subTaskAssignee")
+  TimeBlock       TimeBlock[]       @relation("subTaskAssignee")
 }
+
+model WorkEntry {
+  id             String       @id @default(uuid())
+  work_name      String
+  units          String
+  description    String
+  attachments    String?
+  location       String?
+  staffDetailsId String
+  createdAt      DateTime     @default(now())
+  StaffDetails   StaffDetails @relation(fields: [staffDetailsId], references: [id], onDelete: Cascade)
+}
+
+model ChatRoom {
+  id        String    @id @default(dbgenerated("gen_random_uuid()"))
+  name      String?
+  isGroup   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  messages  Message[] @relation("RoomMessages")
+  users     User[]    @relation("UserRooms")
+}
+
+model Message {
+  id        String   @id @default(dbgenerated("gen_random_uuid()"))
+  content   String
+  timestamp DateTime @default(now())
+  senderId  String
+  roomId    String
+  room      ChatRoom @relation("RoomMessages", fields: [roomId], references: [id])
+  sender    User     @relation("UserMessages", fields: [senderId], references: [id])
+}
+
+model AdminDetails {
+  id            String  @id @default(dbgenerated("gen_random_uuid()"))
+  userId        String  @unique
+  package_id    String?
+  company_name  String?
+  company_logo  String?
+  profile_image String?
+  time_format   String?
+  time_zone     String?
+  date_format   String?
+  week_format   String?
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Subscription Subscription[]
+
+  Subscription Subscription[]
+}
+
+model Branch {
+  id           String         @id @default(dbgenerated("gen_random_uuid()"))
+  branchName   String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  adminId      String
+  admin        User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  StaffDetails StaffDetails[]
+}
+
+model StaffDetails {
+  id                         String                       @id @default(dbgenerated("gen_random_uuid()"))
+  userId                     String                       @unique
+  job_title                  String?
+  departmentId               String?
+  roleId                     String?
+  login_otp                  String?
+  gender                     String?
+  official_email             String?
+  employee_type              String?
+  employee_id                String?
+  date_of_joining            DateTime?                    @default(now())
+  date_of_birth              DateTime?                    @default(now())
+  date_of_leaving            DateTime?
+  current_address            String?
+  permanent_address          String?
+  emergency_contact_name     String?
+  emergency_contact_mobile   String?
+  emergency_contact_relation String?
+  emergency_contact_address  String?
+  guardian_name              String?
+  esi_number                 String?
+  pf_number                  String?
+  employment                 String?
+  marital_status             String?
+  blood_group                String?
+  branchId                   String?
+  applyFine                  Boolean                      @default(false)
+  applyOvertime              Boolean                      @default(false)
+  status                     Boolean                      @default(true)
+  attendanceAutomationRule   AttendanceAutomationRule?
+  AttendenceMode             AttendanceMode?
+  BankDetails                BankDetails?
+  CustomDetails              CustomDetails[]
+  Deduction                  Deductions[]
+  EarlyLeavePolicy           EarlyLeavePolicy?
+  Earning                    Earnings[]
+  Fine                       Fine[]
+  FixedShift                 FixedShift[]
+  FlexibleShift              FlexibleShift[]
+  LateComingPolicy           LateComingPolicy?
+  LeaveBalance               LeaveBalance[]
+  LeavePolicy                LeavePolicy[]
+  LeaveRequest               LeaveRequest[]
+  Overtime                   Overtime[]
+  OverLeavePolicy            OvertimePolicy[]
+  past_Employment            PastEmployment?
+  PunchRecords               PunchRecords[]
+  SalaryDetails              SalaryDetails[]
+  staff_bg_verification      StaffBackgroundVerification?
+  branch                     Branch?                      @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  department                 Department?                  @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  role                       Role?                        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  User                       User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  TicketInformation          TicketInformation[]
+  UpiDetails                 UpiDetails?
+  WorkEntry                  WorkEntry[]
+  breakRecord                breakRecord[]
+  projects                   Project[]                    @relation("ProjectStaff")
+  TaskStatus                 TaskStatus[]                 @relation("staffId")
+  ProjectPriority            ProjectPriority[]            @relation("ProjectPriorityIsHidden")
+  TaskDetail                 TaskDetail[]                 @relation("taskAssignee")
+  PaymentHistory             PaymentHistory[]
+  Incentive                  Incentive[]
+  Reimbursement              Reimbursement[]
+  EmployerContribution       EmployerContribution[]
+  EmployeeContribution       EmployeeContribution[]
+}
+
+model Department {
+  id              String         @id @default(dbgenerated("gen_random_uuid()"))
+  department_name String
+  adminId         String
+  admin           User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  staffs          StaffDetails[]
+  TaskDetail      TaskDetail[]
+}
+
+model AttendanceAutomationRule {
+  id                  String       @id @default(dbgenerated("gen_random_uuid()"))
+  auto_absent         Boolean      @default(false)
+  present_on_punch    Boolean      @default(false)
+  auto_half_day       String?
+  manadatory_half_day String?
+  manadatory_full_day String?
+  created_at          DateTime     @default(now())
+  updated_at          DateTime     @updatedAt
+  staffId             String       @unique
+  staff               StaffDetails @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+model AttendanceMode {
+  id                        String             @id @default(dbgenerated("gen_random_uuid()"))
+  selfie_attendance         Boolean            @default(false)
+  qr_attendance             Boolean            @default(false)
+  gps_attendance            Boolean            @default(false)
+  mark_attendance           MarkAttendenceType @default(Office)
+  allow_punch_in_for_mobile Boolean            @default(false)
+  created_at                DateTime           @default(now())
+  updated_at                DateTime           @updatedAt
+  staffId                   String             @unique
+  staff                     StaffDetails       @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+model StaffBackgroundVerification {
+  id                           String             @id @default(dbgenerated("gen_random_uuid()"))
+  aadhaar_number               String?
+  aadhaar_verification_status  VerificationStatus @default(PENDING)
+  aadhaar_file                 String?
+  voter_id_number              String?
+  voter_id_verification_status VerificationStatus @default(PENDING)
+  voter_id_file                String?
+  pan_number                   String?
+  pan_verification_status      VerificationStatus @default(PENDING)
+  pan_file                     String?
+  uan_number                   String?
+  uan_verification_status      VerificationStatus @default(PENDING)
+  uan_file                     String?
+  driving_license_number       String?
+  driving_license_status       VerificationStatus @default(PENDING)
+  driving_license_file         String?
+  face_file                    String?
+  face_verification_status     VerificationStatus @default(PENDING)
+  current_address              String?
+  permanent_address            String?
+  address_status               VerificationStatus @default(PENDING)
+  address_file                 String?
+  staffId                      String?            @unique
+  createdAt                    DateTime           @default(now())
+  updatedAt                    DateTime           @updatedAt
+  staff                        StaffDetails?      @relation(fields: [staffId], references: [id])
+}
+
+model PastEmployment {
+  id                     String             @id @default(dbgenerated("gen_random_uuid()"))
+  company_name           String
+  designation            String?
+  joining_date           DateTime           @default(now())
+  leaving_date           DateTime           @default(now())
+  currency               String?
+  salary                 Float?
+  company_gst            String?
+  past_Employment_status VerificationStatus @default(PENDING)
+  staffId                String?            @unique
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  staff                  StaffDetails?      @relation(fields: [staffId], references: [id])
+}
+
+model BankDetails {
+  id             String       @id @default(dbgenerated("gen_random_uuid()"))
+  staffId        String       @unique
+  bank_name      String?
+  account_number String?
+  holder_name    String?
+  branch_name    String?
+  status         BankStatus?
+  ifsc_code      String?
+  created_at     DateTime     @default(now())
+  updated_at     DateTime     @updatedAt
+  staff          StaffDetails @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+enum BankStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model LeavePolicy {
+  id                   String         @id @default(dbgenerated("gen_random_uuid()"))
+  staffId              String
+  name                 String
+  allowed_leaves       Int            @default(0)
+  carry_forward_leaves Int            @default(0)
+  policy_type          LeaveType
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  leaveBalance         LeaveBalance?
+  staff                StaffDetails   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  LeaveRequest         LeaveRequest[]
+}
+
+model LeaveRequest {
+  id           String             @id @default(dbgenerated("gen_random_uuid()"))
+  staffId      String
+  leaveTypeId  String
+  request_date DateTime           @default(now())
+  start_date   DateTime
+  end_date     DateTime
+  status       LeaveRequestStatus @default(PENDING)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  leavePolicy  LeavePolicy        @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+  staff        StaffDetails       @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+model LeaveBalance {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  staffId       String
+  leavePolicyId String       @unique
+  balance       Float        @default(0)
+  used          Float        @default(0)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  leavePolicy   LeavePolicy  @relation(fields: [leavePolicyId], references: [id], onDelete: Cascade)
+  staff         StaffDetails @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+model CustomDetails {
+  id          String       @id @default(dbgenerated("gen_random_uuid()"))
+  staffId     String
+  field_name  String
+  field_value String
+  staff       StaffDetails @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+model EarlyLeavePolicy {
+  id              String       @id @default(dbgenerated("gen_random_uuid()"))
+  fineType        FineType     @default(HOURLY)
+  gracePeriodMins Float        @default(0)
+  fineAmountMins  Float        @default(0)
+  waiveOffDays    Float        @default(0)
+  staffId         String       @unique
+  staff           StaffDetails @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+model LateComingPolicy {
+  id              String       @id @default(dbgenerated("gen_random_uuid()"))
+  fineType        FineType     @default(HOURLY)
+  gracePeriodMins Float        @default(0)
+  fineAmountMins  Float        @default(0)
+  waiveOffDays    Float        @default(0)
+  staffId         String       @unique
+  staff           StaffDetails @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+model OvertimePolicy {
+  id               String        @id @default(dbgenerated("gen_random_uuid()"))
+  gracePeriodMins  Float         @default(0)
+  extraHoursPay    Float         @default(0)
+  publicHolidayPay Float         @default(0)
+  weekOffPay       Float         @default(0)
+  staffId          String?       @unique
+  staff            StaffDetails? @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+model Role {
+  id          String         @id @default(dbgenerated("gen_random_uuid()"))
+  role_name   String
+  created_at  DateTime       @default(now())
+  updated_at  DateTime       @updatedAt
+  permissions Permissions?
+  staffs      StaffDetails[]
+  tasks       TaskDetail[]
+  adminId     String
+  admin       User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}
+
+model ClientsPermissions {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  view_global   Boolean      @default(false)
+  create        Boolean      @default(false)
+  edit          Boolean      @default(false)
+  delete        Boolean      @default(false)
+  permissionsId String?      @unique
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+  Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model ProjectsPermissions {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  view_global   Boolean      @default(false)
+  create        Boolean      @default(false)
+  edit          Boolean      @default(false)
+  delete        Boolean      @default(false)
+  permissionsId String?      @unique
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+  Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model ReportPermissions {
+  id               String       @id @default(dbgenerated("gen_random_uuid()"))
+  view_global      Boolean      @default(false)
+  view_time_sheets Boolean      @default(false)
+  permissionsId    String?      @unique
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
+  Permissions      Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model StaffRolePermissions {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  view_global   Boolean      @default(false)
+  create        Boolean      @default(false)
+  edit          Boolean      @default(false)
+  delete        Boolean      @default(false)
+  permissionsId String?      @unique
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+  Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model SettingsPermissions {
+  id               String       @id @default(dbgenerated("gen_random_uuid()"))
+  view_global      Boolean      @default(false)
+  view_time_sheets Boolean      @default(false)
+  permissionsId    String?      @unique
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
+  Permissions      Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model StaffPermissions {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  view_global   Boolean      @default(false)
+  create        Boolean      @default(false)
+  edit          Boolean      @default(false)
+  delete        Boolean      @default(false)
+  permissionsId String?      @unique
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+  Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model TaskPermissions {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  view_global   Boolean      @default(false)
+  create        Boolean      @default(false)
+  edit          Boolean      @default(false)
+  delete        Boolean      @default(false)
+  permissionsId String?      @unique
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+  Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model SubTaskPermissions {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  view_global   Boolean      @default(false)
+  create        Boolean      @default(false)
+  edit          Boolean      @default(false)
+  delete        Boolean      @default(false)
+  permissionsId String?      @unique
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+  Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model ChatModulePermissions {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  grant_access  Boolean      @default(false)
+  staff         Boolean      @default(false)
+  client        Boolean      @default(false)
+  permissionsId String?      @unique
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+  Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model AIPermissions {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  grant_access  Boolean      @default(false)
+  permissionsId String?      @unique
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+  Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model Permissions {
+  id                      String                 @id @default(dbgenerated("gen_random_uuid()"))
+  roleId                  String?                @unique
+  created_at              DateTime               @default(now())
+  updated_at              DateTime               @updatedAt
+  ai_permissions          AIPermissions?
+  chat_module_permissions ChatModulePermissions?
+  clients_permissions     ClientsPermissions?
+  Role                    Role?                  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  projects_permissions    ProjectsPermissions?
+  report_permissions      ReportPermissions?
+  settings_permissions    SettingsPermissions?
+  staff_permissions       StaffPermissions?
+  staff_role_permissions  StaffRolePermissions?
+  sub_task_permissions    SubTaskPermissions?
+  task_permissions        TaskPermissions?
+}
+
+model SalaryDetails {
+  id                   String                 @id @default(uuid())
+  effective_date       DateTime?
+  salary_type          String?
+  ctc_amount           Float?
+  employer_pf          Float?
+  employer_esi         Float?
+  employer_lwf         Float?
+  employee_pf          Float?
+  employee_esi         Float?
+  professional_tax     Float?
+  employee_lwf         Float?
+  payroll_finalized    Boolean                @default(false)
+  finalized_date       DateTime?
+  final_salary         Float?
+  tds                  Float?
+  created_at           DateTime?              @default(now())
+  updated_at           DateTime?              @updatedAt
+  staffId              String
+  employerContribution EmployerContribution[]
+  employeeContribution EmployeeContribution[]
+  deductions           Deductions[]
+  earnings             Earnings[]
+  Staff                StaffDetails           @relation(fields: [staffId], references: [id])
+  PaymentHistory       PaymentHistory[]
+  Incentive            Incentive[]
+  Reimbursement        Reimbursement[]
+}
+
+model Shifts {
+  id                   String          @id @default(dbgenerated("gen_random_uuid()"))
+  shiftName            String
+  shiftStartTime       String
+  shiftEndTime         String
+  punchInType          PunchTime       @default(ANYTIME)
+  punchOutType         PunchTime       @default(ANYTIME)
+  allowPunchInHours    Int?
+  allowPunchInMinutes  Int?
+  allowPunchOutMinutes Int?
+  allowPunchOutHours   Int?
+  Fine                 Fine[]
+  Overtime             Overtime[]
+  FixedShifts          FixedShift[]    @relation("FixedShiftToShifts")
+  FlexibleShift        FlexibleShift[] @relation("FlexibleShiftToShifts")
+  punchRecords         PunchRecords[]
+  adminId              String
+  admin                User            @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}
+
+model WeekOffShift {
+  id         String      @id @default(dbgenerated("gen_random_uuid()"))
+  weekOne    Boolean?    @default(false)
+  weekTwo    Boolean?    @default(false)
+  weekThree  Boolean?    @default(false)
+  weekFour   Boolean?    @default(false)
+  weekFive   Boolean?    @default(false)
+  FixedShift FixedShift?
+}
+
+model FixedShift {
+  id        String        @id @default(dbgenerated("gen_random_uuid()"))
+  day       Day           @default(Mon)
+  weekOff   Boolean       @default(false)
+  staffId   String
+  weekId    String?       @unique
+  createdAt DateTime      @default(now())
+  staff     StaffDetails  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  week      WeekOffShift? @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  shifts    Shifts[]      @relation("FixedShiftToShifts")
+}
+
+model FlexibleShift {
+  id        String       @id @default(dbgenerated("gen_random_uuid()"))
+  dateTime  DateTime
+  weekOff   Boolean      @default(false)
+  staffId   String
+  createdAt DateTime     @default(now())
+  staff     StaffDetails @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  shifts    Shifts[]     @relation("FlexibleShiftToShifts")
+
+  @@unique([staffId, dateTime])
+}
+
+model PunchRecords {
+  id         String            @id @default(dbgenerated("gen_random_uuid()"))
+  punchDate  DateTime          @default(now())
+  isApproved Boolean           @default(false)
+  punchInId  String?           @unique
+  punchOutId String?           @unique
+  staffId    String?
+  shiftId    String?
+  status     punchRecordStatus @default(ABSENT)
+  fine       Fine?
+  Overtime   Overtime?
+  shift      Shifts?           @relation(fields: [shiftId], references: [id])
+  punchIn    PunchIn?          @relation(fields: [punchInId], references: [id], onDelete: Cascade)
+  punchOut   PunchOut?         @relation(fields: [punchOutId], references: [id], onDelete: Cascade)
+  staff      StaffDetails?     @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, punchDate])
+}
+
+model breakRecord {
+  id           String        @id @default(dbgenerated("gen_random_uuid()"))
+  breakDate    DateTime      @default(now())
+  startBreakId String?
+  endBreakId   String?
+  staffId      String?
+  endBreak     EndBreak?     @relation(fields: [endBreakId], references: [id], onDelete: Cascade)
+  staff        StaffDetails? @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  startBreak   StartBreak?   @relation(fields: [startBreakId], references: [id], onDelete: Cascade)
+}
+
+model Fine {
+  id                       String        @id @default(dbgenerated("gen_random_uuid()"))
+  lateEntryFineHoursTime   String?
+  lateEntryFineAmount      Float?        @default(1)
+  lateEntryAmount          Float?        @default(0)
+  excessBreakFineHoursTime String?
+  excessBreakFineAmount    Float?        @default(1)
+  excessBreakAmount        Float?        @default(0)
+  earlyOutFineHoursTime    String?
+  earlyOutFineAmount       Float?        @default(1)
+  earlyOutAmount           Float?        @default(0)
+  totalAmount              Float?        @default(0)
+  shiftIds                 String?
+  punchRecordId            String        @unique
+  staffId                  String?
+  createdAt                DateTime      @default(now())
+  punchRecord              PunchRecords  @relation(fields: [punchRecordId], references: [id], onDelete: Cascade)
+  shiftDetails             Shifts?       @relation(fields: [shiftIds], references: [id], onDelete: Cascade)
+  staff                    StaffDetails? @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+model Overtime {
+  id                         String        @id @default(dbgenerated("gen_random_uuid()"))
+  earlyCommingEntryHoursTime String?
+  earlyCommingEntryAmount    Float?        @default(1)
+  earlyEntryAmount           Float?        @default(0)
+  lateOutOvertimeHoursTime   String?
+  lateOutOvertimeAmount      Float?        @default(1)
+  lateOutAmount              Float?        @default(0)
+  totalAmount                Float?        @default(0)
+  shiftIds                   String?
+  punchRecordId              String?       @unique
+  staffId                    String?
+  punchRecord                PunchRecords? @relation(fields: [punchRecordId], references: [id], onDelete: Cascade)
+  shiftDetails               Shifts?       @relation(fields: [shiftIds], references: [id], onDelete: Cascade)
+  staff                      StaffDetails? @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+model PunchIn {
+  id            String         @id @default(dbgenerated("gen_random_uuid()"))
+  punchInMethod PunchInMethod? @default(PHOTOCLICK)
+  punchInTime   DateTime       @default(now())
+  punchInDate   DateTime       @default(now())
+  biometricData String?
+  qrCodeValue   String?
+  photoUrl      String?
+  location      String?
+  PunchRecords  PunchRecords?
+  approve       String?        @default("Pending")
+}
+
+enum PunchOutMethod {
+  BIOMETRIC
+  QRSCAN
+  PHOTOCLICK
+}
+
+model PunchOut {
+  id             String          @id @default(dbgenerated("gen_random_uuid()"))
+  punchOutMethod PunchOutMethod? @default(PHOTOCLICK)
+  punchOutTime   DateTime        @default(now())
+  punchOutDate   DateTime        @default(now())
+  biometricData  String?
+  qrCodeValue    String?
+  photoUrl       String?
+  location       String?
+  overtime       String?
+  punchRecords   PunchRecords?
+}
+
+model StartBreak {
+  id             String        @id @default(dbgenerated("gen_random_uuid()"))
+  breakMethod    BreakMethod   @default(PHOTOCLICK)
+  startBreakTime DateTime      @default(now())
+  biometricData  String?
+  qrCodeValue    String?
+  photoUrl       String?
+  location       String
+  breakRecord    breakRecord[]
+}
+
+model EndBreak {
+  id            String        @id @default(dbgenerated("gen_random_uuid()"))
+  breakMethod   BreakMethod   @default(PHOTOCLICK)
+  endBreakTime  DateTime      @default(now())
+  biometricData String?
+  qrCodeValue   String?
+  photoUrl      String?
+  location      String
+  breakRecord   breakRecord[]
+}
+
+model TaskStatus {
+  id             String         @id @default(dbgenerated("gen_random_uuid()"))
+  taskStatusName String
+  statusColor    String
+  statusOrder    Int            @default(0)
+  canBeChangedId TaskStatus[]   @relation("CanBeChangedId") // Self-relation
+  isHiddenFor    StaffDetails[] @relation("staffId")
+  TaskDetail     TaskDetail[]
+  TaskStatus     TaskStatus[]   @relation("CanBeChangedId")
+  adminId        String
+  admin          User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}
+
+model TaskPriority {
+  id               String       @id @default(dbgenerated("gen_random_uuid()"))
+  taskPriorityName String
+  TaskDetail       TaskDetail[]
+  adminId          String
+  admin            User         @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}
+
+model SubTask {
+  id           String     @id @default(dbgenerated("gen_random_uuid()"))
+  description  String
+  status       Boolean    @default(false)
+  time         String?
+  date         DateTime?
+  assignee     User?      @relation("subTaskAssignee", fields: [assigneeId], references: [id])
+  assigneeId   String?
+  taskDetail   TaskDetail @relation(fields: [taskDetailId], references: [id])
+  taskDetailId String
+}
+
+model TimeBlock {
+  id           String     @id @default(dbgenerated("gen_random_uuid()"))
+  status       Boolean    @default(false)
+  planned      String?
+  spent        String?
+  date         DateTime?
+  assignee     User?      @relation("subTaskAssignee", fields: [assigneeId], references: [id])
+  assigneeId   String?
+  taskDetail   TaskDetail @relation(fields: [taskDetailId], references: [id])
+  taskDetailId String
+}
+
+model TaskDetail {
+  id              String         @id @default(dbgenerated("gen_random_uuid()"))
+  taskName        String
+  taskStatusId    String?
+  taskStatus      TaskStatus?    @relation(fields: [taskStatusId], references: [id], onDelete: Cascade)
+  taskPriorityId  String?
+  taskPriority    TaskPriority?  @relation(fields: [taskPriorityId], references: [id], onDelete: Cascade)
+  startDate       String?
+  endDate         String?
+  dueDate         String?
+  taskDescription String?
+  departmentId    String?
+  roleId          String?
+  taskTag         String[]       @default([])
+  attachFile      String[]       @default([])
+  taskAssignee    StaffDetails[] @relation("taskAssignee")
+  department      Department?    @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  role            Role?          @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  Project         Project?       @relation(fields: [projectId], references: [id])
+  projectId       String?
+  adminId         String
+  admin           User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  Comments        Comment[]
+  SubTask         SubTask[]
+  TimeBlock       TimeBlock[]
+}
+
+model ProjectFiles {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()"))
+  file_name           String
+  file_type           String
+  last_activity       String?
+  total_comments      String?
+  visible_to_customer Boolean  @default(false)
+  uploaded_by         String
+  date_uploaded       DateTime
+}
+
+model ProjectStatus {
+  id             String          @id @default(uuid())
+  project_name   String
+  project_color  String
+  project_order  Int
+  default_filter Boolean         @default(false)
+  can_changed    ProjectStatus[] @relation("CanBeChanged")
+  ProjectStatus  ProjectStatus[] @relation("CanBeChanged")
+  Project        Project[]
+  adminId        String
+  admin          User            @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}
+
+//create relation between projectpriority and project table same as project status.
+model ProjectPriority {
+  id              String            @id @default(uuid())
+  Priority_name   String
+  Priority_color  String
+  Priority_order  Int
+  default_filter  Boolean           @default(false)
+  is_hidden       StaffDetails[]    @relation("ProjectPriorityIsHidden")
+  can_changed     ProjectPriority[] @relation("CanBeChangedBy")
+  ProjectPriority ProjectPriority[] @relation("CanBeChangedBy")
+  adminId         String
+  admin           User              @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  Project         Project[]
+}
+
+model Project {
+  id              String          @id @default(uuid())
+  project_name    String
+  billing_type    String
+  status          String
+  projectStatus   ProjectStatus   @relation(fields: [status], references: [id], onDelete: Cascade)
+  priority        String
+  projectPriority ProjectPriority @relation(fields: [priority], references: [id], onDelete: Cascade)
+  total_rate      Int
+  estimated_hours Int
+  progress        Float           @default(0)
+  start_date      String
+  deadline        String
+  tags            String[]
+  description     String
+  send_mail       Boolean         @default(false)
+  customerId      String?
+  customerDetails ClientDetails?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  staffId         StaffDetails[]  @relation("ProjectStaff")
+  TaskDetail      TaskDetail[]
+  adminId         String
+  admin           User            @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  Discussion      Discussion[]
+}
+
+model TicketInformation {
+  id             String        @id @default(dbgenerated("gen_random_uuid()"))
+  subject        String
+  contact        String
+  name           String
+  email          String
+  department     String
+  cc             String
+  tags           String[]
+  assign_ticket  String
+  priority       String
+  service        String
+  project        String
+  ticket_body    String
+  insert_link    String
+  personal_notes String
+  insert_files   String
+  staffId        String?
+  staff          StaffDetails? @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+model Discussion {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()"))
+  subject             String?
+  description         String?
+  last_activity       String?
+  visible_to_customer Boolean? @default(false)
+  CommentId           String?
+  comments            Comment? @relation(fields: [CommentId], references: [id], onDelete: Cascade)
+  projectId           String
+  project             Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  lastActivity        DateTime @default(now())
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+}
+
+model ClientDetails {
+  id               String        @id @default(dbgenerated("gen_random_uuid()"))
+  userId           String        @unique
+  company          String?
+  vat_number       String?       @unique
+  website          String?
+  groups           String[]      @default([])
+  currency         String[]      @default([])
+  default_language String[]      @default([])
+  address          String?
+  country          String?
+  state            String?
+  city             String?
+  status           Boolean?      @default(false)
+  zip_code         String?
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Project          Project[]
+  ClientNotes      ClientNotes[]
+}
+
+model ClientNotes {
+  id            String        @id @default(dbgenerated("gen_random_uuid()"))
+  clientId      String
+  title         String
+  description   String
+  color         String
+  ClientDetails ClientDetails @relation(fields: [clientId], references: [id])
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+}
+
+model UpiDetails {
+  UpiId   String       @id
+  staffId String       @unique
+  staff   StaffDetails @relation(fields: [staffId], references: [id])
+}
+
+model Deductions {
+  id              String         @id @default(dbgenerated("gen_random_uuid()"))
+  heads           String?
+  calculation     String?
+  amount          Float?
+  deduction_month String?
+  staffId         String?
+  salaryDetailsId String?
+  SalaryDetails   SalaryDetails? @relation(fields: [salaryDetailsId], references: [id])
+  staff           StaffDetails?  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+model Earnings {
+  id              String         @id @default(dbgenerated("gen_random_uuid()"))
+  heads           String?
+  calculation     String?
+  amount          Float?
+  staffId         String?
+  salary_month    String?
+  salaryDetailsId String?
+  SalaryDetails   SalaryDetails? @relation(fields: [salaryDetailsId], references: [id])
+  staff           StaffDetails?  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+model PaymentHistory {
+  id              String         @id @default(dbgenerated("gen_random_uuid()"))
+  staffId         String
+  date            DateTime       @default(now())
+  amount          Float
+  type            PaymentType    @default(SALARY)
+  status          PaymentStatus  @default(SAVED)
+  transactionId   String?
+  utrNumber       String?
+  note            String?
+  adminId         String
+  admin           User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  salaryDetailsId String?
+  SalaryDetails   SalaryDetails? @relation(fields: [salaryDetailsId], references: [id], onDelete: Cascade)
+  staff           StaffDetails   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+model IncentiveType {
+  id        String      @id @default(dbgenerated("gen_random_uuid()"))
+  name      String
+  adminId   String
+  admin     User        @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  Incentive Incentive[]
+}
+
+model Incentive {
+  id              String         @id @default(dbgenerated("gen_random_uuid()"))
+  staffId         String
+  incentiveTypeId String
+  amount          Float
+  date            DateTime       @default(now())
+  note            String?
+  adminId         String
+  admin           User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  salaryId        String?
+  salary          SalaryDetails? @relation(fields: [salaryId], references: [id], onDelete: Cascade)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  staff           StaffDetails   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  IncentiveType   IncentiveType  @relation(fields: [incentiveTypeId], references: [id], onDelete: Cascade)
+}
+
+model Reimbursement {
+  id        String         @id @default(dbgenerated("gen_random_uuid()"))
+  staffId   String
+  amount    Float
+  date      DateTime       @default(now())
+  note      String?
+  adminId   String
+  admin     User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  salaryId  String?
+  salary    SalaryDetails? @relation(fields: [salaryId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  staff     StaffDetails   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+model EmployerContribution {
+  id                 String         @id @default(dbgenerated("gen_random_uuid()"))
+  staffId            String
+  staff              StaffDetails   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  type               String // PF, ESI, LWF
+  calculation        String? // Calculation formula or method
+  amount             Float
+  state              String? // For state-specific contributions like LWF
+  includedInCTC      Boolean        @default(false)
+  contribution_month String
+  selected_earnings  String[]
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  SalaryDetails      SalaryDetails? @relation(fields: [salaryDetailsId], references: [id])
+  salaryDetailsId    String?
+}
+
+model EmployeeContribution {
+  id                 String         @id @default(dbgenerated("gen_random_uuid()"))
+  staffId            String
+  staff              StaffDetails   @relation(fields: [staffId], references: [id])
+  type               String // PF, ESI, Professional Tax, LWF
+  calculation        String? // Calculation formula or method
+  amount             Float
+  state              String? // For state-specific contributions
+  contribution_month String // Format: YYYY-MM
+  selected_earnings  String[]
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  SalaryDetails      SalaryDetails? @relation(fields: [salaryDetailsId], references: [id])
+  salaryDetailsId    String?
+}
+
+model Lead {
+  id              String   @id @default(dbgenerated("gen_random_uuid()"))
+  name            String
+  position        String?
+  email           String?
+  website         String?
+  phone           String?
+  leadValue       Float[]
+  currencySymbol  String[]
+  address         String?
+  city            String?
+  state           String?
+  country         String?
+  zipCode         String?
+  defaultLanguage String[]
+  company         String?
+  description     String?
+  adminId         String?
+  admin           User?    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  tags            String[]
+  isPublic        Boolean? @default(false)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+}
+
+model Comment {
+  id         String       @id @default(dbgenerated("gen_random_uuid()"))
+  message    String?
+  files      String[]
+  Tasks      TaskDetail?  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId     String
+  Discussion Discussion[]
+}
+
+model Notification {
+  id        String   @id @default(dbgenerated("gen_random_uuid()"))
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Activity {
+  id               String   @id @default(dbgenerated("gen_random_uuid()"))
+  title            String?
+  description      String?
+  status           String?
+  visibleToCustmor Boolean? @default(false)
+  doneBy           String
+  doneByUser       User     @relation(fields: [doneBy], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Event {
+  id           String     @id @default(dbgenerated("gen_random_uuid()"))
+  name         String?
+  Date         DateTime?
+  startTime    String?
+  endTime      String?
+  type         String?
+  reminder     Boolean?   @default(false)
+  description  String?
+  location     String?
+  particepants User[]     @relation("particepatsUsers")
+  attachFile   String[]
+  eventTypeId  String?
+  eventType    EventType? @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model EventType {
+  id     String   @id @default(dbgenerated("gen_random_uuid()"))
+  colors String?
+  type   String?
+  tasks  Boolean? @default(false)
+  events Boolean? @default(false)
+  Event  Event[]
+}
+
 
 model superAdminDetails {
   id        String   @id @default(dbgenerated("gen_random_uuid()"))
@@ -42,15 +1124,35 @@ model superAdminDetails {
   updatedAt DateTime @default(now())
 }
 
-model User {
-  id    String       @id @default(dbgenerated("gen_random_uuid()"))
-  role  UserType     @default(STAFF)
-  staff StaffDetail?
+
+model Subscription {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  adminId       String // Reference to User model
+  admin         AdminDetails @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  packageId     String // Reference to Package model
+  // package        Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  planType      String
+  packageTenure String
+  startDate     DateTime
+  endDate       DateTime
+  paymentMethod String
+  paid          Boolean
+  status        String
+  price         Decimal      @default(0.00)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 }
 
 enum PaymentType {
   ADVANCE
   SALARY
+}
+
+enum UserType {
+  ADMIN
+  STAFF
+  CLIENT
+  SUPERADMIN
 }
 
 enum PaymentStatus {
@@ -60,11 +1162,10 @@ enum PaymentStatus {
   SAVED
 }
 
-enum UserType {
+enum UserRole {
   ADMIN
   STAFF
   CLIENT
-  SUPERADMIN
 }
 
 enum MarkAttendenceType {
