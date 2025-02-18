@@ -3,9 +3,9 @@ import express from "express";
 // import http from "http";
 import cors from "cors";
 // import socketIo from "socket.io";
-// import jwt from "jsonwebtoken";
-import path from "path";
 import rootRouter from "./router/routes.js";
+import jwt from "jsonwebtoken";
+import path from "path";
 
 
 config();
@@ -15,7 +15,7 @@ const _dirname = path.dirname("")
 const buildpath = path.join(_dirname, "../frontend-flowchanger.ai/build")
 app.use(express.static(buildpath))
 
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 5000;
 
 app.use(
   cors({

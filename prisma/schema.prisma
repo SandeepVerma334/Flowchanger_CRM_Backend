@@ -56,3 +56,116 @@ enum UnitType {
   MB
 }
 
+model StaffDetail {
+  id            String   @id @default(dbgenerated("gen_random_uuid()"))
+  name          String
+  jobTitle      String
+  branch        String
+  department    String
+  role          String
+  mobileNumber  String   @unique
+  loginOtp      Int
+  gender        String
+  officialEmail String   @unique
+  dateOfJoining DateTime @default(now())
+  address       String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  userId        String   @unique
+  User          User     @relation(fields: [userId], references: [id])
+}
+
+model superAdminDetails {
+  id        String   @id @default(dbgenerated("gen_random_uuid()"))
+  email     String   @unique
+  password  String
+  role      UserType @default(SUPERADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+}
+
+model User {
+  id    String       @id @default(dbgenerated("gen_random_uuid()"))
+  role  UserType     @default(STAFF)
+  staff StaffDetail?
+}
+
+enum PaymentType {
+  ADVANCE
+  SALARY
+}
+
+enum PaymentStatus {
+  PROCESSING
+  SUCCESS
+  FAILED
+  SAVED
+}
+
+enum UserType {
+  ADMIN
+  STAFF
+  CLIENT
+  SUPERADMIN
+}
+
+enum MarkAttendenceType {
+  Office
+  Anywhere
+}
+
+enum VerificationStatus {
+  VERIFIED
+  PENDING
+  REJECTED
+}
+
+enum LeaveType {
+  MONTHLY
+  YEARLY
+}
+
+enum LeaveRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum FineType {
+  HOURLY
+  DAILY
+}
+
+enum PunchTime {
+  ANYTIME
+  ADDLIMIT
+}
+
+enum Day {
+  Mon
+  Tue
+  Wed
+  Thu
+  Fri
+  Sat
+  Sun
+}
+
+enum punchRecordStatus {
+  ABSENT
+  PRESENT
+  HALFDAY
+  PAIDLEAVE
+}
+
+enum PunchInMethod {
+  BIOMETRIC
+  QRSCAN
+  PHOTOCLICK
+}
+
+enum BreakMethod {
+  BIOMETRIC
+  QRSCAN
+  PHOTOCLICK
+}
