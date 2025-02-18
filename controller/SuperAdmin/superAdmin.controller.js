@@ -1,10 +1,7 @@
 import bcrypt from 'bcrypt';
-import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
-const prisma = new PrismaClient();
-import nodemailer from 'nodemailer';
-import {superAdminDetailsSchema} from "../../utils/validation.js";
-
+import prisma from "../../prisma/prisma.js";
+import { superAdminDetailsSchema } from "../../utils/validation.js";
 // Create Super Admin API endpoint with validation
 const createSuperAdmin = async (req, res, next) => {
     try {
