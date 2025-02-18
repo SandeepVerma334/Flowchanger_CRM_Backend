@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import ApiError from "../utils/ApiError.js";
+import { ZodError } from "zod";
 
 /**
  * Global error handler middleware.
@@ -8,6 +9,7 @@ import ApiError from "../utils/ApiError.js";
 const errorHandler = (err, req, res, next) => {
   let statusCode = err.statusCode || 500;
   let message = err.message || "Something went wrong. Please try again.";
+  let errors = undefined;
 
   // 🛑 Handle Custom API Errors First
   if (err instanceof ApiError) {
@@ -39,12 +41,10 @@ const errorHandler = (err, req, res, next) => {
   }
 
   // 🛑 Handle Zod Validation Errors
-  if (err.name === "ZodError") {
+  if (err instanceof ZodError) {
     statusCode = 400;
-    message = err.errors.map((e) => ({
-      field: e.path?.join(".") || "unknown",
-      message: e.message,
-    }));
+    errors = err.errors[0].message;
+    message = err.errors[0].message;
   }
 
   // 📌 Log the error in production (Optional: Use winston/pino)
@@ -56,7 +56,7 @@ const errorHandler = (err, req, res, next) => {
   res.status(statusCode).json({
     success: false,
     message,
-    errors: Array.isArray(message) ? message : undefined, // Include detailed errors for validation failures
+    errors,  // Send the errors as a single string in a single line
     ...(process.env.NODE_ENV === "development" && { stack: err.stack }), // Show stack only in development mode
   });
 };
