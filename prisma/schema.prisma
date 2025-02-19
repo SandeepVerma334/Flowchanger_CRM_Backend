@@ -3,9 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -51,6 +51,10 @@ model AdminDetails {
   Subscription  Subscription[]
   packageId     String? // Reference to Package model
   package       Package?       @relation(fields: [packageId], references: [id], onDelete: SetNull)
+
+  // Transaction Transaction[]
+
+  Transaction Transaction[]
 }
 
 model Subscription {
@@ -69,6 +73,9 @@ model Subscription {
   price         Decimal      @default(0.00)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
+  // Transaction   Transaction[]
+
+  Transaction Transaction[]
 }
 
 model Package {
@@ -96,6 +103,24 @@ model Module {
   packages Package[]
 }
 
+model Transaction {
+  id             String            @id @default(uuid())
+  subscriptionId String // Foreign Key
+  subscription   Subscription      @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  paymentId      String            @unique
+  amount         Decimal
+  currency       String
+  paymentType    String
+  disable        Boolean           @default(false)
+  status         TransactionStatus @default(PENDING)
+  message        String?
+  invoiceUrl     String?
+  dateCreated    DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  adminId        String
+  admin          AdminDetails      @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}
+
 enum UnitType {
   GB
   TB
@@ -107,4 +132,11 @@ enum UserType {
   STAFF
   CLIENT
   SUPERADMIN
+}
+
+enum TransactionStatus {
+  PENDING
+  VERIFIED
+  FAILED
+  REFUNDED
 }
