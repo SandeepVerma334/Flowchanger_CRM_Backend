@@ -122,11 +122,7 @@ export const updatePackageById = async (req, res) => {
 
         return res.status(200).json(updatedPackage);
     } catch (error) {
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({ error: error.errors });
-        }
-        console.error("Error updating package:", error);
-        return res.status(500).json({ error: "Internal server error" });
+        next(error)
     }
 };
 
