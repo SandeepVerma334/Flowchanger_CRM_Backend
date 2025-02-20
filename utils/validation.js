@@ -1,5 +1,23 @@
 import z from 'zod';
 
+const UnitType = z.enum(["GB", "TB", "MB"]); // Define your enum values accordingly
+const statusType = z.enum(["REFUNDED", "VERIFIED", "PENDING", "FAILED"]); // Define your enum values accordingly
+
+const packageSchema = z.object({
+  packageName: z.string().min(1, "Package name is required"),
+  packageNumber: z.number().int().nonnegative().optional(),
+  numberOfProjects: z.number().int().nonnegative().min(1, "Number of projects must be at least 1"),
+  price: z.number({ required_error: "Price is required" }).positive(),
+  storageLimit: z.number({ required_error: "Storage limit is required" }).int().nonnegative(),
+  unit: UnitType.default("GB"),
+  numberOfClients: z.number({ required_error: "Client is required" }).nonnegative(),
+  validityTerms: z.array(z.string({ required_error: "Validity term is required" }).min(1, "Validity term cannot be empty")).default(["Monthly"]),
+  description: z.string().nullable().optional(),
+  modules: z.array(z.string({ required_error: "Modules are required" }), { required_error: "At least one module must be selected" }),
+  // adminId: z.string({ required_error: "Admin ID is required" }).uuid(),
+  adminId: z.string().optional(),
+});
+
 const BranchSchema = z.object({
   branchName: z.string().min(1, "Branch Name is required"),
 });
@@ -49,10 +67,11 @@ const transactionSchema = z.object({
   amount: z.coerce.number({ required_error: "Price is required", invalid_type_error: "Price must be a non-negative number" }).nonnegative(),
   currency: z.string({ required_error: "Currency is required" }),
   paymentType: z.string({ required_error: "Payment type is required" }),
-  status: z.string({ required_error: "Status is required" }),
+  status: statusType.default("PENDING"),
   paymentId: z.string({ required_error: "Payment ID is required" }),
   message: z.string({ required_error: "Message is required" }).optional(),
   adminId: z.string({ required_error: "Admin ID is required" }),
   invoiceUrl: z.string({ required_error: "Invoice URL is required" }).url({ message: 'Invalid URL format' }).optional(),
 });
-export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, superAdminDetailsSchema, transactionSchema };
+
+export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, superAdminDetailsSchema, transactionSchema, packageSchema };

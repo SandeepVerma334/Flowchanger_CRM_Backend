@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  // directUrl = env("DIRECT_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -52,8 +52,6 @@ model AdminDetails {
   packageId     String? // Reference to Package model
   package       Package?       @relation(fields: [packageId], references: [id], onDelete: SetNull)
 
-  // Transaction Transaction[]
-
   Transaction Transaction[]
 }
 
@@ -73,7 +71,6 @@ model Subscription {
   price         Decimal      @default(0.00)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
-  // Transaction   Transaction[]
 
   Transaction Transaction[]
 }
@@ -81,13 +78,13 @@ model Subscription {
 model Package {
   id               String         @id @default(uuid())
   packageName      String
-  packageNumber    String         @unique
+  packageNumber    Int?
   numberOfProjects Int
   price            Float
   storageLimit     Int
-  unit             UnitType
+  unit             UnitType     @default(GB)
   numberOfClients  Int
-  validityTerms    String // Can store values like "Monthly, Quarterly, Yearly"
+  validityTerms    String[]
   description      String?
   modules          Module[]
   createdAt        DateTime       @default(now())
