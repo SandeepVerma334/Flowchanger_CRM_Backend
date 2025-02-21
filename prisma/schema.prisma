@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -32,8 +32,8 @@ model SuperAdminDetails {
   role      UserType @default(SUPERADMIN)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String?  @unique
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model AdminDetails {
@@ -51,8 +51,16 @@ model AdminDetails {
   Subscription  Subscription[]
   packageId     String? // Reference to Package model
   package       Package?       @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  Transaction   Transaction[]
 
-  Transaction Transaction[]
+  adminId     String?
+  gender      String?
+  designation String?
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  country     String?
 }
 
 model Subscription {

@@ -4,6 +4,9 @@ CREATE TYPE "UnitType" AS ENUM ('GB', 'TB', 'MB');
 -- CreateEnum
 CREATE TYPE "UserType" AS ENUM ('ADMIN', 'STAFF', 'CLIENT', 'SUPERADMIN');
 
+-- CreateEnum
+CREATE TYPE "TransactionStatus" AS ENUM ('PENDING', 'VERIFIED', 'FAILED', 'REFUNDED');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
@@ -28,7 +31,7 @@ CREATE TABLE "SuperAdminDetails" (
     "role" "UserType" NOT NULL DEFAULT 'SUPERADMIN',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "userId" TEXT NOT NULL,
+    "userId" TEXT,
 
     CONSTRAINT "SuperAdminDetails_pkey" PRIMARY KEY ("id")
 );
@@ -46,6 +49,14 @@ CREATE TABLE "AdminDetails" (
     "date_format" TEXT,
     "week_format" TEXT,
     "packageId" TEXT,
+    "adminId" TEXT,
+    "gender" TEXT,
+    "designation" TEXT,
+    "address" TEXT,
+    "city" TEXT,
+    "state" TEXT,
+    "zipCode" TEXT,
+    "country" TEXT,
 
     CONSTRAINT "AdminDetails_pkey" PRIMARY KEY ("id")
 );
@@ -73,13 +84,13 @@ CREATE TABLE "Subscription" (
 CREATE TABLE "Package" (
     "id" TEXT NOT NULL,
     "packageName" TEXT NOT NULL,
-    "packageNumber" TEXT NOT NULL,
+    "packageNumber" INTEGER,
     "numberOfProjects" INTEGER NOT NULL,
     "price" DOUBLE PRECISION NOT NULL,
     "storageLimit" INTEGER NOT NULL,
-    "unit" "UnitType" NOT NULL,
+    "unit" "UnitType" NOT NULL DEFAULT 'GB',
     "numberOfClients" INTEGER NOT NULL,
-    "validityTerms" TEXT NOT NULL,
+    "validityTerms" TEXT[],
     "description" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -94,6 +105,25 @@ CREATE TABLE "Module" (
     "name" TEXT NOT NULL,
 
     CONSTRAINT "Module_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Transaction" (
+    "id" TEXT NOT NULL,
+    "subscriptionId" TEXT NOT NULL,
+    "paymentId" TEXT NOT NULL,
+    "amount" DECIMAL(65,30) NOT NULL,
+    "currency" TEXT NOT NULL,
+    "paymentType" TEXT NOT NULL,
+    "disable" BOOLEAN NOT NULL DEFAULT false,
+    "status" "TransactionStatus" NOT NULL DEFAULT 'PENDING',
+    "message" TEXT,
+    "invoiceUrl" TEXT,
+    "dateCreated" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "adminId" TEXT NOT NULL,
+
+    CONSTRAINT "Transaction_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -117,10 +147,10 @@ CREATE UNIQUE INDEX "SuperAdminDetails_userId_key" ON "SuperAdminDetails"("userI
 CREATE UNIQUE INDEX "AdminDetails_userId_key" ON "AdminDetails"("userId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Package_packageNumber_key" ON "Package"("packageNumber");
+CREATE UNIQUE INDEX "Module_name_key" ON "Module"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Module_name_key" ON "Module"("name");
+CREATE UNIQUE INDEX "Transaction_paymentId_key" ON "Transaction"("paymentId");
 
 -- CreateIndex
 CREATE INDEX "_ModuleToPackage_B_index" ON "_ModuleToPackage"("B");
@@ -142,6 +172,12 @@ ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_adminId_fkey" FOREIGN KE
 
 -- AddForeignKey
 ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_packageId_fkey" FOREIGN KEY ("packageId") REFERENCES "Package"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_subscriptionId_fkey" FOREIGN KEY ("subscriptionId") REFERENCES "Subscription"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "AdminDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_ModuleToPackage" ADD CONSTRAINT "_ModuleToPackage_A_fkey" FOREIGN KEY ("A") REFERENCES "Module"("id") ON DELETE CASCADE ON UPDATE CASCADE;
