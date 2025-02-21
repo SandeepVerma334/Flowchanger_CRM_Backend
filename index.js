@@ -3,9 +3,10 @@ import express from "express";
 // import http from "http";
 import cors from "cors";
 // import socketIo from "socket.io";
+import rootRouter from "./router/routes.js";
+import jwt from "jsonwebtoken";
 // import jwt from "jsonwebtoken";
 import path from "path";
-import rootRouter from "./router/routes.js";
 
 
 config();

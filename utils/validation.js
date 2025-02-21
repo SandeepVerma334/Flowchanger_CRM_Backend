@@ -1,7 +1,14 @@
-// const z = require("zod");
-import { z } from "zod";
+import z from 'zod';
 
-const staffDetailSchema = z.object({
+export const BranchSchema = z.object({
+    branchName: z.string().min(1, "Branch Name is required"),
+});
+
+export const DepartmentSchema = z.object({
+    departmentName: z.string().min(1, "Department Name is required"),
+});
+
+export const staffDetailSchema = z.object({
   name: z.string().min(1, "Name is required"),
   jobTitle: z.string().min(1, "Job Title is required"),
   branch: z.string().min(1, "Branch is required"),
@@ -18,7 +25,7 @@ const staffDetailSchema = z.object({
 });
 
 
-const subscriptionSchema = z.object({
+export const subscriptionSchema = z.object({
   adminId: z.string({ required_error: "User ID is required" }).min(1, "User ID cannot be empty"),
   packageId: z.string({ required_error: "Package ID is required" }).min(1, "Package ID cannot be empty"),
   planType: z.string({ required_error: "Plan type is required" }).min(1, "Plan type cannot be empty"),
@@ -32,18 +39,23 @@ const subscriptionSchema = z.object({
 });
 
 
-const superAdminDetailsSchema = z.object({
+export const superAdminDetailsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6, 'Password must be at least 6 characters long'),
 });
 
-export { staffDetailSchema, subscriptionSchema, superAdminDetailsSchema };
-import z from 'zod';
-
-export const BranchSchema = z.object({
-    branchName: z.string().min(1, "Branch Name is required"),
-});
-
-export const DepartmentSchema = z.object({
-    departmentName: z.string().min(1, "Department Name is required"),
+export const adminSignupSchema = z.object({
+  name: z.string({ required_error: "Name is required" }).min(3, "Name must be at least 3 characters"),
+  email: z.string({ required_error: "Email is required" }).email("Invalid email format"),
+  date_Of_Birth: z.string().optional(), 
+  date_Of_Joining: z.string().optional(),
+  gender: z.enum(["Male", "Female", "Other"]).optional(),
+  mobile: z.string({ required_error: "Mobile number is required" }).min(10, "Mobile number must be at least 10 digits"),
+  designation: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zipCode: z.string().optional(),
+  country: z.string().optional(),
+  password: z.string({ required_error: "Password is required" }).min(8, "Password must be at least 8 characters"),
 });
