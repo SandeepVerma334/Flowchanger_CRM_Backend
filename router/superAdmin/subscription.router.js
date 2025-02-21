@@ -1,5 +1,5 @@
 import express from "express";
-import { createSubscription, deleteSubscription, getAllSubscription, getSubscriptionById, searchSubscription, updateSubscription } from "../../controller/superAdmin/subscription.controller.js";
+import { createSubscription, deleteSubscription, getAllSubscription, getSubscriptionById, searchSubscription, updateSubscription } from "../../controller/SuperAdmin/subscription.controller.js";
 import errorHandler from "../../middleware/errorhandler.js";
 
 const subscriptionRouter = express.Router();

@@ -14,8 +14,8 @@ const packageSchema = z.object({
   validityTerms: z.array(z.string({ required_error: "Validity term is required" }).min(1, "Validity term cannot be empty")).default(["Monthly"]),
   description: z.string().nullable().optional(),
   modules: z.array(z.string({ required_error: "Modules are required" }), { required_error: "At least one module must be selected" }),
-  // adminId: z.string({ required_error: "Admin ID is required" }).uuid(),
-  adminId: z.string().optional(),
+  adminId: z.string({ required_error: "Admin ID is required" }).uuid(),
+  // adminId: z.string().optional(),
 });
 
 const BranchSchema = z.object({

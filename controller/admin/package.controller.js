@@ -8,12 +8,12 @@ export const createPackage = async (req, res, next) => {
         const validatedData = packageSchema.parse(req.body);
 
         // Check if admin exists
-        // const adminExists = await prisma.adminDetails.findUnique({
-        //     where: { userId: validatedData.adminId },
-        // });
-        // if (!adminExists) {
-        //     return res.status(404).json({ error: "Admin not found" });
-        // }
+        const adminExists = await prisma.adminDetails.findUnique({
+            where: { userId: validatedData.adminId },
+        });
+        if (!adminExists) {
+            return res.status(404).json({ error: "Admin not found" });
+        }
 
         // Create or connect modules dynamically
         const modules = await Promise.all(
