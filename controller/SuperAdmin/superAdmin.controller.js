@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from "../../prisma/prisma.js";
 import { superAdminDetailsSchema } from "../../utils/validation.js";
+import nodemailer from 'nodemailer';
 // Create Super Admin API endpoint with validation
 const createSuperAdmin = async (req, res, next) => {
     try {
@@ -114,10 +115,10 @@ const sendInviteToAdmin = async (req, res) => {
             return res.status(400).json({ error: 'Email is required' });
         }
         const mailOptions = {
-            from: process.env.EMAIL,
+            from: process.env.EMAIL_USER,
             to: email,
             subject: 'Welcome to Flow Changer Agency',
-            text: 'Hello, you have been invited to join Flow Changer Agency. Please sign up using the provided link.\n\nhttps://docs.google.com/forms/d/e/1FAIpQLSfdvX-bMY_ZzIdtviTqIIKvDraQI9uloVSYnJHcpQyrSYjLXQ/viewform?pli=1&pli=1',            
+            text: 'Hello, you have been invited to join Flow Changer Agency. Please sign up using the provided link.\n\n' + process.env.FRONTEND_URL,            
         };
 
         const info = await transporter.sendMail(mailOptions);
