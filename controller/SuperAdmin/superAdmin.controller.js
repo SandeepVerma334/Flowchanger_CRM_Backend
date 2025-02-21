@@ -104,10 +104,10 @@ const sendInviteToAdmin = async (req, res) => {
             port: 465,
             secure: true,
             auth: {
-              user: process.env.EMAIL_USER,
-              pass: process.env.EMAIL_PASS,
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
             },
-          });
+        });
         const { email } = req.body;
 
         // Validate email input
@@ -118,11 +118,11 @@ const sendInviteToAdmin = async (req, res) => {
             from: process.env.EMAIL_USER,
             to: email,
             subject: 'Welcome to Flow Changer Agency',
-            text: 'Hello, you have been invited to join Flow Changer Agency. Please sign up using the provided link.\n\n' + process.env.FRONTEND_URL,            
+            text: 'Hello, you have been invited to join Flow Changer Agency. Please sign up using the provided link.\n\n' + process.env.FRONTEND_URL,
         };
 
         const info = await transporter.sendMail(mailOptions);
-        res.status(200).json({ 
+        res.status(200).json({
             message: 'Email sent successfully',
             response: {
                 subject: mailOptions.subject,
