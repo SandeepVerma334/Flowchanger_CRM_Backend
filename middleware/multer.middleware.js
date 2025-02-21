@@ -1,12 +1,14 @@
-const { console } = require("inspector");
-const multer = require("multer");
-const path = require("path");
-const { v4: uuidv4 } = require("uuid");
-const cloudinary = require("cloudinary").v2;
-require("dotenv").config();
+import { console } from "inspector";
+import multer from "multer";
+import path from "path";
+import { v4 as uuidv4 } from "uuid";
+import cloudinary from "cloudinary";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // Cloudinary configuration
-cloudinary.config({
+cloudinary.v2.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.CLOUD_API_KEY,
   api_secret: process.env.CLOUD_API_SECRET,
@@ -49,7 +51,7 @@ const uploadAndSaveToCloudinary = (fieldName) => (req, res, next) => {
 
     if (req.file) {
       try {
-        const cloudinaryResult = await cloudinary.uploader.upload(
+        const cloudinaryResult = await cloudinary.v2.uploader.upload(
           `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
           {
             folder: folderName,
@@ -82,7 +84,7 @@ const uploadMultipleAndSaveToCloudinary = (fieldName) => (req, res, next) => {
         for (const file of req.files) {
           const fileType = file.mimetype.split("/")[0]; // Extract the type (e.g., image, video)
           const resourceType = fileType === "video" ? "video" : "image"; // Determine resource type
-          const cloudinaryResult = await cloudinary.uploader.upload(
+          const cloudinaryResult = await cloudinary.v2.uploader.upload(
             `data:${file.mimetype};base64,${file.buffer.toString('base64')}`,
             {
               folder: folderName,
@@ -117,7 +119,4 @@ const determineFolderName = (routePath) => {
   return "Default_Folder";
 };
 
-module.exports = {
-  uploadAndSaveToCloudinary,
-  uploadMultipleAndSaveToCloudinary,
-};
+export { uploadAndSaveToCloudinary, uploadMultipleAndSaveToCloudinary };

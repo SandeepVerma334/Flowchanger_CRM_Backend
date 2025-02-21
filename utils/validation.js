@@ -62,6 +62,22 @@ const superAdminDetailsSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters long'),
 });
 
+export const adminSignupSchema = z.object({
+  name: z.string({ required_error: "Name is required" }).min(3, "Name must be at least 3 characters"),
+  email: z.string({ required_error: "Email is required" }).email("Invalid email format"),
+  date_Of_Birth: z.string().optional(), 
+  date_Of_Joining: z.string().optional(),
+  gender: z.enum(["Male", "Female", "Other"]).optional(),
+  mobile: z.string({ required_error: "Mobile number is required" }).min(10, "Mobile number must be at least 10 digits"),
+  designation: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zipCode: z.string().optional(),
+  country: z.string().optional(),
+  password: z.string({ required_error: "Password is required" }).min(8, "Password must be at least 8 characters"),
+});
+
 const transactionSchema = z.object({
   subscriptionId: z.string({ required_error: "Subscription ID is required" }).uuid({ message: "Invalid subscription ID" }),
   amount: z.coerce.number({ required_error: "Price is required", invalid_type_error: "Price must be a non-negative number" }).nonnegative(),
