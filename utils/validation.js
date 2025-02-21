@@ -1,14 +1,14 @@
 import z from 'zod';
 
-export const BranchSchema = z.object({
-    branchName: z.string().min(1, "Branch Name is required"),
+const BranchSchema = z.object({
+  branchName: z.string().min(1, "Branch Name is required"),
 });
 
-export const DepartmentSchema = z.object({
-    departmentName: z.string().min(1, "Department Name is required"),
+const DepartmentSchema = z.object({
+  departmentName: z.string().min(1, "Department Name is required"),
 });
 
-export const staffDetailSchema = z.object({
+const staffDetailSchema = z.object({
   name: z.string().min(1, "Name is required"),
   jobTitle: z.string().min(1, "Job Title is required"),
   branch: z.string().min(1, "Branch is required"),
@@ -25,9 +25,9 @@ export const staffDetailSchema = z.object({
 });
 
 
-export const subscriptionSchema = z.object({
-  adminId: z.string({ required_error: "User ID is required" }).min(1, "User ID cannot be empty"),
-  packageId: z.string({ required_error: "Package ID is required" }).min(1, "Package ID cannot be empty"),
+const subscriptionSchema = z.object({
+  adminId: z.string({ required_error: "User ID is required" }).uuid({ message: "Invalid user ID" }),
+  packageId: z.string({ required_error: "Package ID is required" }).uuid({ message: "Invalid package ID" }),
   planType: z.string({ required_error: "Plan type is required" }).min(1, "Plan type cannot be empty"),
   packageTenure: z.string({ required_error: "Package tenure is required" }).min(1, "Package tenure cannot be empty"),
   startDate: z.coerce.date({ required_error: "Start date is required", invalid_type_error: "Invalid start date format" }),
@@ -39,7 +39,7 @@ export const subscriptionSchema = z.object({
 });
 
 
-export const superAdminDetailsSchema = z.object({
+const superAdminDetailsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6, 'Password must be at least 6 characters long'),
 });
@@ -59,3 +59,16 @@ export const adminSignupSchema = z.object({
   country: z.string().optional(),
   password: z.string({ required_error: "Password is required" }).min(8, "Password must be at least 8 characters"),
 });
+
+const transactionSchema = z.object({
+  subscriptionId: z.string({ required_error: "Subscription ID is required" }).uuid({ message: "Invalid subscription ID" }),
+  amount: z.coerce.number({ required_error: "Price is required", invalid_type_error: "Price must be a non-negative number" }).nonnegative(),
+  currency: z.string({ required_error: "Currency is required" }),
+  paymentType: z.string({ required_error: "Payment type is required" }),
+  status: z.string({ required_error: "Status is required" }),
+  paymentId: z.string({ required_error: "Payment ID is required" }),
+  message: z.string({ required_error: "Message is required" }).optional(),
+  adminId: z.string({ required_error: "Admin ID is required" }),
+  invoiceUrl: z.string({ required_error: "Invoice URL is required" }).url({ message: 'Invalid URL format' }).optional(),
+});
+export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, superAdminDetailsSchema, transactionSchema };
