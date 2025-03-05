@@ -29,6 +29,8 @@ model SuperAdminDetails {
   id        String   @id @default(dbgenerated("gen_random_uuid()"))
   email     String   @unique
   password  String
+  name      String
+  mobile    String
   role      UserType @default(SUPERADMIN)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
@@ -90,7 +92,7 @@ model Package {
   numberOfProjects Int
   price            Float
   storageLimit     Int
-  unit             UnitType     @default(GB)
+  unit             UnitType       @default(GB)
   numberOfClients  Int
   validityTerms    String[]
   description      String?

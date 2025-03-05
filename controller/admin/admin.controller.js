@@ -169,5 +169,4 @@ const searchUsers = async (req, res, next) => {
     }
 };
 
-
 export { adminSignup, getAllUsers, searchUsers, getUserById, deleteUserById };
