@@ -15,8 +15,25 @@ export const createBranch = async (req, res) => {
                 message: branchResult.error.issues[0].message,
             });
         }
+        const admin = await prisma.user.findUnique({
+            where: {
+                id: req.userId,
+            }
+        })
+        if (!admin) {
+            return res.status(400).json({
+                status: false,
+                message: "Admin not found",
+            });
+        }
+        if (admin.role !== "ADMIN") {
+            return res.status(400).json({
+                status: false,
+                message: "Unauthorized access",
+            });
+        }
         const branch = await prisma.branch.create({
-            data: branchResult.data,
+            data: { ...branchResult.data, adminId: req.userId },
         });
         res.status(200).json({ branch });
     } catch (error) {

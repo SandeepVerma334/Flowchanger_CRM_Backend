@@ -23,6 +23,188 @@ model User {
   adminId      String? // Foreign key to reference a manager User
   admin        User?              @relation("UserAdmin", fields: [adminId], references: [id], onDelete: Cascade) // One Admin
   subordinates User[]             @relation("UserAdmin") // Many subordinates
+  StaffDetails StaffDetails?
+  Branch Branch[]
+  Department Department[]
+  Role Role[]
+}
+
+model Branch {
+  id           String         @id @default(dbgenerated("gen_random_uuid()"))
+  branchName   String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  adminId      String
+  admin        User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  StaffDetails StaffDetails[]
+}
+
+model Department {
+  id              String         @id @default(dbgenerated("gen_random_uuid()"))
+  department_name String
+  adminId         String
+  admin           User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  staffs          StaffDetails[]
+}
+
+model Permissions {
+  id                      String                 @id @default(dbgenerated("gen_random_uuid()"))
+  roleId                  String?                @unique
+  created_at              DateTime               @default(now())
+  updated_at              DateTime               @updatedAt
+  ai_permissions          AIPermissions?
+  chat_module_permissions ChatModulePermissions?
+  clients_permissions     ClientsPermissions?
+  Role                    Role?                  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  projects_permissions    ProjectsPermissions?
+  report_permissions      ReportPermissions?
+  settings_permissions    SettingsPermissions?
+  staff_permissions       StaffPermissions?
+  staff_role_permissions  StaffRolePermissions?
+  sub_task_permissions    SubTaskPermissions?
+  task_permissions        TaskPermissions?
+}
+
+model Role {
+  id          String         @id @default(dbgenerated("gen_random_uuid()"))
+  role_name   String
+  created_at  DateTime       @default(now())
+  updated_at  DateTime       @updatedAt
+  permissions Permissions?
+  staffs      StaffDetails[]
+  adminId     String
+  admin       User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}
+
+model ClientsPermissions {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  view_global   Boolean      @default(false)
+  create        Boolean      @default(false)
+  edit          Boolean      @default(false)
+  delete        Boolean      @default(false)
+  permissionsId String?      @unique
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+  Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model ProjectsPermissions {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  view_global   Boolean      @default(false)
+  create        Boolean      @default(false)
+  edit          Boolean      @default(false)
+  delete        Boolean      @default(false)
+  permissionsId String?      @unique
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+  Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model ReportPermissions {
+  id               String       @id @default(dbgenerated("gen_random_uuid()"))
+  view_global      Boolean      @default(false)
+  view_time_sheets Boolean      @default(false)
+  permissionsId    String?      @unique
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
+  Permissions      Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model StaffRolePermissions {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  view_global   Boolean      @default(false)
+  create        Boolean      @default(false)
+  edit          Boolean      @default(false)
+  delete        Boolean      @default(false)
+  permissionsId String?      @unique
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+  Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model SettingsPermissions {
+  id               String       @id @default(dbgenerated("gen_random_uuid()"))
+  view_global      Boolean      @default(false)
+  view_time_sheets Boolean      @default(false)
+  permissionsId    String?      @unique
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
+  Permissions      Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model StaffPermissions {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  view_global   Boolean      @default(false)
+  create        Boolean      @default(false)
+  edit          Boolean      @default(false)
+  delete        Boolean      @default(false)
+  permissionsId String?      @unique
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+  Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model TaskPermissions {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  view_global   Boolean      @default(false)
+  create        Boolean      @default(false)
+  edit          Boolean      @default(false)
+  delete        Boolean      @default(false)
+  permissionsId String?      @unique
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+  Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model SubTaskPermissions {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  view_global   Boolean      @default(false)
+  create        Boolean      @default(false)
+  edit          Boolean      @default(false)
+  delete        Boolean      @default(false)
+  permissionsId String?      @unique
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+  Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model ChatModulePermissions {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  grant_access  Boolean      @default(false)
+  staff         Boolean      @default(false)
+  client        Boolean      @default(false)
+  permissionsId String?      @unique
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+  Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model AIPermissions {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  grant_access  Boolean      @default(false)
+  permissionsId String?      @unique
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+  Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+}
+
+model StaffDetails {
+  id            String         @id @default(dbgenerated("gen_random_uuid()"))
+  userId        String        @unique
+  User         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobTitle    String?
+  mobileNumber String?
+  loginOtp     Int?
+  gender     String?
+  officialMail String?
+  dateOfJoining DateTime?
+  address     String?
+  branchId    String
+  departmentId String
+  roleId      String
+  Branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  Department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  Role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 }
 
 model SuperAdminDetails {
@@ -52,7 +234,6 @@ model AdminDetails {
   packageId     String? // Reference to Package model
   package       Package?       @relation(fields: [packageId], references: [id], onDelete: SetNull)
   Transaction   Transaction[]
-
   adminId     String?
   gender      String?
   designation String?
@@ -79,7 +260,6 @@ model Subscription {
   price         Decimal      @default(0.00)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
-
   Transaction Transaction[]
 }
 
