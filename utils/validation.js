@@ -27,19 +27,26 @@ const DepartmentSchema = z.object({
 });
 
 const staffDetailSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  jobTitle: z.string().min(1, "Job Title is required"),
-  branch: z.string().min(1, "Branch is required"),
-  department: z.string().min(1, "Department is required"),
-  role: z.string().min(1, "Role is required"),
+  userId: z.string().min(1, "User ID is required"), // Unique and required
+  jobTitle: z.string().min(1, "Job Title is required").optional().nullable(),
   mobileNumber: z
-    .string().min(1, "Mobile number is required!"),
-  loginOtp: z.number().min(100000).max(999999), // 6-digit OTP
-  gender: z.enum(["Male", "Female", "Other"], { message: "Invalid gender" }),
-  officialEmail: z.string().email("Invalid email format"),
-  dateOfJoining: z.coerce.date(),
-  address: z.string().min(1, "Address is required"),
-  userId: z.string().min(1, "User ID is required"),
+    .string()
+    .min(10, "Mobile number must be at least 10 digits")
+    .max(15, "Mobile number cannot exceed 15 digits")
+    .optional()
+    .nullable(),
+  loginOtp: z.number().min(100000).max(999999).optional().nullable(), // 6-digit OTP
+  gender: z.enum(["Male", "Female", "Other"]).optional().nullable(),
+  officialMail: z.string().email("Invalid email format").optional().nullable(),
+  dateOfJoining: z
+    .string()
+    .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date format" })
+    .optional()
+    .nullable(),
+  address: z.string().min(1, "Address is required").optional().nullable(),
+  branchId: z.string().min(1, "Branch ID is required"), // Foreign key
+  departmentId: z.string().min(1, "Department ID is required"), // Foreign key
+  roleId: z.string().min(1, "Role ID is required"), // Foreign key
 });
 
 
