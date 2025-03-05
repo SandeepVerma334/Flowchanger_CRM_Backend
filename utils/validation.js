@@ -65,17 +65,20 @@ const subscriptionSchema = z.object({
 
 
 const superAdminDetailsSchema = z.object({
+  name: z.string().min(3, 'Name must be at least 3 characters long'),
+  mobile: z.string().min(10, 'Mobile number must be at least 10 digits long'),
   email: z.string().email(),
   password: z.string().min(6, 'Password must be at least 6 characters long'),
 });
 
 export const adminSignupSchema = z.object({
-  name: z.string({ required_error: "Name is required" }).min(3, "Name must be at least 3 characters"),
+  firstName: z.string({ required_error: "First Name is required" }).min(3, "First name must be at least 3 characters"),
+  lastName: z.string({ required_error: "Last Name is required" }).min(3, "Last name must be at least 3 characters"),
   email: z.string({ required_error: "Email is required" }).email("Invalid email format"),
-  date_Of_Birth: z.string().optional(), 
+  date_Of_Birth: z.string().optional(),
   date_Of_Joining: z.string().optional(),
   gender: z.enum(["Male", "Female", "Other"]).optional(),
-  mobile: z.string({ required_error: "Mobile number is required" }).min(10, "Mobile number must be at least 10 digits"),
+  mobile: z.string({ required_error: "Mobile number is required" }).min(10, "Mobile number must be at least 10 digits").optional(),
   designation: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
@@ -83,6 +86,10 @@ export const adminSignupSchema = z.object({
   zipCode: z.string().optional(),
   country: z.string().optional(),
   password: z.string({ required_error: "Password is required" }).min(8, "Password must be at least 8 characters"),
+  businessType: z.string().optional(),
+  services: z.array(z.string()).optional(),
+  companySize: z.string().optional(),
+  role: z.string().optional(),
 });
 
 const transactionSchema = z.object({
@@ -97,4 +104,93 @@ const transactionSchema = z.object({
   invoiceUrl: z.string({ required_error: "Invoice URL is required" }).url({ message: 'Invalid URL format' }).optional(),
 });
 
-export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, superAdminDetailsSchema, transactionSchema, packageSchema };
+const clientSchema = z.object({
+  name: z.string({
+    required_error: "Name is required",
+    invalid_type_error: "Name must be a string"
+  }).min(1, "Name cannot be empty"),
+
+  email: z.string({
+    required_error: "Email is required",
+    invalid_type_error: "Email must be a valid string"
+  }).email("Invalid email format"),
+
+  phoneNumber: z.string({
+    required_error: "Phone Number is required",
+    invalid_type_error: "Phone Number must be a string"
+  }),
+
+  group: z.string({
+    required_error: "Group is required",
+    invalid_type_error: "Group must be a string"
+  }),
+
+  currency: z.string({
+    required_error: "Currency is required",
+    invalid_type_error: "Currency must be a string"
+  }),
+
+  defaultLanguage: z.string({
+    required_error: "Default Language is required",
+    invalid_type_error: "Default Language must be a string"
+  }),
+
+  // Company Details
+  organizationName: z.string({
+    required_error: "Organization Name is required",
+    invalid_type_error: "Organization Name must be a string"
+  }),
+
+  website: z.string({
+    required_error: "Website is required",
+    invalid_type_error: "Website must be a valid URL"
+  }).url("Invalid website URL"),
+
+  industriesField: z.string().optional(),
+
+  gstNumber: z.string({
+    required_error: "GST Number is required",
+    invalid_type_error: "GST Number must be a string"
+  }),
+
+  vatNumber: z.string({
+    required_error: "VAT Number is required",
+    invalid_type_error: "VAT Number must be a string"
+  }),
+
+  panNumber: z.string({
+    required_error: "PAN Number is required",
+    invalid_type_error: "PAN Number must be a string"
+  }),
+  password: z.string(
+    {
+      required_error: "Password is required",
+      invalid_type_error: "Password must be a string",
+    }
+  ).min(6, 'Password must be at least 6 characters long'),
+  // Address
+  pinCode: z.string({
+    required_error: "Pin Code is required",
+    invalid_type_error: "Pin Code must be a string"
+  }),
+
+  city: z.string({
+    required_error: "City is required",
+    invalid_type_error: "City must be a string"
+  }),
+
+  state: z.string({
+    required_error: "State is required",
+    invalid_type_error: "State must be a string"
+  }),
+
+  country: z.string({
+    required_error: "Country is required",
+    invalid_type_error: "Country must be a string"
+  }),
+
+  addressLine: z.string().optional()
+});
+
+
+export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema };

@@ -20,8 +20,7 @@ const authorizationMiddleware = (req, res, next) => {
         .status(401)
         .json({ error: "Invalid token or authorization failed" });
     }
-    req.userId = decodedToken.userId;
-    // console.log(decodedToken);
+    req.userId = decodedToken.id;
     next();
   } catch (error) {
     res.status(401).json({

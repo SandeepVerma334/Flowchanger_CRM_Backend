@@ -9,6 +9,7 @@ import staffRouter from "./admin/staff/staffDetail.router.js";
 import subscriptionRouter from "./superAdmin/subscription.router.js";
 import superAdminRouter from "./superAdmin/superAdmin.router.js";
 import transactionRouter from "./superAdmin/transaction.router.js";
+import clientRouter from "./client/client.router.js";
 
 rootRouter.use("/branch", branchRouter);
 rootRouter.use("/department", departmentRouter);
@@ -18,5 +19,5 @@ rootRouter.use("/transaction", transactionRouter);
 rootRouter.use("/package", packageRouter);
 rootRouter.use("/subscription", subscriptionRouter);
 rootRouter.use("/admin", adminSignup);
-
+rootRouter.use("/client", clientRouter);
 export default rootRouter;
