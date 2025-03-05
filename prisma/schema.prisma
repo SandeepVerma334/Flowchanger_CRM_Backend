@@ -5,24 +5,26 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  // directUrl = env("DIRECT_URL")s
 }
 
 model User {
-  id           String             @id @default(dbgenerated("gen_random_uuid()"))
-  email        String             @unique
-  password     String?
-  name         String?
-  mobile       String?
-  role         UserType           @default(STAFF)
-  is_verified  Boolean            @default(false)
-  otp          Int?
-  otpExpiresAt DateTime?
-  adminDetails AdminDetails?
-  superAdmin   SuperAdminDetails?
-  adminId      String? // Foreign key to reference a manager User
-  admin        User?              @relation("UserAdmin", fields: [adminId], references: [id], onDelete: Cascade) // One Admin
-  subordinates User[]             @relation("UserAdmin") // Many subordinates
+  id            String             @id @default(dbgenerated("gen_random_uuid()"))
+  email         String             @unique
+  password      String?
+  firstName     String?
+  lastName      String?
+  mobile        String?
+  role          UserType           @default(STAFF)
+  is_verified   Boolean            @default(false)
+  otp           Int?
+  otpExpiresAt  DateTime?
+  adminDetails  AdminDetails?
+  superAdmin    SuperAdminDetails?
+  adminId       String? // Foreign key to reference a manager User
+  admin         User?              @relation("UserAdmin", fields: [adminId], references: [id], onDelete: Cascade) // One Admin
+  subordinates  User[]             @relation("UserAdmin") // Many subordinates
+  clientDetails ClientDetails?
 }
 
 model SuperAdminDetails {
@@ -37,8 +39,8 @@ model SuperAdminDetails {
 }
 
 model AdminDetails {
-  id            String         @id @default(dbgenerated("gen_random_uuid()"))
-  userId        String         @unique
+  id            String          @id @default(dbgenerated("gen_random_uuid()"))
+  userId        String          @unique
   package_id    String?
   company_name  String?
   company_logo  String?
@@ -47,20 +49,46 @@ model AdminDetails {
   time_zone     String?
   date_format   String?
   week_format   String?
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   Subscription  Subscription[]
   packageId     String? // Reference to Package model
-  package       Package?       @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  package       Package?        @relation(fields: [packageId], references: [id], onDelete: SetNull)
   Transaction   Transaction[]
+  adminId       String?
+  gender        String?
+  designation   String?
+  address       String?
+  city          String?
+  state         String?
+  zipCode       String?
+  country       String?
+  businessType  String?
+  services      String[]
+  companySize   String?
+  role          String?
+  ClientDetails ClientDetails[]
+}
 
-  adminId     String?
-  gender      String?
-  designation String?
-  address     String?
-  city        String?
-  state       String?
-  zipCode     String?
-  country     String?
+model ClientDetails {
+  id               String       @id @default(dbgenerated("gen_random_uuid()"))
+  group            String
+  currency         String
+  defaultLanguage  String
+  organizationName String
+  website          String
+  industriesField  String?
+  gstNumber        String
+  vatNumber        String
+  panNumber        String
+  pinCode          String
+  city             String
+  state            String
+  country          String
+  addressLine      String?
+  adminId          String?
+  adminDetails     AdminDetails? @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  userId           String       @unique
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Subscription {
@@ -90,7 +118,7 @@ model Package {
   numberOfProjects Int
   price            Float
   storageLimit     Int
-  unit             UnitType     @default(GB)
+  unit             UnitType       @default(GB)
   numberOfClients  Int
   validityTerms    String[]
   description      String?
