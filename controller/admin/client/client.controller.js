@@ -3,6 +3,7 @@ import { clientSchema } from "../../../utils/validation.js";
 import checkAdmin from "../../../utils/adminChecks.js";
 import bcrypt from 'bcrypt';
 import { pagination } from "../../../utils/pagination.js";
+import { sendEmailWithPdf, sendLoginCredentialsEmail } from "../../../utils/emailService.js";
 
 const createClient = async (req, res, next) => {
     try {
@@ -46,12 +47,14 @@ const createClient = async (req, res, next) => {
                 }
             })
 
+        await sendEmailWithPdf(email, validatedData.name, password, validatedData.panNumber, `${process.env.CLIENT_URL}/login`);
         res.status(201).json({
             message: "Client created successfully",
             data: {
                 client, clientDetails
             }
         });
+
     } catch (error) {
         next(error);
     }
