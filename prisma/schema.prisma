@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -12,8 +12,9 @@ model User {
   id           String             @id @default(dbgenerated("gen_random_uuid()"))
   email        String             @unique
   password     String?
-  name         String?
-  mobile       String?
+  firstName     String?
+  lastName      String?
+  mobile        String?
   profileImage String?
   role         UserType           @default(STAFF)
   is_verified  Boolean            @default(false)
@@ -25,11 +26,10 @@ model User {
   admin        User?              @relation("UserAdmin", fields: [adminId], references: [id], onDelete: Cascade) // One Admin
   subordinates User[]             @relation("UserAdmin") // Many subordinates
   StaffDetails StaffDetails?
-  Branch Branch[]
-  Department Department[]
-  Role Role[]
-
-  ClientDetails ClientDetails[]
+  Branch       Branch[]
+  Department   Department[]
+  Role         Role[]
+  ClientDetails ClientDetails?
 }
 
 model Branch {
@@ -192,22 +192,22 @@ model AIPermissions {
 }
 
 model StaffDetails {
-  id            String         @id @default(dbgenerated("gen_random_uuid()"))
-  userId        String        @unique
-  User         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobTitle    String?
-  mobileNumber String?
-  loginOtp     Int?
-  gender     String?
-  officialMail String?
+  id            String     @id @default(dbgenerated("gen_random_uuid()"))
+  userId        String     @unique
+  User          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobTitle      String?
+  mobileNumber  String?
+  loginOtp      Int?
+  gender        String?
+  officialMail  String?
   dateOfJoining DateTime?
-  address     String?
-  branchId    String
-  departmentId String
-  roleId      String
-  Branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  Department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  Role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  address       String?
+  branchId      String
+  departmentId  String
+  roleId        String
+  Branch        Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  Department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  Role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
 }
 
 model SuperAdminDetails {
@@ -255,7 +255,7 @@ model AdminDetails {
 }
 
 model ClientDetails {
-  id               String       @id @default(dbgenerated("gen_random_uuid()"))
+  id               String        @id @default(dbgenerated("gen_random_uuid()"))
   group            String
   currency         String
   defaultLanguage  String
@@ -272,16 +272,16 @@ model ClientDetails {
   addressLine      String?
   adminId          String?
   adminDetails     AdminDetails? @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  userId           String       @unique
-  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String        @unique
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Subscription {
-  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  id            String        @id @default(dbgenerated("gen_random_uuid()"))
   adminId       String // Reference to User model
-  admin         AdminDetails @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  admin         AdminDetails  @relation(fields: [adminId], references: [id], onDelete: Cascade)
   packageId     String // Reference to Package model
-  package       Package      @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  package       Package       @relation(fields: [packageId], references: [id], onDelete: Cascade)
   planType      String
   packageTenure String
   startDate     DateTime
@@ -289,10 +289,10 @@ model Subscription {
   paymentMethod String
   paid          Boolean
   status        String
-  price         Decimal      @default(0.00)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  Transaction Transaction[]
+  price         Decimal       @default(0.00)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  Transaction   Transaction[]
 }
 
 model Package {
