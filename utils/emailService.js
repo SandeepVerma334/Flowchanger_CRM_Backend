@@ -71,7 +71,7 @@ const sendGeneralMessage = async (email, subject, message) => {
     `;
     await sendEmail(email, subject, htmlContent);
 };
-
+// hanges
 export {
     sendOtpEmail,
     sendVerificationLinkEmail,
