@@ -31,6 +31,7 @@ const adminSignup = async (req, res, next) => {
         // Return response
         res.status(201).json({
             message: "User created successfully",
+            data: newUser
         });
 
     } catch (error) {

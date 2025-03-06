@@ -23,7 +23,7 @@ const BranchSchema = z.object({
 });
 
 const DepartmentSchema = z.object({
-  departmentName: z.string().min(1, "Department Name is required"),
+  department_name: z.string().min(1, "Department Name is required"),
 });
 
 const staffDetailSchema = z.object({
@@ -90,6 +90,7 @@ export const adminSignupSchema = z.object({
   services: z.array(z.string()).optional(),
   companySize: z.string().optional(),
   role: z.string().optional(),
+  packageId: z.string().optional(),
 });
 
 const transactionSchema = z.object({
@@ -192,5 +193,93 @@ const clientSchema = z.object({
   addressLine: z.string().optional()
 });
 
+const allPermissionSchema = z.object({
+  clients_permissions: z
+    .object({
+      create: z.boolean().default(false).optional(),
+      edit: z.boolean().default(false).optional(),
+      delete: z.boolean().default(false).optional(),
+      view_global: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  projects_permissions: z
+    .object({
+      create: z.boolean().default(false).optional(),
+      edit: z.boolean().default(false).optional(),
+      delete: z.boolean().default(false).optional(),
+      view_global: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  report_permissions: z
+    .object({
+      view_global: z.boolean().default(false).optional(),
+      view_time_sheets: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  staff_role_permissions: z
+    .object({
+      create: z.boolean().default(false).optional(),
+      edit: z.boolean().default(false).optional(),
+      delete: z.boolean().default(false).optional(),
+      view_global: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  settings_permissions: z
+    .object({
+      view_global: z.boolean().default(false).optional(),
+      view_time_sheets: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  staff_permissions: z
+    .object({
+      create: z.boolean().default(false).optional(),
+      edit: z.boolean().default(false).optional(),
+      delete: z.boolean().default(false).optional(),
+      view_global: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  task_permissions: z
+    .object({
+      create: z.boolean().default(false).optional(),
+      edit: z.boolean().default(false).optional(),
+      delete: z.boolean().default(false).optional(),
+      view_global: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  sub_task_permissions: z
+    .object({
+      create: z.boolean().default(false).optional(),
+      edit: z.boolean().default(false).optional(),
+      delete: z.boolean().default(false).optional(),
+      view_global: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  chat_module_permissions: z
+    .object({
+      grant_access: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  ai_permissions: z
+    .object({
+      grant_access: z.boolean().default(false).optional(),
+    })
+    .optional(),
+});
 
-export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema };
+const idSchema = z.string().uuid("Invalid UUID format");
+
+const roleNameSchema = z
+  .string()
+  .regex(/^[a-zA-Z\s]+$/, "Role name can only contain alphabets and spaces");
+
+const newRoleSchema = z.object({
+  roleName: roleNameSchema.min(2, "role name is required"),
+  permissions: allPermissionSchema.optional(),
+});
+
+const updateRoleSchema = z.object({
+  role_name: roleNameSchema.optional(),
+  permissions: allPermissionSchema.optional(),
+});
+
+export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, updateRoleSchema };

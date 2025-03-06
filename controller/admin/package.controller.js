@@ -142,3 +142,42 @@ export const getAllModules = async (req, res) => {
 };
 
 //get package by admin id
+
+export const getPackageByAdminId = async (req, res) => {
+    try {
+        const { adminId } = req.params; // get admin id from request params
+        const packages = await prisma.package.findMany({
+            where: {
+                adminId: adminId,
+            },
+            include: {
+                modules: true,
+                adminDetails: true,
+            },
+        });
+        return res.status(200).json(packages);
+    } catch (error) {
+        console.error("Error fetching packages:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+// get package by id
+export const getPackageById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const pkg = await prisma.package.findUnique({
+            where: {
+                id: id,
+            },
+            include: {
+                modules: true,
+                adminDetails: true,
+            },
+        });
+        return res.status(200).json(pkg);
+    } catch (error) {
+        console.error("Error fetching package:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+};
