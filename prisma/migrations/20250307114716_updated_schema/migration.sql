@@ -2,6 +2,26 @@
 ALTER TABLE "User" ADD COLUMN     "profileImage" TEXT;
 
 -- CreateTable
+CREATE TABLE "StaffDetails" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "userId" TEXT NOT NULL,
+    "jobTitle" TEXT,
+    "loginOtp" INTEGER,
+    "gender" TEXT,
+    "officialMail" TEXT,
+    "dateOfJoining" TIMESTAMP(3),
+    "dateOfBirth" TIMESTAMP(3),
+    "maritalStatus" TEXT,
+    "address" TEXT,
+    "branchId" TEXT NOT NULL,
+    "departmentId" TEXT NOT NULL,
+    "roleId" TEXT NOT NULL,
+    "adminId" TEXT NOT NULL,
+
+    CONSTRAINT "StaffDetails_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Branch" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "branchName" TEXT NOT NULL,
@@ -174,23 +194,8 @@ CREATE TABLE "AIPermissions" (
     CONSTRAINT "AIPermissions_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "StaffDetails" (
-    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
-    "userId" TEXT NOT NULL,
-    "jobTitle" TEXT,
-    "mobileNumber" TEXT,
-    "loginOtp" INTEGER,
-    "gender" TEXT,
-    "officialMail" TEXT,
-    "dateOfJoining" TIMESTAMP(3),
-    "address" TEXT,
-    "branchId" TEXT NOT NULL,
-    "departmentId" TEXT NOT NULL,
-    "roleId" TEXT NOT NULL,
-
-    CONSTRAINT "StaffDetails_pkey" PRIMARY KEY ("id")
-);
+-- CreateIndex
+CREATE UNIQUE INDEX "StaffDetails_userId_key" ON "StaffDetails"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Permissions_roleId_key" ON "Permissions"("roleId");
@@ -225,8 +230,20 @@ CREATE UNIQUE INDEX "ChatModulePermissions_permissionsId_key" ON "ChatModulePerm
 -- CreateIndex
 CREATE UNIQUE INDEX "AIPermissions_permissionsId_key" ON "AIPermissions"("permissionsId");
 
--- CreateIndex
-CREATE UNIQUE INDEX "StaffDetails_userId_key" ON "StaffDetails"("userId");
+-- AddForeignKey
+ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "AdminDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_branchId_fkey" FOREIGN KEY ("branchId") REFERENCES "Branch"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "Department"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Branch" ADD CONSTRAINT "Branch_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -269,15 +286,3 @@ ALTER TABLE "ChatModulePermissions" ADD CONSTRAINT "ChatModulePermissions_permis
 
 -- AddForeignKey
 ALTER TABLE "AIPermissions" ADD CONSTRAINT "AIPermissions_permissionsId_fkey" FOREIGN KEY ("permissionsId") REFERENCES "Permissions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_branchId_fkey" FOREIGN KEY ("branchId") REFERENCES "Branch"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "Department"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
