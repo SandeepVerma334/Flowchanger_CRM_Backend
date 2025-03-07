@@ -1,43 +1,199 @@
-import fs from 'fs';
 import nodemailer from 'nodemailer';
 import PDFDocument from 'pdfkit';
+import fs from 'fs';
 import { promisify } from 'util';
+import axios from 'axios';
+
+const createCredentialPdf = async (filePath, username, email, password, pdfPassword) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const logoResponse = await axios.get(
+                'https://th.bing.com/th/id/OIP.o4psCQ-mkEsCHRbldlmfgAAAAA?rs=1&pid=ImgDetMain',
+                { responseType: 'arraybuffer' }
+            );
+            const logoBuffer = Buffer.from(logoResponse.data, 'binary');
+
+            const doc = new PDFDocument({
+                size: 'A4',
+                margin: 40,
+                userPassword: pdfPassword,
+                permissions: {
+                    printing: 'highResolution',
+                    modifying: false,
+                    copying: false,
+                    annotating: false,
+                }
+            });
+
+            const stream = fs.createWriteStream(filePath);
+            doc.pipe(stream);
+
+            // Header section
+            doc.rect(0, 0, doc.page.width, 120).fill('#ffffff');
+            doc.image(logoBuffer, 40, 15, { width: 100 });
+            doc.fillColor('#5A3AA5')
+                .fontSize(10)
+                .font('Helvetica-Bold')
+                .text('UDYAM-RJ-15-0077988', doc.page.width - 180, 20, {
+                    width: 140,
+                    align: 'right',
+                });
+
+            // Purple Address Bar
+            doc.save();
+            doc.fillColor('#5A3AA5').rect(0, 100, doc.page.width, 40).fill();
+            doc.restore();
+
+            doc.fillColor('#ffffff')
+                .fontSize(9)
+                .font('Helvetica')
+                .text(
+                    'Aggarwal colony - 8A,1st Floor, B Block, Nosegay School Road,\nHanumangarh Rd, Sri Ganganagar, Rajasthan 335001',
+                    40, 110, { width: doc.page.width - 200 }
+                );
+
+            // Watermark logo
+            const pageWidth = doc.page.width;
+            const pageHeight = doc.page.height;
+            const watermarkWidth = 300; // Adjust as needed
+            const watermarkHeight = 300; // Adjust to maintain aspect ratio if needed
+
+            const centerX = (pageWidth - watermarkWidth) / 2;
+            const centerY = (pageHeight - watermarkHeight) / 2;
+
+            doc.save();
+            doc.fillOpacity(0.05);
+            doc.image(logoBuffer, centerX, centerY, { width: watermarkWidth });
+            doc.restore();
+
+            // Confidential title section
+            doc.save();
+            doc.fillColor('#5A3AA5').rect(40, 180, 515, 30).fill();
+            doc.fillColor('white').fontSize(16).font('Helvetica-Bold')
+                .text('CONFIDENTIAL LOGIN CREDENTIALS', 40, 188, { align: 'center', width: 515 });
+            doc.restore();
+
+            // Main body text
+            doc.y = 230;
+            doc.fillColor('#333333').fontSize(11).font('Helvetica')
+                .text(`Dear ${username},`, { align: 'left' });
+            doc.y += 15;
+
+            doc.text('We are pleased to share your login credentials for accessing your Flow Changer account. These credentials give you access to our client portal where you can track your project progress and communicate with our team.');
+            doc.y += 30;
+
+            // ===== Login Box Section (with spacing above and below) =====
+            const loginBoxTop = 310;  // Adjust this value to move box up/down
+            const loginBoxHeight = 140;  // Increased for better spacing
+            const boxPadding = 15;  // Internal padding within the box
+
+            // Draw box
+            doc.save();
+            doc.roundedRect(40, loginBoxTop, 395, loginBoxHeight, 10).stroke('#5A3AA5');
+            doc.restore();
+
+            // Content inside box
+            let contentY = loginBoxTop + boxPadding;
+
+            doc.fillColor('#5A3AA5').fontSize(13).font('Helvetica-Bold')
+                .text('Login Details', 60, contentY-3);
+
+            contentY += 15;
+            doc.moveTo(40, contentY).lineTo(435, contentY).stroke('#5A3AA5');
+            contentY += 15;
+
+            doc.fillColor('#333333').fontSize(11).font('Helvetica')
+                .text('Email:', 60, contentY);
+            doc.font('Helvetica-Bold').text(email, 160, contentY);
+
+            contentY += 20;
+            doc.font('Helvetica').text('Password:', 60, contentY);
+            doc.font('Helvetica-Bold').text(password, 160, contentY);
+
+            contentY += 25;
+
+            // URL button
+            // Draw the button border (optional, for visible button with stroke, remove fill() for transparency)
+            doc.roundedRect(160, contentY, 200, 22, 5)
+                .fillAndStroke('#5A3AA5', '#5A3AA5');  // Solid button with purple fill and stroke
+
+            // Add text inside the button
+            doc.fillColor('white')
+                .font('Helvetica-Bold')
+                .fontSize(11)
+                .text('Login to App', 220, contentY + 6, { width: 100, align: 'center' });
+
+            // Add a clickable link over the button
+            doc.link(160, contentY, 200, 22, 'https://app.owchanger.com/login');
+            // ===== Instructions below box =====
+            doc.y = loginBoxTop + loginBoxHeight + 20;
+            doc.fillColor('#333333').fontSize(10).text(
+                'Please keep these credentials safe and do not share them with anyone. If you have any issues logging in, feel free to contact our support team.', 40, doc.y
+            );
+
+            // Signature section
+            doc.moveDown(2);
+            doc.fillColor('#333333').font('Helvetica')
+                .fontSize(10)
+                .text('Warm regards,', 40, doc.y);
+
+            doc.moveDown(0.5);
+            doc.font('Helvetica-Bold').fontSize(12).text('PRADEEP KUMAR', 40);
+            doc.moveDown(0.5);
+            doc.font('Helvetica').fontSize(10).text('Founder & CEO');
+            doc.text('Flowchanger Digital Marketing Agency');
 
 
-// Initialize Nodemailer Transporter
+            // Footer
+            doc.strokeColor('#5A3AA5').lineWidth(1).moveTo(40, 680).lineTo(555, 680).stroke();
+
+            // Contact info
+            doc.circle(70, 710, 8).fillAndStroke('#5A3AA5', '#5A3AA5');
+            doc.fillColor('white').fontSize(10).text('+', 67, 705);
+            doc.fillColor('#333333').text('+91 6378277791', 85, 705);
+
+            doc.circle(215, 710, 8).fillAndStroke('#5A3AA5', '#5A3AA5');
+            doc.fillColor('white').text('w', 212, 705);
+            doc.fillColor('#333333').text('www.flowchanger.com', 230, 705);
+
+            doc.circle(390, 710, 8).fillAndStroke('#5A3AA5', '#5A3AA5');
+            doc.fillColor('white').text('@', 385, 705);
+            doc.fillColor('#333333').text('flowchangeragency@gmail.com', 403, 705);
+
+            // Finalize
+            doc.end();
+            stream.on('finish', resolve);
+            stream.on('error', reject);
+        } catch (error) {
+            reject(error);
+        }
+    });
+};
+
+
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
+    host: 'smtp.gmail.com', // Adjust based on your email provider
     port: 587,
-    secure: false,
+    secure: false, // false for TLS - change to true if using port 465
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: process.env.EMAIL_USER,      // Your email (support@yourdomain.com)
+        pass: process.env.EMAIL_PASS    // App password or SMTP password
     }
 });
 
-// Core email sender function
-const sendEmail = async (to, subject, htmlContent, attachments = []) => {
+// Reusable email sender
+const sendEmail = async (to, subject, htmlContent) => {
     const mailOptions = {
         from: `"Flowchanger Support" <${process.env.EMAIL_USER}>`,
         to,
         subject,
         html: htmlContent,
-        attachments
     };
-
-    try {
-        await transporter.sendMail(mailOptions);
-        console.log(`Email sent to ${to}`);
-    } catch (error) {
-        console.error(`Failed to send email to ${to}:`, error);
-        throw error;
-    }
+    await transporter.sendMail(mailOptions);
 };
 
-// OTP Generator
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000);
-
-// Send OTP Email
+// OTP email template
 const sendOtpEmail = async (email) => {
     const otp = generateOtp();
     const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
@@ -56,27 +212,27 @@ const sendOtpEmail = async (email) => {
             <p>Regards,<br/>Flowchanger Support Team</p>
         </div>
     `;
-
     await sendEmail(email, 'Your OTP Code', htmlContent);
 };
 
-// Send Verification Link Email
+
+
+// Verification link email template
 const sendVerificationLinkEmail = async (email, link) => {
     const htmlContent = `
         <div style="font-family: Arial, sans-serif; line-height: 1.5;">
             <h2>Verify Your Account</h2>
             <p>Hello,</p>
             <p>Click the link below to verify your account:</p>
-            <a href="${link}" style="padding:10px 20px; background-color:#007bff; color:#fff; text-decoration:none; border-radius:5px;">Verify Account</a>
+            <a href="${link}" style="display:inline-block; padding:10px 20px; background-color:#007bff; color:#fff; text-decoration:none; border-radius:5px;">Verify Account</a>
             <p>If you did not sign up, you can safely ignore this email.</p>
             <p>Regards,<br/>Flowchanger Support Team</p>
         </div>
     `;
-
     await sendEmail(email, 'Verify Your Account', htmlContent);
 };
 
-// Send General Message
+// General message email template
 const sendGeneralMessage = async (email, subject, message) => {
     const htmlContent = `
         <div style="font-family: Arial, sans-serif; line-height: 1.5;">
@@ -84,11 +240,9 @@ const sendGeneralMessage = async (email, subject, message) => {
             <p>Regards,<br/>Flowchanger Support Team</p>
         </div>
     `;
-
     await sendEmail(email, subject, htmlContent);
 };
 
-// Send Login Credentials Email (Plain Email without PDF)
 const sendLoginCredentialsEmail = async (email, password, loginLink) => {
     const htmlContent = `
         <div style="font-family: Arial, sans-serif; line-height: 1.5;">
@@ -96,11 +250,17 @@ const sendLoginCredentialsEmail = async (email, password, loginLink) => {
             <p>Hello,</p>
             <p>Your account has been created successfully. Below are your login credentials:</p>
             <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
-                <tr><td style="padding: 10px; border: 1px solid #ddd;"><strong>Email:</strong></td><td>${email}</td></tr>
-                <tr><td style="padding: 10px; border: 1px solid #ddd;"><strong>Password:</strong></td><td>${password}</td></tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;"><strong>Email:</strong></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${email}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;"><strong>Password:</strong></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${password}</td>
+                </tr>
             </table>
             <p>You can log in using the button below:</p>
-            <a href="${loginLink}" style="padding:10px 20px; background-color:#28a745; color:#fff; text-decoration:none; border-radius:5px;">Login Now</a>
+            <a href="${loginLink}" style="display:inline-block; padding:10px 20px; background-color:#28a745; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">Login Now</a>
             <p>Please change your password after logging in for security reasons.</p>
             <p>Regards,<br/>Flowchanger Support Team</p>
         </div>
@@ -109,61 +269,28 @@ const sendLoginCredentialsEmail = async (email, password, loginLink) => {
     await sendEmail(email, 'Your Flowchanger Account Details', htmlContent);
 };
 
+
 const unlinkAsync = promisify(fs.unlink);
 
 const sendEmailWithPdf = async (email, username, password, pdfPassword, loginLink) => {
     const filePath = `./${username}.pdf`;
 
     try {
-        // Create PDF with password protection
-        await generateEncryptedPdf(filePath, username, email, password, pdfPassword);
+        await createCredentialPdf(filePath, username, email, password, pdfPassword, loginLink);
 
-        // Read the generated PDF into a buffer
         const pdfBuffer = await fs.promises.readFile(filePath);
 
-        // Email HTML content
         const htmlContent = `
-<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; padding: 20px; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px;">
-    <h2 style="color: #007bff; font-size: 22px; margin-bottom: 15px;">Your Account Details</h2>
-    <p style="font-size: 14px; margin: 0 0 10px;">Hello,</p>
-    <p style="font-size: 14px; margin: 0 0 15px;">Your account has been created successfully. Below are your login credentials:</p>
-
-    <table style="border-collapse: collapse; width: 100%; max-width: 100%; margin: 15px 0; border: 1px solid #ddd;">
-        <tr>
-            <td style="padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9; font-weight: bold;">Email:</td>
-            <td style="padding: 10px; border: 1px solid #ddd;">${email}</td>
-        </tr>
-        <tr>
-            <td colspan="2" style="padding: 5px; text-align: center; background-color: #f1f1f1; font-weight: bold; color: #555;">──────────</td>
-        </tr>
-        <tr>
-            <td style="padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9; font-weight: bold;">Username:</td>
-            <td style="padding: 10px; border: 1px solid #ddd;">${username}</td>
-        </tr>
-    </table>
-
-    <p style="font-size: 14px; margin: 15px 0;">Your credentials are also attached in the PDF file.</p>
-
-    <p style="font-size: 14px; margin: 10px 0; font-weight: bold; color: #d9534f;">
-        🔒 The password to open the PDF file is your <strong>PAN Card Number</strong>.
-    </p>
-
-    <p style="font-size: 14px; margin: 15px 0;">You can log in using the button below:</p>
-
-    <p style="text-align: center; margin: 20px 0;">
-        <a href="${loginLink}" style="display: inline-block; padding: 12px 25px; background-color: #28a745; color: #fff; font-size: 14px; text-decoration: none; border-radius: 5px;">Login Now</a>
-    </p>
-
-    <p style="font-size: 14px; margin: 15px 0;">Please change your password after logging in for security reasons.</p>
-
-    <p style="font-size: 14px; margin: 20px 0 0; color: #555;">
-        Regards,<br/>
-        <strong>Flowchanger Support Team</strong>
-    </p>
-</div>
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; padding: 20px; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px;">
+                <h2 style="color: #007bff; font-size: 22px;">Your Account Details</h2>
+                <p>Hello ${username},</p>
+                <p>Your account has been created. Please find the attached PDF with your credentials.</p>
+                <p><strong>PDF Password:</strong> Your PAN Card Number</p>
+                <p><a href="${loginLink}" style="padding:10px 20px; background:#28a745; color:#fff; text-decoration:none;">Login Now</a></p>
+                <p>Regards,<br>Flowchanger Support Team</p>
+            </div>
         `;
 
-        // Send the email with PDF attachment
         const mailOptions = {
             from: `"Flowchanger Support" <${process.env.EMAIL_USER}>`,
             to: email,
@@ -178,124 +305,31 @@ const sendEmailWithPdf = async (email, username, password, pdfPassword, loginLin
             ]
         };
 
+        // Send the email (assuming you have configured `transporter`)
         await transporter.sendMail(mailOptions);
 
         console.log('Email with PDF sent successfully');
 
-        // Cleanup the temporary file
+        // Cleanup
         await unlinkAsync(filePath);
 
     } catch (error) {
         console.error('Failed to send email with PDF:', error);
-
-        // Cleanup the temporary file if it exists
         try {
             await unlinkAsync(filePath);
         } catch (cleanupError) {
-            console.warn(`Failed to delete temporary file: ${cleanupError.message}`);
+            console.warn(`Failed to delete temp file: ${cleanupError.message}`);
         }
-
         throw error;
     }
 };
 
-const generateEncryptedPdf = (filePath, username, email, password, pdfPassword) => {
-    return new Promise((resolve, reject) => {
-        const doc = new PDFDocument({
-            size: 'A4',
-            margin: 50,
-            userPassword: pdfPassword,
-            permissions: {
-                printing: 'highResolution',
-                modifying: false,
-                copying: false,
-                annotating: false,
-            }
-        });
-
-        const stream = fs.createWriteStream(filePath);
-        doc.pipe(stream);
-
-        // Header Section (Like Letter Head)
-        doc
-            .fontSize(12)
-            .fillColor('#6c757d')
-            .text('Aggarwal colony - 8A,1st Floor, B Block, Nosegay School Road,', 140, 30, { align: 'right' })
-            .text('Hanumangarh Rd, Sri Ganganagar, Rajasthan 335001', { align: 'right' })
-            .moveDown(0.5)
-            .text('Phone: +91 6378277791 | Email: flowchangeragency@gmail.com', { align: 'right' })
-            .text('Website: www.flowchanger.com', { align: 'right' });
-
-        doc.moveDown(3);
-
-        // Title (Blue and Centered)
-        doc
-            .fillColor('#6c2eb9')
-            .fontSize(18)
-            .text('CONFIDENTIAL LOGIN CREDENTIALS', { align: 'center', underline: true });
-
-        doc.moveDown(2);
-
-        // Body Text
-        doc.fillColor('black').fontSize(12);
-        doc.text(`Dear ${username},`);
-        doc.moveDown();
-        doc.text('We are pleased to share your login credentials for accessing your Flowchanger account.');
-        doc.moveDown();
-
-        doc.font('Helvetica-Bold').text('Login Details:', { underline: true });
-        doc.moveDown(0.5);
-        doc.font('Helvetica').text(`Username: ${username}`, { indent: 20 });
-        doc.text(`Password: ${password}`, { indent: 20 });
-
-        doc.moveDown();
-        doc.text('Please keep these credentials safe and do not share them with anyone.', { indent: 20 });
-        doc.moveDown();
-        doc.text('You can log in using the link below:', { indent: 20 });
-        doc.fillColor('#007bff').text('https://app.flowchanger.com/login', { indent: 20, link: 'https://app.flowchanger.com/login' });
-
-        doc.moveDown(1);
-        doc.fillColor('black').text('If you have any issues logging in, feel free to contact our support team.', { indent: 20 });
-
-        doc.moveDown(3);
-
-        // Footer - Signature Section
-        doc
-            .font('Helvetica-Bold')
-            .text('Warm regards,', { indent: 20 })
-            .moveDown(0.5)
-            .text('Pradeep Kumar', { indent: 20 })
-            .text('Founder & CEO', { indent: 20 })
-            .text('Flowchanger Digital Marketing Agency', { indent: 20 });
-
-        doc.moveDown(1);
-        doc
-            .font('Helvetica')
-            .text('Jasmine', { indent: 20 })
-            .text('Human Resources', { indent: 20 });
-
-        // Footer Contact Info
-        doc
-            .fontSize(10)
-            .fillColor('#6c2eb9')
-            .text('+91 6378277791 | www.flowchanger.com | flowchangeragency@gmail.com', 50, 770, { align: 'center' });
-
-        // Watermark (Flowchanger Faint Text in Background)
-        doc.fillColor('#f2f2f2');
-        doc.fontSize(60).opacity(0.2);
-        doc.rotate(45, { origin: [300, 400] }).text('Flowchanger', 100, 300);
-
-        doc.end();
-
-        stream.on('finish', resolve);
-        stream.on('error', reject);
-    });
-};
 
 
 export {
-    sendEmailWithPdf, sendGeneralMessage,
-    sendLoginCredentialsEmail, sendOtpEmail,
-    sendVerificationLinkEmail
+    sendOtpEmail,
+    sendVerificationLinkEmail,
+    sendGeneralMessage,
+    sendLoginCredentialsEmail,
+    sendEmailWithPdf
 };
-

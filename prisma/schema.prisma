@@ -17,7 +17,7 @@ model User {
   mobile        String?
   profileImage  String?
   role          UserType           @default(STAFF)
-  is_verified   Boolean            @default(false)
+  isVerified    Boolean            @default(false)
   otp           Int?
   otpExpiresAt  DateTime?
   adminDetails  AdminDetails?
@@ -229,14 +229,13 @@ model SuperAdminDetails {
 model AdminDetails {
   id            String          @id @default(dbgenerated("gen_random_uuid()"))
   userId        String          @unique
-  package_id    String?
-  company_name  String?
-  company_logo  String?
-  profile_image String?
-  time_format   String?
-  time_zone     String?
-  date_format   String?
-  week_format   String?
+  companyName   String?
+  companyLogo   String?
+  profileImage  String?
+  timeFormat    String?
+  timeZone      String?
+  dateFormat    String?
+  weekFormat    String?
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   Subscription  Subscription[]
   packageId     String? // Reference to Package model
