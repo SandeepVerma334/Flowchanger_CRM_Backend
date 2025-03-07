@@ -4,7 +4,7 @@ const staffRouter = express.Router();
 
 staffRouter.post("/createStaff", createStaff);
 staffRouter.get("/", getAllStaff);
-staffRouter.get("/:id", getStaffById);
+staffRouter.get("/one", getStaffById);
 staffRouter.put("/:id", updateStaff);
 staffRouter.delete("/:id", deleteStaff);
 

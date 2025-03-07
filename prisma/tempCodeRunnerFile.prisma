@@ -9,49 +9,27 @@ datasource db {
 }
 
 model User {
-  id            String             @id @default(dbgenerated("gen_random_uuid()"))
-  email         String             @unique
-  password      String?
+  id           String             @id @default(dbgenerated("gen_random_uuid()"))
+  email        String             @unique
+  password     String?
   firstName     String?
   lastName      String?
   mobile        String?
-  profileImage  String?
-  role          UserType           @default(STAFF)
-  is_verified   Boolean            @default(false)
-  otp           Int?
-  otpExpiresAt  DateTime?
-  adminDetails  AdminDetails?
-  superAdmin    SuperAdminDetails?
-  adminId       String? // Foreign key to reference a manager User
-  admin         User?              @relation("UserAdmin", fields: [adminId], references: [id], onDelete: Cascade) // One Admin
-  subordinates  User[]             @relation("UserAdmin") // Many subordinates
-  StaffDetails  StaffDetails?
-  Branch        Branch[]
-  Department    Department[]
-  Role          Role[]
+  profileImage String?
+  role         UserType           @default(STAFF)
+  is_verified  Boolean            @default(false)
+  otp          Int?
+  otpExpiresAt DateTime?
+  adminDetails AdminDetails?
+  superAdmin   SuperAdminDetails?
+  adminId      String? // Foreign key to reference a manager User
+  admin        User?              @relation("UserAdmin", fields: [adminId], references: [id], onDelete: Cascade) // One Admin
+  subordinates User[]             @relation("UserAdmin") // Many subordinates
+  StaffDetails StaffDetails?
+  Branch       Branch[]
+  Department   Department[]
+  Role         Role[]
   ClientDetails ClientDetails?
-}
-
-model StaffDetails {
-  id            String     @id @default(dbgenerated("gen_random_uuid()"))
-  userId        String     @unique
-  User          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobTitle      String?
-  loginOtp      Int?
-  gender        String?
-  officialMail  String?
-  dateOfJoining DateTime?
-  dateOfBirth   DateTime?
-  maritalStatus String?
-  address       String?
-  branchId      String
-  departmentId  String
-  roleId        String
-  adminId       String
-  Admin         AdminDetails @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  Branch        Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  Department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  Role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
 }
 
 model Branch {
@@ -213,6 +191,25 @@ model AIPermissions {
   Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
 }
 
+model StaffDetails {
+  id            String     @id @default(dbgenerated("gen_random_uuid()"))
+  userId        String     @unique
+  User          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobTitle      String?
+  mobileNumber  String?
+  loginOtp      Int?
+  gender        String?
+  officialMail  String?
+  dateOfJoining DateTime?
+  address       String?
+  branchId      String
+  departmentId  String
+  roleId        String
+  Branch        Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  Department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  Role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+}
+
 model SuperAdminDetails {
   id        String   @id @default(dbgenerated("gen_random_uuid()"))
   email     String   @unique
@@ -255,8 +252,6 @@ model AdminDetails {
   companySize   String?
   role          String?
   ClientDetails ClientDetails[]
-
-  StaffDetails StaffDetails[]
 }
 
 model ClientDetails {

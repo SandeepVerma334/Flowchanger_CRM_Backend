@@ -1,4 +1,4 @@
-import z from 'zod';
+import z, { optional } from 'zod';
 
 const UnitType = z.enum(["GB", "TB", "MB"]); // Define your enum values accordingly
 const statusType = z.enum(["REFUNDED", "VERIFIED", "PENDING", "FAILED"]); // Define your enum values accordingly
@@ -27,26 +27,35 @@ const DepartmentSchema = z.object({
 });
 
 const staffDetailSchema = z.object({
-  userId: z.string().min(1, "User ID is required"), // Unique and required
-  jobTitle: z.string().min(1, "Job Title is required").optional().nullable(),
-  mobileNumber: z
+  firstName: z.string().optional(),
+  mobile: z
     .string()
     .min(10, "Mobile number must be at least 10 digits")
-    .max(15, "Mobile number cannot exceed 15 digits")
+    .max(15, "Mobile number cannot exceed 15 digits"),
+  officialMail: z.string().email("Invalid email format"),
+  loginOtp: z
+    .string()
+    .regex(/^\d{6}$/, "OTP must be a 6-digit number")
     .optional()
     .nullable(),
-  loginOtp: z.number().min(100000).max(999999).optional().nullable(), // 6-digit OTP
-  gender: z.enum(["Male", "Female", "Other"]).optional().nullable(),
-  officialMail: z.string().email("Invalid email format").optional().nullable(),
+  jobTitle: z.string().min(1, "Job Title is required").optional().nullable(),
+  gender: z.string().optional(),
+  maritalStatus: z.string().optional(),
   dateOfJoining: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date format" })
     .optional()
     .nullable(),
+    dateOfBirth: z
+    .string()
+    .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date format" })
+    .optional()
+    .nullable(),
   address: z.string().min(1, "Address is required").optional().nullable(),
-  branchId: z.string().min(1, "Branch ID is required"), // Foreign key
-  departmentId: z.string().min(1, "Department ID is required"), // Foreign key
-  roleId: z.string().min(1, "Role ID is required"), // Foreign key
+  branchId: z.string().uuid("Branch ID must be a valid UUID"),
+  departmentId: z.string().uuid("Department ID must be a valid UUID"),
+  roleId: z.string().uuid("Role ID must be a valid UUID"),
+  adminId: z.string().uuid("Admin ID must be a valid UUID"),
 });
 
 
