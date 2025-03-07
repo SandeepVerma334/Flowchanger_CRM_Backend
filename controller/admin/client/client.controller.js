@@ -30,29 +30,22 @@ const createClient = async (req, res, next) => {
                 role: "CLIENT",
                 firstName: name,
                 mobile: phoneNumber,
+                adminId: admin.id,
+                clientDetails: {
+                    create: {
+                        adminId: admin.adminDetails.id,
+                        ...restValidation
+                    }
+                }
+            },
+            include: {
+                clientDetails: true
             }
         })
-        const clientDetails = await prisma.clientDetails.upsert(
-            {
-                where: {
-                    userId: client.id
-                },
-                update: {
-                    ...restValidation
-                },
-                create: {
-                    userId: client.id,
-                    adminId: admin.adminDetails.id,
-                    ...restValidation
-                }
-            })
-
         await sendEmailWithPdf(email, validatedData.name, password, validatedData.panNumber, `${process.env.CLIENT_URL}/login`);
         res.status(201).json({
             message: "Client created successfully",
-            data: {
-                client, clientDetails
-            }
+            data: client
         });
 
     } catch (error) {
@@ -67,16 +60,23 @@ const getClients = async (req, res, next) => {
         const { page, limit } = req.query;
 
         const where = {
-            adminId: admin.adminDetails.id
+            role: "CLIENT",
+            adminId: admin.id
         };
 
-        const result = await pagination(prisma.clientDetails, { page, limit, where });
+        const include = {
+            clientDetails: true
+        };
+
+        const result = await pagination(prisma.user, { page, limit, where, include });
 
         if (result.data.length === 0) {
             return res.status(404).json({ message: "No clients found.", data: [] });
         }
 
-        res.status(200).json(result);
+        res.status(200).json({
+            message: "Clients found successfully", ...result
+        });
     } catch (error) {
         next(error);
     }
@@ -116,7 +116,62 @@ const updateClient = async (req, res, next) => {
     }
 }
 
+const getClientById = async (req, res, next) => {
+    try {
+        const id = req.params.id;
+        const admin = await checkAdmin(req.userId);
+        const client = await prisma.user.findUnique({
+            where: { id },
+            include: {
+                clientDetails: true
+            },
+        });
+        if (!client) {
+            return res.status(404).json({ message: "Client not found" });
+        }
+        res.status(200).json({ message: "Client found successfully", data: client });
+    } catch (error) {
+        next(error);
+    }
+}
+
+const searchClientByName = async (req, res, next) => {
+    try {
+        const admin = await checkAdmin(req.userId);
+
+        const { page, limit, name } = req.query;
+
+        if (!name) {
+            return res.status(400).json({ message: "Name query parameter is required" });
+        }
+
+        const where = {
+            role: "CLIENT",
+            firstName: {
+                contains: name,
+                mode: "insensitive" // Case-insensitive search
+            }
+        };
+
+        const include = {
+            clientDetails: true
+        };
+
+        const result = await pagination(prisma.user, { page, limit, where, include });
+
+        if (result.data.length === 0) {
+            return res.status(404).json({ message: "No clients found with this name.", data: [] });
+        }
+
+        res.status(200).json({
+            message: `Clients found successfully matching name: ${name}`,
+            ...result
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
 
 
-
-export { createClient, getClients, updateClient };
+export { createClient, getClients, updateClient, getClientById, searchClientByName };
