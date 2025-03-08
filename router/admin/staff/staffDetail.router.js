@@ -3,7 +3,7 @@ import { createStaff, getAllStaff, getStaffById, updateStaff, deleteStaff  } fro
 import { authorizationMiddleware } from "../../../middleware/auth.js";
 const staffRouter = express.Router();
 
-staffRouter.post("/createStaff", authorizationMiddleware, createStaff);
+staffRouter.post("/", authorizationMiddleware, createStaff);
 staffRouter.get("/", authorizationMiddleware, getAllStaff);
 staffRouter.get("/one", authorizationMiddleware, getStaffById);
 staffRouter.put("/:id", authorizationMiddleware, updateStaff);

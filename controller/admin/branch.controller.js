@@ -37,9 +37,9 @@ const createBranch = async (req, res) => {
         });
         res.status(200).json({ branch });
     } catch (error) {
-        if (error instanceof ZodError) {
-            return res.status(400).json({ error: error.message });
-        }
+        // if (error instanceof ZodError) {
+        //     return res.status(400).json({ error: error.message });
+        // }
         res.status(400).json({ error: error.message });
     }
 }

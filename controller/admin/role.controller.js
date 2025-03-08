@@ -1,5 +1,5 @@
 import prisma from "../../prisma/prisma.js";
-const { idSchema, newRoleSchema, updateRoleSchema } = require("../../utils/validation.js");
+import { idSchema, newRoleSchema, updateRoleSchema } from "../../utils/validation.js";
 
 const fetchRole = async (req, res) => {
     try {

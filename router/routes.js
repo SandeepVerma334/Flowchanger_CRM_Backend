@@ -10,6 +10,7 @@ import subscriptionRouter from "./superAdmin/subscription.router.js";
 import superAdminRouter from "./superAdmin/superAdmin.router.js";
 import transactionRouter from "./superAdmin/transaction.router.js";
 import clientRouter from "./client/client.router.js";
+import roleRouter from "./admin/role.router.js";
 
 rootRouter.use("/branch", branchRouter);
 rootRouter.use("/department", departmentRouter);
@@ -20,4 +21,5 @@ rootRouter.use("/package", packageRouter);
 rootRouter.use("/subscription", subscriptionRouter);
 rootRouter.use("/admin", adminSignup);
 rootRouter.use("/client", clientRouter);
+rootRouter.use("/role", roleRouter);
 export default rootRouter;

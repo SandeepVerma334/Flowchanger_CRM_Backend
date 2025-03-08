@@ -28,17 +28,16 @@ const DepartmentSchema = z.object({
 
 const staffDetailSchema = z.object({
   firstName: z.string().optional(),
+  lastName: z.string().optional(),
   mobile: z
     .string()
     .min(10, "Mobile number must be at least 10 digits")
     .max(15, "Mobile number cannot exceed 15 digits"),
   officialMail: z.string().email("Invalid email format"),
-  loginOtp: z
-    .string()
-    .regex(/^\d{6}$/, "OTP must be a 6-digit number")
-    .optional()
-    .nullable(),
+  loginOtp: z.number().optional(),
   jobTitle: z.string().min(1, "Job Title is required").optional().nullable(),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  employeeId: z.string().optional(),
   gender: z.string().optional(),
   maritalStatus: z.string().optional(),
   dateOfJoining: z
@@ -55,7 +54,7 @@ const staffDetailSchema = z.object({
   branchId: z.string().uuid("Branch ID must be a valid UUID"),
   departmentId: z.string().uuid("Department ID must be a valid UUID"),
   roleId: z.string().uuid("Role ID must be a valid UUID"),
-  adminId: z.string().uuid("Admin ID must be a valid UUID"),
+  adminId: z.string().optional(),
 });
 
 
