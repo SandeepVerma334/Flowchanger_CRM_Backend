@@ -55,9 +55,11 @@ const updateAdminProfile = async (req, res, next) => {
             businessType,
             services,
             companySize,
-            role
+            role,
+            packageId
         } = req.body;
 
+        // Find the user by email
         const user = await prisma.user.findUnique({
             where: { email: email }
         });
@@ -65,14 +67,6 @@ const updateAdminProfile = async (req, res, next) => {
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
-
-        // Update User fields
-        const updatedUser = await prisma.user.update({
-            where: { email },
-            data: {
-                mobile
-            }
-        });
 
         // Upsert AdminDetails (create if missing, update if exists)
         const updatedAdminDetails = await prisma.adminDetails.upsert({
@@ -90,7 +84,8 @@ const updateAdminProfile = async (req, res, next) => {
                 businessType,
                 services,
                 companySize,
-                role
+                role,
+                packageId
             },
             create: {
                 userId: user.id,
@@ -106,13 +101,14 @@ const updateAdminProfile = async (req, res, next) => {
                 businessType,
                 services,
                 companySize,
-                role
+                role,
+                packageId
             }
         });
 
         res.status(200).json({
             message: "Admin profile updated successfully",
-            user: updatedUser,
+            // user: updatedUser,
             adminDetails: updatedAdminDetails
         });
 
@@ -120,6 +116,7 @@ const updateAdminProfile = async (req, res, next) => {
         next(error);
     }
 };
+
 
 const adminLogin = async (req, res, next) => {
     try {
@@ -209,7 +206,11 @@ const getAllUsers = async (req, res, next) => {
                 role: "ADMIN"
             },
             include: {
-                adminDetails: true
+                adminDetails: {
+                    include: {
+                        package: true
+                    }
+                },
             },
             skip: (page - 1) * pageSize,
             take: parseInt(pageSize),

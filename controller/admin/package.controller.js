@@ -6,14 +6,15 @@ export const createPackage = async (req, res, next) => {
     try {
         // Validate request body
         const validatedData = packageSchema.parse(req.body);
-
+console.log(validatedData);
         // Check if admin exists
-        const adminExists = await prisma.adminDetails.findUnique({
-            where: { userId: validatedData.adminId },
-        });
-        if (!adminExists) {
-            return res.status(404).json({ error: "Admin not found" });
-        }
+        // const adminExists = await prisma.adminDetails.findUnique({
+        //     where: { id: validatedData.adminId },
+        // });
+        // console.log(adminExists);
+        // if (!adminExists) {
+        //     return res.status(404).json({ error: "Admin not found" });
+        // }
 
         // Create or connect modules dynamically
         const modules = await Promise.all(
@@ -38,7 +39,7 @@ export const createPackage = async (req, res, next) => {
                 numberOfClients: validatedData.numberOfClients,
                 validityTerms: validatedData.validityTerms,
                 description: validatedData.description,
-                adminId: validatedData.adminId,
+                // adminId: validatedData.adminId,
                 modules: {
                     connect: modules.map((module) => ({ id: module.id })),
                 },

@@ -12,7 +12,8 @@ CREATE TABLE "User" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "email" TEXT NOT NULL,
     "password" TEXT,
-    "name" TEXT,
+    "firstName" TEXT,
+    "lastName" TEXT,
     "mobile" TEXT,
     "profileImage" TEXT,
     "role" "UserType" NOT NULL DEFAULT 'STAFF',
@@ -20,6 +21,7 @@ CREATE TABLE "User" (
     "otp" INTEGER,
     "otpExpiresAt" TIMESTAMP(3),
     "adminId" TEXT,
+    "packageId" TEXT,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -359,6 +361,9 @@ CREATE TABLE "_ModuleToPackage" (
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "User_adminId_key" ON "User"("adminId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Permissions_roleId_key" ON "Permissions"("roleId");
 
 -- CreateIndex
@@ -417,6 +422,9 @@ CREATE INDEX "_ModuleToPackage_B_index" ON "_ModuleToPackage"("B");
 
 -- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "User" ADD CONSTRAINT "User_packageId_fkey" FOREIGN KEY ("packageId") REFERENCES "Package"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Branch" ADD CONSTRAINT "Branch_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -3,33 +3,37 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id           String             @id @default(dbgenerated("gen_random_uuid()"))
-  email        String             @unique
-  password     String?
+  id            String             @id @default(dbgenerated("gen_random_uuid()"))
+  email         String             @unique
+  password      String?
   firstName     String?
   lastName      String?
   mobile        String?
-  profileImage String?
-  role         UserType           @default(STAFF)
-  is_verified  Boolean            @default(false)
-  otp          Int?
-  otpExpiresAt DateTime?
-  adminDetails AdminDetails?
-  superAdmin   SuperAdminDetails?
-  adminId      String? // Foreign key to reference a manager User
-  admin        User?              @relation("UserAdmin", fields: [adminId], references: [id], onDelete: Cascade) // One Admin
-  subordinates User[]             @relation("UserAdmin") // Many subordinates
-  StaffDetails StaffDetails?
-  Branch       Branch[]
-  Department   Department[]
-  Role         Role[]
+  profileImage  String?
+  role          UserType           @default(STAFF)
+  is_verified   Boolean            @default(false)
+  otp           Int?
+  otpExpiresAt  DateTime?
+  adminDetails  AdminDetails?
+  superAdmin    SuperAdminDetails?
+  adminId       String?            @unique @map("adminId") // Foreign key to reference a manager User
+  admin         User?              @relation("UserAdmin", fields: [adminId], references: [id], onDelete: Cascade) // One Admin
+  subordinates  User[]             @relation("UserAdmin") // Many subordinates
+  StaffDetails  StaffDetails?
+  Branch        Branch[]
+  Department    Department[]
+  Role          Role[]
   ClientDetails ClientDetails?
+  packageId     String?
+  package       Package?           @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  // adminId       String?            @unique @map("admin_id") // Ensure correct relation
+  // admin         AdminDetails?      @relation(fields: [adminId], references: [id])
 }
 
 model Branch {
@@ -226,7 +230,6 @@ model SuperAdminDetails {
 model AdminDetails {
   id            String          @id @default(dbgenerated("gen_random_uuid()"))
   userId        String          @unique
-  package_id    String?
   company_name  String?
   company_logo  String?
   profile_image String?
@@ -312,6 +315,11 @@ model Package {
   adminId          String?
   adminDetails     AdminDetails[]
   Subscription     Subscription[]
+  User             User[]
+}
+
+model Project {
+  id String @id @default(uuid())
 }
 
 model Module {
