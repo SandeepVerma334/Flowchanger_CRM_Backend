@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 
 const createStaff = async (req, res) => {
   const validation = staffDetailSchema.safeParse(req.body);
-  console.log("Validation:", validation);
+  // console.log("Validation:", validation);
 
   if (!validation.success) {
     return res.status(400).json({
@@ -31,9 +31,9 @@ const createStaff = async (req, res) => {
     branchId,
     departmentId,
     roleId,
-    adminId,
+    employeeId,
   } = validation.data;
-  console.log(validation.data);
+  // console.log(validation.data);
 
   try {
     // Check if email already exists
@@ -67,7 +67,7 @@ const createStaff = async (req, res) => {
     }
 
     // Generate unique employee ID
-    const uniqueEmployeeId = `FLOW#${uuidv4().replace(/-/g, "").substring(0, 5)}`;
+    const uniqueEmployeeId = `FLOW#-${new Date().getTime()}-${uuidv4().replace(/-/g, "").substring(0, 5)}`;
 
     // Create new staff user
     const user = await prisma.user.create({
@@ -95,6 +95,13 @@ const createStaff = async (req, res) => {
             departmentId,
             roleId,
             employeeId: uniqueEmployeeId,
+          },
+        },
+      },
+      include: {
+        StaffDetails: {
+          select: {
+            employeeId: true, // Include employeeId in the response
           },
         },
       },
@@ -159,11 +166,11 @@ const getStaffById = async (req, res) => {
     const staff = await prisma.user.findUnique({
       where: { id: req.userId },
       include: {
-        staffDetails: {
+        StaffDetails: {
           include: {
             Role: true,
             Department: true,
-            Role: true,
+            Branch: true, // Added Branch for consistency with updateStaff
           },
         },
       },
@@ -226,26 +233,24 @@ const updateStaff = async (req, res) => {
     console.error("Error updating staff by ID:", error);
     res.status(500).json({ error: "Failed to update staff by ID" });
   }
-}
-
+};
 
 // Delete Staff by ID
 const deleteStaff = async (req, res) => {
-  const { id } = req.params;
-
+  const { id } = req.params; // 'id' represents the user's id
   try {
-    // Check if staff exists
+    // Check if staff exists by looking up the staff details via userId
     const existingStaff = await prisma.staffDetails.findUnique({
-      where: { id },
+      where: { userId: id },
     });
 
     if (!existingStaff) {
       return res.status(404).json({ error: "Staff not found" });
     }
 
-    // Delete the staff details first
+    // Delete the staff details first using userId
     await prisma.staffDetails.delete({
-      where: { id },
+      where: { userId: id },
     });
 
     // Delete the user record associated with the staff
@@ -272,19 +277,23 @@ const searchStaff = async (req, res) => {
   const { search } = req.query;
 
   try {
-    const staff = await prisma.staffDetails.findMany({
+    const staff = await prisma.user.findMany({
       where: {
+        role: "STAFF",
         OR: [
-          { firstName: { contains: search } },
-          { email: { contains: search } },
-          { mobile: { contains: search } },
+          { firstName: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } },
+          { mobile: { contains: search, mode: "insensitive" } },
         ],
       },
       include: {
-        User: true,
-        Role: true,
-        Department: true,
-        Branch: true,
+        StaffDetails: {
+          include: {
+            Role: true,
+            Department: true,
+            Branch: true,
+          },
+        },
       },
     });
 
@@ -293,6 +302,6 @@ const searchStaff = async (req, res) => {
     console.error("Error searching staff:", error);
     res.status(500).json({ error: "Failed to search staff" });
   }
-}
+};
 
-export { createStaff, getAllStaff, getStaffById, updateStaff, deleteStaff };
+export { createStaff, getAllStaff, getStaffById, updateStaff, deleteStaff, searchStaff };
