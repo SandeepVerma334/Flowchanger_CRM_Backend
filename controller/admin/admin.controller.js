@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import prisma from "../../prisma/prisma.js";
 import { adminSignupSchema } from "../../utils/validation.js";
 import { sendOtpEmail } from '../../utils/emailService.js';
+import { pagination } from '../../utils/pagination.js';
 
 const adminSignup = async (req, res, next) => {
     try {
@@ -31,6 +32,7 @@ const adminSignup = async (req, res, next) => {
         // Return response
         res.status(201).json({
             message: "User created successfully",
+            data: newUser
         });
 
     } catch (error) {
@@ -43,8 +45,8 @@ const updateAdminProfile = async (req, res, next) => {
         const {
             email,
             mobile,
-            company_name,
-            time_zone,
+            companyName,
+            timeZone,
             address,
             city,
             state,
@@ -56,9 +58,12 @@ const updateAdminProfile = async (req, res, next) => {
             services,
             companySize,
             role,
+            password,
             packageId
         } = req.body;
 
+
+        console.log(companyName,password, timeZone, address, city, state, zipCode, country, gender, designation, businessType, services, companySize, role)
         // Find the user by email
         const user = await prisma.user.findUnique({
             where: { email: email }
@@ -68,48 +73,38 @@ const updateAdminProfile = async (req, res, next) => {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Upsert AdminDetails (create if missing, update if exists)
-        const updatedAdminDetails = await prisma.adminDetails.upsert({
-            where: { userId: user.id },  // unique userId in AdminDetails
-            update: {
-                company_name,
-                time_zone,
-                address,
-                city,
-                state,
-                zipCode,
-                country,
-                gender,
-                designation,
-                businessType,
-                services,
-                companySize,
-                role,
-                packageId
+        // Update User fields
+        const updatedUser = await prisma.user.update({
+            where: { email },
+            data: {
+                mobile,
+                password,
+                adminDetails: {
+                    create: {
+                        companyName,
+                        timeZone,
+                        address,
+                        city,
+                        state,
+                        zipCode,
+                        country,
+                        gender,
+                        designation,
+                        businessType,
+                        services,
+                        companySize,
+                        role
+                    }
+                }
             },
-            create: {
-                userId: user.id,
-                company_name,
-                time_zone,
-                address,
-                city,
-                state,
-                zipCode,
-                country,
-                gender,
-                designation,
-                businessType,
-                services,
-                companySize,
-                role,
-                packageId
+            include: {
+                adminDetails: true
             }
         });
 
         res.status(200).json({
             message: "Admin profile updated successfully",
-            // user: updatedUser,
-            adminDetails: updatedAdminDetails
+            data: updatedUser,
         });
 
     } catch (error) {
@@ -173,7 +168,7 @@ const verifyOTP = async (req, res, next) => {
             await prisma.user.update({
                 where: { email },
                 data: {
-                    is_verified: true,
+                    isVerified: true,
                     otp: null,               // Clear OTP after verification
                     otpExpiresAt: null       // Clear expiry after verification
                 },
@@ -200,36 +195,24 @@ const sendOTP = async (req, res, next) => {
 
 const getAllUsers = async (req, res, next) => {
     try {
-        const { page = 1, pageSize = 10 } = req.query;
-        const users = await prisma.user.findMany({
-            where: {
-                role: "ADMIN"
-            },
-            include: {
-                adminDetails: {
-                    include: {
-                        package: true
-                    }
-                },
-            },
-            skip: (page - 1) * pageSize,
-            take: parseInt(pageSize),
-        });
+        const { page, limit } = req.query;
 
-        const totalUsers = await prisma.user.count({
-            where: {
-                role: "ADMIN"
-            }
-        });
+        const where = {
+            role: "ADMIN",
+        };
+
+        const include = {
+            adminDetails: true
+        };
+
+        const result = await pagination(prisma.user, { page, limit, where, include });
+
+        if (result.data.length === 0) {
+            return res.status(404).json({ message: "No Admin found.", data: [] });
+        }
 
         res.status(200).json({
-            users,
-            pagination: {
-                page: parseInt(page),
-                pageSize: parseInt(pageSize),
-                totalUsers,
-                totalPages: Math.ceil(totalUsers / pageSize),
-            }
+            message: "Admin found successfully", ...result
         });
     } catch (error) {
         next(error);

@@ -3,62 +3,33 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  // directUrl = env("DIRECT_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id            String             @id @default(dbgenerated("gen_random_uuid()"))
-  email         String             @unique
-  password      String?
+  id           String             @id @default(dbgenerated("gen_random_uuid()"))
+  email        String             @unique
+  password     String?
   firstName     String?
   lastName      String?
   mobile        String?
-  profileImage  String?
-  role          UserType           @default(STAFF)
-  isVerified    Boolean            @default(false)
-  otp           Int?
-  otpExpiresAt  DateTime?
-  adminDetails  AdminDetails?
-  superAdmin    SuperAdminDetails?
-  adminId       String? // Foreign key to reference a manager User
-  admin         User?              @relation("UserAdmin", fields: [adminId], references: [id], onDelete: Cascade) // One Admin
-  subordinates  User[]             @relation("UserAdmin") // Many subordinates
-  StaffDetails  StaffDetails?
-  Branch        Branch[]
-  Department    Department[]
-  Role          Role[]
+  profileImage String?
+  role         UserType           @default(STAFF)
+  is_verified  Boolean            @default(false)
+  otp          Int?
+  otpExpiresAt DateTime?
+  adminDetails AdminDetails?
+  superAdmin   SuperAdminDetails?
+  adminId      String? // Foreign key to reference a manager User
+  admin        User?              @relation("UserAdmin", fields: [adminId], references: [id], onDelete: Cascade) // One Admin
+  subordinates User[]             @relation("UserAdmin") // Many subordinates
+  StaffDetails StaffDetails?
+  Branch       Branch[]
+  Department   Department[]
+  Role         Role[]
   ClientDetails ClientDetails?
-  packageId     String?
-  package       Package?           @relation(fields: [packageId], references: [id], onDelete: SetNull)
-  // adminId       String?            @unique @map("admin_id") // Ensure correct relation
-  // admin         AdminDetails?      @relation(fields: [adminId], references: [id])
-}
-
-model StaffDetails {
-  id            String     @id @default(dbgenerated("gen_random_uuid()"))
-  userId        String     @unique
-  User          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobTitle      String?
-  loginOtp      Int?
-  gender        String?
-  officialMail  String?
-  dateOfJoining DateTime?
-  dateOfBirth   DateTime?
-  employeeId    String?
-  maritalStatus String?
-  address       String?
-  branchId      String
-  departmentId  String
-  roleId        String
-  // adminId       String
-  // Admin         AdminDetails @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  Branch        Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  Department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  Role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  Project       Project?   @relation(fields: [projectId], references: [id])
-  projectId     String?
 }
 
 model Branch {
@@ -130,7 +101,6 @@ model ProjectsPermissions {
   created_at    DateTime     @default(now())
   updated_at    DateTime     @updatedAt
   Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
-  Project       Project[]
 }
 
 model ReportPermissions {
@@ -221,6 +191,25 @@ model AIPermissions {
   Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
 }
 
+model StaffDetails {
+  id            String     @id @default(dbgenerated("gen_random_uuid()"))
+  userId        String     @unique
+  User          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobTitle      String?
+  mobileNumber  String?
+  loginOtp      Int?
+  gender        String?
+  officialMail  String?
+  dateOfJoining DateTime?
+  address       String?
+  branchId      String
+  departmentId  String
+  roleId        String
+  Branch        Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  Department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  Role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+}
+
 model SuperAdminDetails {
   id        String   @id @default(dbgenerated("gen_random_uuid()"))
   email     String   @unique
@@ -237,13 +226,14 @@ model SuperAdminDetails {
 model AdminDetails {
   id            String          @id @default(dbgenerated("gen_random_uuid()"))
   userId        String          @unique
-  companyName   String?
-  companyLogo   String?
-  profileImage  String?
-  timeFormat    String?
-  timeZone      String?
-  dateFormat    String?
-  weekFormat    String?
+  package_id    String?
+  company_name  String?
+  company_logo  String?
+  profile_image String?
+  time_format   String?
+  time_zone     String?
+  date_format   String?
+  week_format   String?
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   Subscription  Subscription[]
   packageId     String? // Reference to Package model
@@ -284,53 +274,6 @@ model ClientDetails {
   adminDetails     AdminDetails? @relation(fields: [adminId], references: [id], onDelete: Cascade)
   userId           String        @unique
   user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Project          Project[]
-}
-
-model Project {
-  id                    String               @id @default(uuid())
-  projectName           String               @db.VarChar(255)
-  customer              String               @db.VarChar(255)
-  progressBar           Int?
-  estimatedHours        Int?
-  members               StaffDetails[]
-  startDate             DateTime
-  deadline              DateTime
-  description           String               @db.Text
-  sendMail              Boolean?
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
-  // One-to-One Relation with ProjectPermissions
-  ProjectsPermissions   ProjectsPermissions? @relation(fields: [projectsPermissionsId], references: [id], onDelete: Cascade)
-  projectsPermissionsId String?
-  clientId              String?
-  client                ClientDetails?       @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  contactNotifications  String[]
-  visibleTabs           String[]
-  ProjectPermissions    ProjectPermissions[]
-}
-
-model ProjectPermissions {
-  id                                      String   @id @default(uuid())
-  allowCustomerToViewTasks                Boolean?
-  allowCustomerToCreateTasks              Boolean?
-  allowCustomerToEditTasks                Boolean?
-  allowCustomerToCommentOnProjectTasks    Boolean?
-  allowCustomerToViewTaskComments         Boolean?
-  allowCustomerToViewTaskAttachments      Boolean?
-  allowCustomerToViewTaskChecklistItems   Boolean?
-  allowCustomerToUploadAttachmentsOnTasks Boolean?
-  allowCustomerToViewTaskTotalLoggedTime  Boolean?
-  allowCustomerToViewFinanceOverview      Boolean?
-  allowCustomerToUploadFiles              Boolean?
-  allowCustomerToOpenDiscussions          Boolean?
-  allowCustomerToViewMilestones           Boolean?
-  allowCustomerToViewGantt                Boolean?
-  allowCustomerToViewTimesheets           Boolean?
-  allowCustomerToViewActivityLog          Boolean?
-  allowCustomerToViewTeamMembers          Boolean?
-  project                                 Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId                               String?
 }
 
 model Subscription {
@@ -369,7 +312,6 @@ model Package {
   adminId          String?
   adminDetails     AdminDetails[]
   Subscription     Subscription[]
-  User             User[]
 }
 
 model Module {

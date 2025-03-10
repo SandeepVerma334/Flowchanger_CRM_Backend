@@ -1,5 +1,8 @@
 import nodemailer from 'nodemailer';
-//  .env file import
+import PDFDocument from 'pdfkit';
+import fs from 'fs';
+import { promisify } from 'util';
+import axios from 'axios';
 import dotenv from 'dotenv';
 import prisma from '../prisma/prisma.js';
 dotenv.config();
@@ -13,6 +16,97 @@ const transporter = nodemailer.createTransport({
         pass: process.env.EMAIL_PASS    // App password or SMTP password
     }
 });
+
+// send mail with pdf attachment
+const unlinkAsync = promisify(fs.unlink);
+
+const sendEmailWithPdf = async (email, username, password, pdfPassword, loginLink) => {
+    const filePath = `./${username}.pdf`; // ✅ Fixed path syntax
+
+    try {
+        await createCredentialPdf(filePath, username, email, password, pdfPassword, loginLink);
+
+        const pdfBuffer = await fs.promises.readFile(filePath);
+
+        const htmlContent = `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; padding: 20px; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px;">
+                <h2 style="color: #007bff; font-size: 22px;">Your Account Details</h2>
+                <p>Hello <strong>${username}</strong>,</p>
+                <p>Your account has been created. Please find the attached PDF with your credentials.</p>
+                <p><strong>PDF Password:</strong> Your PAN Card Number</p>
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="${loginLink}" 
+                       style="padding:10px 20px; background:#28a745; color:#fff; text-decoration:none; border-radius: 5px; font-size: 16px;">
+                       Login Now
+                    </a>
+                </div>
+                <p>Regards,<br><strong>Flowchanger Support Team</strong></p>
+            </div>
+        `;
+
+        const mailOptions = {
+            from: `"Flowchanger Support" <${process.env.EMAIL_USER}>`, // ✅ Fixed sender format
+            to: email,
+            subject: "Your Flowchanger Account Details (PDF Attached)",
+            html: htmlContent,
+            attachments: [
+                {
+                    filename: `${username}.pdf`,
+                    content: pdfBuffer,
+                    contentType: "application/pdf"
+                }
+            ]
+        };
+
+        // Send the email
+        await transporter.sendMail(mailOptions);
+
+        console.log("✅ Email with PDF sent successfully");
+
+        // Cleanup: Delete the temporary PDF
+        await unlinkAsync(filePath);
+
+    } catch (error) {
+        console.error("❌ Failed to send email with PDF:", error);
+
+        // Cleanup: Delete the file if sending fails
+        try {
+            await unlinkAsync(filePath);
+        } catch (cleanupError) {
+            console.warn(`⚠️ Failed to delete temp file: ${cleanupError.message}`);
+        }
+
+        throw error;
+    }
+};
+
+// send email login creadential
+const sendLoginCredentialsEmail = async (email, password, loginLink) => {
+    const message = `
+        <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+            <h2>Your Account Details</h2>
+            <p>Hello,</p>
+            <p>Your account has been created successfully. Below are your login credentials:</p>
+            <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;"><strong>Email:</strong></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${email}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;"><strong>Password:</strong></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${password}</td>
+                </tr>
+            </table>
+            <p>You can log in using the button below:</p>
+            <a href="${loginLink}" style="display:inline-block; padding:10px 20px; background-color: #532D94; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">Login Now</a>
+            <p>Please change your password after logging in for security reasons.</p>
+            <p>Regards,<br/>Flowchanger Support Team</p>
+        </div>
+    `;
+
+    await sendEmail(email, 'Your Flowchanger Account Details', message);
+};
+
 
 // Reusable email sender
 const sendEmail = async (to, subject, htmlContent) => {
@@ -163,10 +257,13 @@ const sendInviteToAdminMail = async (email) => {
 
 
 
+
 export {
     sendOtpEmail,
     sendVerificationLinkEmail,
     sendGeneralMessage,
     sendPasswordResetAndForgotEmail,
-    sendInviteToAdminMail
+    sendInviteToAdminMail,
+    sendLoginCredentialsEmail,
+    sendEmailWithPdf
 };

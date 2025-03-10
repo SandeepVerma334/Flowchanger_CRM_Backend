@@ -1,31 +1,74 @@
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import prisma from "../../prisma/prisma.js";
-import { adminSignupSchema } from "../../utils/validation.js";
-import { sendOtpEmail } from '../../utils/emailService.js';
-
-// create project
-
-const createProject = async (req, res, next) => {
+import prisma from "../../../prisma/prisma.js";
+import { projectSchema } from "../../../utils/validation.js";
+// import sendEmail from "../../../utils/sendEmail.js";
+const createProject = async (req, res) => {
     try {
-        const validatedData = adminSignupSchema.parse(req.body);
-        const user = await prisma.user.findUnique({
-            where: {
-                email: validatedData.email
-            }
+        // Validate input data
+        const validatedData = projectSchema.parse(req.body);
+        
+        // Check if the admin exists and has the right role
+        const admin = await prisma.user.findUnique({
+            where: { id: req.userId }
         });
-        if (user) {
-            return res.status(400).json({ message: "User already exists" });
+
+        if (!admin) {
+            return res.status(400).json({
+                status: false,
+                message: "Admin not found",
+            });
         }
-        const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(validatedData.password, saltRounds);
-        const newUser = await prisma.user.create({
-            data: { ...validatedData, role: "ADMIN", password: hashedPassword },
+
+        if (admin.role !== "ADMIN") {
+            return res.status(403).json({
+                status: false,
+                message: "Unauthorized access",
+            });
+        }
+
+        // Destructure necessary fields
+        const { 
+            projectName, customer, progressBar, estimatedHours, startDate, deadline, description, sendMail, 
+            contactNotifications, visibleTabs, 
+            permissions 
+        } = validatedData;
+
+        // Create the project with nested permissions
+        const project = await prisma.project.create({
+            data: {
+                projectName,
+                customer,
+                progressBar,
+                estimatedHours,
+                startDate,
+                deadline,
+                description,
+                sendMail,
+                contactNotifications,  // Array field
+                visibleTabs,  // Array field
+                ProjectPermissions: {
+                    create: {
+                        ...permissions // Spread permissions object
+                    }
+                }
+            },
+            include: { ProjectPermissions: true } // Include permissions in response
         });
+
+        // Return success response
         res.status(201).json({
-            message: "User created successfully",
+            status: true,
+            message: "Project created successfully",
+            data: project
         });
+
     } catch (error) {
-        next(error);
+        console.error("Error creating project:", error);
+        res.status(500).json({
+            status: false,
+            message: "Failed to create project",
+            error: error.message
+        });
     }
 };
+
+export { createProject };

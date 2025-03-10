@@ -1,4 +1,4 @@
-import z from 'zod';
+import z, { optional } from 'zod';
 
 const UnitType = z.enum(["GB", "TB", "MB"]); // Define your enum values accordingly
 const statusType = z.enum(["REFUNDED", "VERIFIED", "PENDING", "FAILED"]); // Define your enum values accordingly
@@ -23,30 +23,38 @@ const BranchSchema = z.object({
 });
 
 const DepartmentSchema = z.object({
-  departmentName: z.string().min(1, "Department Name is required"),
+  department_name: z.string().min(1, "Department Name is required"),
 });
 
 const staffDetailSchema = z.object({
-  userId: z.string().min(1, "User ID is required"), // Unique and required
-  jobTitle: z.string().min(1, "Job Title is required").optional().nullable(),
-  mobileNumber: z
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  mobile: z
     .string()
     .min(10, "Mobile number must be at least 10 digits")
-    .max(15, "Mobile number cannot exceed 15 digits")
-    .optional()
-    .nullable(),
-  loginOtp: z.number().min(100000).max(999999).optional().nullable(), // 6-digit OTP
-  gender: z.enum(["Male", "Female", "Other"]).optional().nullable(),
-  officialMail: z.string().email("Invalid email format").optional().nullable(),
+    .max(15, "Mobile number cannot exceed 15 digits"),
+  officialMail: z.string().email("Invalid email format"),
+  loginOtp: z.number().optional(),
+  jobTitle: z.string().min(1, "Job Title is required").optional().nullable(),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  employeeId: z.string().optional(),
+  gender: z.string().optional(),
+  maritalStatus: z.string().optional(),
   dateOfJoining: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date format" })
     .optional()
     .nullable(),
+    dateOfBirth: z
+    .string()
+    .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date format" })
+    .optional()
+    .nullable(),
   address: z.string().min(1, "Address is required").optional().nullable(),
-  branchId: z.string().min(1, "Branch ID is required"), // Foreign key
-  departmentId: z.string().min(1, "Department ID is required"), // Foreign key
-  roleId: z.string().min(1, "Role ID is required"), // Foreign key
+  branchId: z.string().uuid("Branch ID must be a valid UUID"),
+  departmentId: z.string().uuid("Department ID must be a valid UUID"),
+  roleId: z.string().uuid("Role ID must be a valid UUID"),
+  adminId: z.string().optional(),
 });
 
 
@@ -75,8 +83,8 @@ export const adminSignupSchema = z.object({
   firstName: z.string({ required_error: "First Name is required" }).min(3, "First name must be at least 3 characters"),
   lastName: z.string({ required_error: "Last Name is required" }).min(3, "Last name must be at least 3 characters"),
   email: z.string({ required_error: "Email is required" }).email("Invalid email format"),
-  date_Of_Birth: z.string().optional(),
-  date_Of_Joining: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  dateOfJoining: z.string().optional(),
   gender: z.enum(["Male", "Female", "Other"]).optional(),
   mobile: z.string({ required_error: "Mobile number is required" }).min(10, "Mobile number must be at least 10 digits").optional(),
   designation: z.string().optional(),
@@ -193,8 +201,110 @@ const clientSchema = z.object({
   addressLine: z.string().optional()
 });
 
-// create project validations
+const allPermissionSchema = z.object({
+  clients_permissions: z
+    .object({
+      create: z.boolean().default(false).optional(),
+      edit: z.boolean().default(false).optional(),
+      delete: z.boolean().default(false).optional(),
+      view_global: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  projects_permissions: z
+    .object({
+      create: z.boolean().default(false).optional(),
+      edit: z.boolean().default(false).optional(),
+      delete: z.boolean().default(false).optional(),
+      view_global: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  report_permissions: z
+    .object({
+      view_global: z.boolean().default(false).optional(),
+      view_time_sheets: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  staff_role_permissions: z
+    .object({
+      create: z.boolean().default(false).optional(),
+      edit: z.boolean().default(false).optional(),
+      delete: z.boolean().default(false).optional(),
+      view_global: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  settings_permissions: z
+    .object({
+      view_global: z.boolean().default(false).optional(),
+      view_time_sheets: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  staff_permissions: z
+    .object({
+      create: z.boolean().default(false).optional(),
+      edit: z.boolean().default(false).optional(),
+      delete: z.boolean().default(false).optional(),
+      view_global: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  task_permissions: z
+    .object({
+      create: z.boolean().default(false).optional(),
+      edit: z.boolean().default(false).optional(),
+      delete: z.boolean().default(false).optional(),
+      view_global: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  sub_task_permissions: z
+    .object({
+      create: z.boolean().default(false).optional(),
+      edit: z.boolean().default(false).optional(),
+      delete: z.boolean().default(false).optional(),
+      view_global: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  chat_module_permissions: z
+    .object({
+      grant_access: z.boolean().default(false).optional(),
+    })
+    .optional(),
+  ai_permissions: z
+    .object({
+      grant_access: z.boolean().default(false).optional(),
+    })
+    .optional(),
+});
 
+const idSchema = z.string().uuid("Invalid UUID format");
 
+const roleNameSchema = z
+  .string()
+  .regex(/^[a-zA-Z\s]+$/, "Role name can only contain alphabets and spaces");
 
-export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema };
+const newRoleSchema = z.object({
+  roleName: roleNameSchema.min(2, "role name is required"),
+  permissions: allPermissionSchema.optional(),
+});
+
+const updateRoleSchema = z.object({
+  role_name: roleNameSchema.optional(),
+  permissions: allPermissionSchema.optional(),
+});
+
+// Define project schema
+const projectSchema = z.object({
+  projectName: z.string().min(3, "Project name must be at least 3 characters long"),
+  customer: z.string().min(1, "Customer is required"),
+  progressBar: z.number().optional(),
+  estimatedHours: z.number().optional(),
+  members: z.array(z.string()).optional(), // Ensure members are an array of strings (IDs)
+  startDate: z.string().refine(date => !isNaN(Date.parse(date)), "Invalid start date"),
+  deadline: z.string().refine(date => !isNaN(Date.parse(date)), "Invalid deadline"),
+  description: z.string().min(10, "Description must be at least 10 characters long"),
+  sendMail: z.boolean().optional(),
+  sendMailAllSelectedMembers: z.boolean().optional(),
+  visibleTabs: z.array(z.string()).optional(),
+  permissions: allPermissionSchema.optional(),
+  clientId: z.string().uuid("Client ID must be a valid UUID").optional(),
+});
+
+export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, updateRoleSchema, projectSchema };

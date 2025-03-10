@@ -17,13 +17,33 @@ CREATE TABLE "User" (
     "mobile" TEXT,
     "profileImage" TEXT,
     "role" "UserType" NOT NULL DEFAULT 'STAFF',
-    "is_verified" BOOLEAN NOT NULL DEFAULT false,
+    "isVerified" BOOLEAN NOT NULL DEFAULT false,
     "otp" INTEGER,
     "otpExpiresAt" TIMESTAMP(3),
     "adminId" TEXT,
     "packageId" TEXT,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "StaffDetails" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "userId" TEXT NOT NULL,
+    "jobTitle" TEXT,
+    "loginOtp" INTEGER,
+    "gender" TEXT,
+    "officialMail" TEXT,
+    "dateOfJoining" TIMESTAMP(3),
+    "dateOfBirth" TIMESTAMP(3),
+    "employeeId" TEXT,
+    "maritalStatus" TEXT,
+    "address" TEXT,
+    "branchId" TEXT NOT NULL,
+    "departmentId" TEXT NOT NULL,
+    "roleId" TEXT NOT NULL,
+
+    CONSTRAINT "StaffDetails_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -200,24 +220,6 @@ CREATE TABLE "AIPermissions" (
 );
 
 -- CreateTable
-CREATE TABLE "StaffDetails" (
-    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
-    "userId" TEXT NOT NULL,
-    "jobTitle" TEXT,
-    "mobileNumber" TEXT,
-    "loginOtp" INTEGER,
-    "gender" TEXT,
-    "officialMail" TEXT,
-    "dateOfJoining" TIMESTAMP(3),
-    "address" TEXT,
-    "branchId" TEXT NOT NULL,
-    "departmentId" TEXT NOT NULL,
-    "roleId" TEXT NOT NULL,
-
-    CONSTRAINT "StaffDetails_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "SuperAdminDetails" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "email" TEXT NOT NULL,
@@ -236,14 +238,13 @@ CREATE TABLE "SuperAdminDetails" (
 CREATE TABLE "AdminDetails" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "userId" TEXT NOT NULL,
-    "package_id" TEXT,
-    "company_name" TEXT,
-    "company_logo" TEXT,
-    "profile_image" TEXT,
-    "time_format" TEXT,
-    "time_zone" TEXT,
-    "date_format" TEXT,
-    "week_format" TEXT,
+    "companyName" TEXT,
+    "companyLogo" TEXT,
+    "profileImage" TEXT,
+    "timeFormat" TEXT,
+    "timeZone" TEXT,
+    "dateFormat" TEXT,
+    "weekFormat" TEXT,
     "packageId" TEXT,
     "adminId" TEXT,
     "gender" TEXT,
@@ -323,6 +324,13 @@ CREATE TABLE "Package" (
 );
 
 -- CreateTable
+CREATE TABLE "Project" (
+    "id" TEXT NOT NULL,
+
+    CONSTRAINT "Project_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Module" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -361,7 +369,7 @@ CREATE TABLE "_ModuleToPackage" (
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_adminId_key" ON "User"("adminId");
+CREATE UNIQUE INDEX "StaffDetails_userId_key" ON "StaffDetails"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Permissions_roleId_key" ON "Permissions"("roleId");
@@ -397,9 +405,6 @@ CREATE UNIQUE INDEX "ChatModulePermissions_permissionsId_key" ON "ChatModulePerm
 CREATE UNIQUE INDEX "AIPermissions_permissionsId_key" ON "AIPermissions"("permissionsId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "StaffDetails_userId_key" ON "StaffDetails"("userId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "SuperAdminDetails_email_key" ON "SuperAdminDetails"("email");
 
 -- CreateIndex
@@ -425,6 +430,18 @@ ALTER TABLE "User" ADD CONSTRAINT "User_adminId_fkey" FOREIGN KEY ("adminId") RE
 
 -- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_packageId_fkey" FOREIGN KEY ("packageId") REFERENCES "Package"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_branchId_fkey" FOREIGN KEY ("branchId") REFERENCES "Branch"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "Department"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Branch" ADD CONSTRAINT "Branch_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -467,18 +484,6 @@ ALTER TABLE "ChatModulePermissions" ADD CONSTRAINT "ChatModulePermissions_permis
 
 -- AddForeignKey
 ALTER TABLE "AIPermissions" ADD CONSTRAINT "AIPermissions_permissionsId_fkey" FOREIGN KEY ("permissionsId") REFERENCES "Permissions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_branchId_fkey" FOREIGN KEY ("branchId") REFERENCES "Branch"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "Department"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "SuperAdminDetails" ADD CONSTRAINT "SuperAdminDetails_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
