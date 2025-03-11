@@ -34,6 +34,7 @@ model User {
   package       Package?           @relation(fields: [packageId], references: [id], onDelete: SetNull)
   // adminId       String?            @unique @map("admin_id") // Ensure correct relation
   // admin         AdminDetails?      @relation(fields: [adminId], references: [id])
+  projects      Project[]
 }
 
 model StaffDetails {
@@ -58,7 +59,8 @@ model StaffDetails {
   Department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   Role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   Project       Project?   @relation(fields: [projectId], references: [id])
-  projectId     String?
+  projectId     String[]
+  task          Task[]
 }
 
 model Branch {
@@ -130,7 +132,7 @@ model ProjectsPermissions {
   created_at    DateTime     @default(now())
   updated_at    DateTime     @updatedAt
   Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
-  Project       Project[]
+  // Project       Project[]
 }
 
 model ReportPermissions {
@@ -288,30 +290,60 @@ model ClientDetails {
 }
 
 model Project {
-  id                    String               @id @default(uuid())
-  projectName           String               @db.VarChar(255)
-  customer              String               @db.VarChar(255)
-  progressBar           Int?
-  estimatedHours        Int?
-  members               StaffDetails[]
-  startDate             DateTime
-  deadline              DateTime
-  description           String               @db.Text
-  sendMail              Boolean?
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
-  // One-to-One Relation with ProjectPermissions
-  ProjectsPermissions   ProjectsPermissions? @relation(fields: [projectsPermissionsId], references: [id], onDelete: Cascade)
-  projectsPermissionsId String?
-  clientId              String?
-  client                ClientDetails?       @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  contactNotifications  String[]
-  visibleTabs           String[]
-  ProjectPermissions    ProjectPermissions[]
+  id                   String         @id @default(uuid())
+  projectName          String?
+  // customer              String               @db.VarChar(255)
+  progressBar          Int?
+  estimatedHours       Int?
+  members              StaffDetails[]
+  startDate            DateTime?
+  deadline             DateTime?
+  description          String?
+  sendMail             Boolean?
+  createdAt            DateTime?      @default(now())
+  updatedAt            DateTime?      @updatedAt
+  customer             String?
+  client               ClientDetails? @relation(fields: [customer], references: [id], onDelete: Cascade)
+  contactNotifications String[]
+  visibleTabs          String[]
+  userDetails          User[]
+
+  // Add relation to ProjectPermissions
+  ProjectPermissions ProjectPermissions[]
+  task               Task[]
+}
+
+model Task {
+  id                        String    @id @default(uuid())
+  subject                   String?
+  hourlyRate                String?
+  startDate                 DateTime?
+  dueDate                   DateTime?
+  priority                  String?
+  repeateEvery              String?
+  relatedTo                 String?
+  insertChecklishtTemplates String?
+  postingDate               DateTime  @default(now())
+  description               String?
+  public                    Boolean?  @default(false)
+  billable                  Boolean?  @default(false)
+  attachFiles               String[]
+  assignedBy                String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  Project        Project?      @relation(fields: [projectId], references: [id])
+  projectId      String?
+  StaffDetails   StaffDetails? @relation(fields: [staffDetailsId], references: [id])
+  staffDetailsId String?
 }
 
 model ProjectPermissions {
-  id                                      String   @id @default(uuid())
+  id        String  @id @default(uuid())
+  projectId String
+  Project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   allowCustomerToViewTasks                Boolean?
   allowCustomerToCreateTasks              Boolean?
   allowCustomerToEditTasks                Boolean?
@@ -329,8 +361,6 @@ model ProjectPermissions {
   allowCustomerToViewTimesheets           Boolean?
   allowCustomerToViewActivityLog          Boolean?
   allowCustomerToViewTeamMembers          Boolean?
-  project                                 Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId                               String?
 }
 
 model Subscription {

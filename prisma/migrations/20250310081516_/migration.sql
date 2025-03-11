@@ -1,4 +1,7 @@
 -- CreateEnum
+CREATE TYPE "ProjectPermissions" AS ENUM ('allowCustomerToViewTasks', 'allowCustomerToCreateTasks', 'allowCustomerToEditTasks', 'allowCustomerToCommentOnProjectTasks', 'allowCustomerToViewTaskComments', 'allowCustomerToViewTaskAttachments', 'allowCustomerToViewTaskChecklistItems', 'allowCustomerToUploadAttachmentsOnTasks', 'allowCustomerToViewTaskTotalLoggedTime', 'allowCustomerToViewFinanceOverview', 'allowCustomerToUploadFiles', 'allowCustomerToOpenDiscussions', 'allowCustomerToViewMilestones', 'allowCustomerToViewGantt', 'allowCustomerToViewTimesheets', 'allowCustomerToViewActivityLog', 'allowCustomerToViewTeamMembers');
+
+-- CreateEnum
 CREATE TYPE "UnitType" AS ENUM ('GB', 'TB', 'MB');
 
 -- CreateEnum
@@ -42,6 +45,7 @@ CREATE TABLE "StaffDetails" (
     "branchId" TEXT NOT NULL,
     "departmentId" TEXT NOT NULL,
     "roleId" TEXT NOT NULL,
+    "projectId" TEXT,
 
     CONSTRAINT "StaffDetails_pkey" PRIMARY KEY ("id")
 );
@@ -286,6 +290,27 @@ CREATE TABLE "ClientDetails" (
 );
 
 -- CreateTable
+CREATE TABLE "Project" (
+    "id" TEXT NOT NULL,
+    "projectName" TEXT,
+    "progressBar" INTEGER,
+    "estimatedHours" INTEGER,
+    "startDate" TIMESTAMP(3),
+    "deadline" TIMESTAMP(3),
+    "description" TEXT,
+    "sendMail" BOOLEAN,
+    "createdAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3),
+    "customer" TEXT,
+    "contactNotifications" TEXT[],
+    "visibleTabs" TEXT[],
+    "permissions" "ProjectPermissions" NOT NULL,
+    "projectsPermissionsId" TEXT,
+
+    CONSTRAINT "Project_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Subscription" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "adminId" TEXT NOT NULL,
@@ -324,13 +349,6 @@ CREATE TABLE "Package" (
 );
 
 -- CreateTable
-CREATE TABLE "Project" (
-    "id" TEXT NOT NULL,
-
-    CONSTRAINT "Project_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "Module" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -355,6 +373,14 @@ CREATE TABLE "Transaction" (
     "adminId" TEXT NOT NULL,
 
     CONSTRAINT "Transaction_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "_ProjectToUser" (
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL,
+
+    CONSTRAINT "_ProjectToUser_AB_pkey" PRIMARY KEY ("A","B")
 );
 
 -- CreateTable
@@ -423,6 +449,9 @@ CREATE UNIQUE INDEX "Module_name_key" ON "Module"("name");
 CREATE UNIQUE INDEX "Transaction_paymentId_key" ON "Transaction"("paymentId");
 
 -- CreateIndex
+CREATE INDEX "_ProjectToUser_B_index" ON "_ProjectToUser"("B");
+
+-- CreateIndex
 CREATE INDEX "_ModuleToPackage_B_index" ON "_ModuleToPackage"("B");
 
 -- AddForeignKey
@@ -442,6 +471,9 @@ ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_departmentId_fkey" FOREI
 
 -- AddForeignKey
 ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Branch" ADD CONSTRAINT "Branch_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -501,6 +533,12 @@ ALTER TABLE "ClientDetails" ADD CONSTRAINT "ClientDetails_adminId_fkey" FOREIGN 
 ALTER TABLE "ClientDetails" ADD CONSTRAINT "ClientDetails_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Project" ADD CONSTRAINT "Project_customer_fkey" FOREIGN KEY ("customer") REFERENCES "ClientDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Project" ADD CONSTRAINT "Project_projectsPermissionsId_fkey" FOREIGN KEY ("projectsPermissionsId") REFERENCES "ProjectsPermissions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "AdminDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -511,6 +549,12 @@ ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_subscriptionId_fkey" FOREI
 
 -- AddForeignKey
 ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "AdminDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_ProjectToUser" ADD CONSTRAINT "_ProjectToUser_A_fkey" FOREIGN KEY ("A") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_ProjectToUser" ADD CONSTRAINT "_ProjectToUser_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_ModuleToPackage" ADD CONSTRAINT "_ModuleToPackage_A_fkey" FOREIGN KEY ("A") REFERENCES "Module"("id") ON DELETE CASCADE ON UPDATE CASCADE;

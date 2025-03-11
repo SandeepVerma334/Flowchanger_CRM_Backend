@@ -291,20 +291,25 @@ const updateRoleSchema = z.object({
 });
 
 // Define project schema
+
 const projectSchema = z.object({
-  projectName: z.string().min(3, "Project name must be at least 3 characters long"),
-  customer: z.string().min(1, "Customer is required"),
+  id: z.string().optional(),
+  projectName: z.string().optional(),
   progressBar: z.number().optional(),
   estimatedHours: z.number().optional(),
-  members: z.array(z.string()).optional(), // Ensure members are an array of strings (IDs)
-  startDate: z.string().refine(date => !isNaN(Date.parse(date)), "Invalid start date"),
-  deadline: z.string().refine(date => !isNaN(Date.parse(date)), "Invalid deadline"),
-  description: z.string().min(10, "Description must be at least 10 characters long"),
+  members: z.array(z.string()).min(1, "At least one staff ID is required"), // Required staff IDs
+  startDate: z.coerce.date().optional(),
+  deadline: z.coerce.date().optional(),
+  description: z.string().optional(),
   sendMail: z.boolean().optional(),
-  sendMailAllSelectedMembers: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  // projectsPermissionsId: z.string().optional(),
+  customer: z.string().optional(), // Required customer ID
+  contactNotifications: z.array(z.string()).optional(),
   visibleTabs: z.array(z.string()).optional(),
-  permissions: allPermissionSchema.optional(),
-  clientId: z.string().uuid("Client ID must be a valid UUID").optional(),
+  
 });
+
 
 export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, updateRoleSchema, projectSchema };

@@ -212,6 +212,41 @@ const sendPasswordResetAndForgotEmail = async (email, name, resetToken, type) =>
     }
 };
 
+// send email to selected staff and customers
+
+const sendSelectedStaffCustomers = async (emails) => {
+    try {
+        const subject = "Project Created - Flow Changer Agency";
+        const text = `Hello,\n\nA new project has been created for you. Please check your dashboard for details.\n\nBest Regards,\nFlow Changer Agency`;
+        
+        const message = `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <h3 style="color: #000000;">Dear Team Members,</h3>
+                <p>A new project has been assigned to you. Please log in to your dashboard to review the details.</p>
+                <p>Thank you for being a part of Flow Changer Agency.</p>
+                <br>
+                <p>Best Regards,<br>Flow Changer Agency</p>
+            </div>
+        `;
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: emails.join(","), // Ensures emails are properly formatted
+            subject,
+            text,
+            html: message,
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log("Emails sent successfully:", info.messageId);
+
+        return { success: true };
+    } catch (error) {
+        console.error("Error sending email:", error);
+        return { success: false, error: error.message };
+    }
+};
+
 
 const sendInviteToAdminMail = async (email) => {
     try {
@@ -221,8 +256,8 @@ const sendInviteToAdminMail = async (email) => {
 
         const message = `
             <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                <h3 style="color: #000000;">You are Invited to Flow Changer Agency</h3>            
-                <p> Hello, <span style="color: #532D94 !important;">${email}</span> <br><br>
+                <h3 style="color: #532D94;">You are Invited to Flow Changer Agency</h3>            
+                <p> Hello, <span style="color: #000 !important;">${email}</span> <br><br>
                     You have been invited to join Flow Changer Agency. Please sign up using the provided link.
                 </p>
                 <div style="text-align: left; margin: 20px 0;">
@@ -265,5 +300,6 @@ export {
     sendPasswordResetAndForgotEmail,
     sendInviteToAdminMail,
     sendLoginCredentialsEmail,
-    sendEmailWithPdf
+    sendEmailWithPdf,
+    sendSelectedStaffCustomers
 };

@@ -1,14 +1,142 @@
 import prisma from "../../../prisma/prisma.js";
 import { projectSchema } from "../../../utils/validation.js";
-// import sendEmail from "../../../utils/sendEmail.js";
+import { sendSelectedStaffCustomers } from '../../../utils/emailService.js';
+import { pagination } from "../../../utils/pagination.js";
+
 const createProject = async (req, res) => {
     try {
-        // Validate input data
+        // Extract members and permissions from the request body
+        const {
+            members,
+            permissions
+        } = req.body;
+
+        // Validate request body using zod
         const validatedData = projectSchema.parse(req.body);
-        
-        // Check if the admin exists and has the right role
+        console.log(validatedData)
+
         const admin = await prisma.user.findUnique({
-            where: { id: req.userId }
+            where: {
+                id: req.userId,
+            }
+        })
+        if (!admin) {
+            return res.status(400).json({
+                status: false,
+                message: "Admin not found",
+            });
+        }
+        if (admin.role !== "ADMIN") {
+            return res.status(400).json({
+                status: false,
+                message: "Unauthorized access",
+            });
+        }
+        // Validate staff members
+        const staffMembers = await prisma.staffDetails.findMany({
+            where: { id: { in: members } },
+        });
+
+        console.log(staffMembers);
+
+        if (staffMembers.length !== members.length) {
+            return res.status(400).json({
+                status: false,
+                message: "Some Member IDs are invalid",
+            });
+        }
+        // fetch all emails from staff details and user table 
+        const users = await prisma.staffDetails.findMany({
+            where: {
+                id: { in: members },
+            },
+            select: {
+                User: {
+                    select: {
+                        id: true,
+                        email: true,
+                        role: true,
+                    }
+                }
+            }
+        });
+
+        // Extract only emails
+        const emails = users.map(user => user.User?.email).filter(email => email);
+
+        // Destructure validated fields (excluding permissions)
+        const {
+            projectName, progressBar, estimatedHours, startDate, deadline,
+            description, sendMail, contactNotifications, visibleTabs
+        } = validatedData;
+
+        const project = await prisma.project.create({
+            data: {
+                projectName,
+                progressBar,
+                estimatedHours,
+                startDate,
+                deadline,
+                description,
+                sendMail,
+                contactNotifications,
+                visibleTabs,
+                members: { connect: members.map((id) => ({ id })) },
+
+                // Add ProjectPermissions
+                ProjectPermissions: {
+                    create: permissions.map(permission => ({
+                        allowCustomerToViewTasks: permission.allowCustomerToViewTasks,
+                        allowCustomerToCreateTasks: permission.allowCustomerToCreateTasks,
+                        allowCustomerToEditTasks: permission.allowCustomerToEditTasks,
+                        allowCustomerToCommentOnProjectTasks: permission.allowCustomerToCommentOnProjectTasks,
+                        allowCustomerToViewTaskComments: permission.allowCustomerToViewTaskComments,
+                        allowCustomerToViewTaskAttachments: permission.allowCustomerToViewTaskAttachments,
+                        allowCustomerToViewTaskChecklistItems: permission.allowCustomerToViewTaskChecklistItems,
+                        allowCustomerToUploadAttachmentsOnTasks: permission.allowCustomerToUploadAttachmentsOnTasks,
+                        allowCustomerToViewTaskTotalLoggedTime: permission.allowCustomerToViewTaskTotalLoggedTime,
+                        allowCustomerToViewFinanceOverview: permission.allowCustomerToViewFinanceOverview,
+                        allowCustomerToUploadFiles: permission.allowCustomerToUploadFiles,
+                        allowCustomerToOpenDiscussions: permission.allowCustomerToOpenDiscussions,
+                        allowCustomerToViewMilestones: permission.allowCustomerToViewMilestones,
+                        allowCustomerToViewGantt: permission.allowCustomerToViewGantt,
+                        allowCustomerToViewTimesheets: permission.allowCustomerToViewTimesheets,
+                        allowCustomerToViewActivityLog: permission.allowCustomerToViewActivityLog,
+                        allowCustomerToViewTeamMembers: permission.allowCustomerToViewTeamMembers
+                    }))
+                }
+            },
+            include: {
+                members: true,
+                ProjectPermissions: true,
+            }
+        });
+        // send mail for selected members and customers
+        if (emails.length > 0) {
+            await sendSelectedStaffCustomers(emails);
+        }
+        // Return success response
+        res.status(201).json({
+            status: true,
+            message: "Project created successfully! An email has been sent to you. Please check your inbox.",
+            data: project,
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+// get all project
+const getAllProjects = async (req, res, next) => {
+    const { id } = req.params; // Project ID from params
+    try {
+        const { page, limit } = req.query;
+
+        const admin = await prisma.user.findUnique({
+            where: {
+                id: req.userId,
+            }
         });
 
         if (!admin) {
@@ -17,58 +145,426 @@ const createProject = async (req, res) => {
                 message: "Admin not found",
             });
         }
-
         if (admin.role !== "ADMIN") {
+            return res.status(400).json({
+                status: false,
+                message: "Unauthorized access",
+            });
+        }
+
+        // Define where filter based on your use case (filter projects by id, status, etc.)
+        const where = {
+            id: id, // Assuming you're filtering by project ID
+        };
+
+        const projects = await prisma.project.findMany({
+            where,
+            include: {
+                ProjectPermissions: true,
+                members: {
+                    include: {
+                        User: {
+                            select: {
+                                id: true,
+                                mobile: true,
+                                role: true,
+                                isVerified: true,
+                                packageId: true,
+                                adminId: true,
+                                otp: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        // Pagination logic using your custom pagination function
+        const result = await pagination(prisma.project, {
+            page, limit, where, include: {
+                ProjectPermissions: true,
+                members: {
+                    include: {
+                        User: {
+                            select: {
+                                id: true,
+                                mobile: true,
+                                role: true,
+                                isVerified: true,
+                                packageId: true,
+                                adminId: true,
+                                otp: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true,
+                            },
+                        },
+                    },
+                },
+            }
+        });
+
+        // Return paginated result
+        res.status(200).json({
+            status: true,
+            projects,
+            pages: result, // Include pagination result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+// get single project  by id
+
+const getProjectById = async (req, res, next) => {
+    const { id } = req.params;
+    try {
+        const admin = await prisma.user.findUnique({
+            where: {
+                id: req.userId,
+            }
+        })
+        if (!admin) {
+            return res.status(400).json({
+                status: false,
+                message: "Admin not found",
+            });
+        }
+        if (admin.role !== "ADMIN") {
+            return res.status(400).json({
+                status: false,
+                message: "Unauthorized access",
+            });
+        }
+        const projectData = await prisma.project.findUnique({
+            where: {
+                id: id
+            },
+            include: {
+                ProjectPermissions: true,
+                members: {
+                    include: {
+                        User: {
+                            select: {
+                                id: true,
+                                mobile: true,
+                                role: true,
+                                isVerified: true,
+                                packageId: true,
+                                adminId: true,
+                                otp: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        res.status(200).json({
+            status: true,
+            message: "Project retrieved successfully",
+            data: projectData,
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+// delete project by id
+const deleteProjectById = async (req, res, next) => {
+    const { id } = req.params;
+    try {
+        const admin = await prisma.user.findUnique({
+            where: {
+                id: req.userId,
+            }
+        })
+        if (!admin) {
+            return res.status(400).json({
+                status: false,
+                message: "Admin not found",
+            });
+        }
+        if (admin.role !== "ADMIN") {
+            return res.status(400).json({
+                status: false,
+                message: "Unauthorized access",
+            });
+        }
+        const existProjectId = await prisma.project.findUnique({
+            where: {
+                id: id,
+            },
+        });
+        if (!existProjectId) {
+            return res.status(404).json({ message: "Project not found" });
+        }
+        const project = await prisma.project.delete({
+            where: {
+                id: id
+            }
+        });
+        res.status(200).json({ message: "Project deleted successfully", data: project });
+    } catch (error) {
+        next(error);
+    }
+}
+
+// search project by name
+
+const searchProjectByName = async (req, res, next) => {
+    try {
+        const admin = await prisma.user.findUnique({
+            where: {
+                id: req.userId,
+            }
+        })
+        if (!admin) {
+            return res.status(400).json({
+                status: false,
+                message: "Admin not found",
+            });
+        }
+        if (admin.role !== "ADMIN") {
+            return res.status(400).json({
+                status: false,
+                message: "Unauthorized access",
+            });
+        }
+
+        const { projectName } = req.query;
+        const projects = await prisma.project.findMany({
+            where: {
+                projectName: {
+                    contains: projectName,
+                    mode: "insensitive"
+                }
+            },
+            include: {
+                ProjectPermissions: true,
+                members: {
+                    include: {
+                        User: {
+                            select: {
+                                id: true,
+                                mobile: true,
+                                role: true,
+                                isVerified: true,
+                                packageId: true,
+                                adminId: true,
+                                otp: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        res.status(200).json({ message: "Project search successful by name : " + projectName, data: projects });
+    } catch (error) {
+        next(error);
+    }
+}
+
+// update project by id
+
+const updateProjectById = async (req, res, next) => {
+    const { id } = req.params;
+
+    try {
+        const { members, permissions } = req.body;
+
+        // Log permissions to verify if they are received correctly
+        console.log("Permissions received:", permissions);
+
+        // Ensure permissions is an array
+        if (!Array.isArray(permissions)) {
+            return res.status(400).json({
+                status: false,
+                message: "Permissions must be an array",
+            });
+        }
+
+        if (permissions.length === 0) {
+            return res.status(400).json({
+                status: false,
+                message: "Permissions array cannot be empty",
+            });
+        }
+
+        // Validate request body using zod
+        const validatedData = projectSchema.parse(req.body);
+        console.log(validatedData);
+
+        // Check if the project exists
+        const existingProject = await prisma.project.findUnique({ where: { id } });
+        if (!existingProject) {
+            return res.status(404).json({
+                status: false,
+                message: "Project not found",
+            });
+        }
+
+        // Validate admin
+        const admin = await prisma.user.findUnique({
+            where: { id: req.userId },
+        });
+
+        if (!admin || admin.role !== "ADMIN") {
             return res.status(403).json({
                 status: false,
                 message: "Unauthorized access",
             });
         }
 
-        // Destructure necessary fields
-        const { 
-            projectName, customer, progressBar, estimatedHours, startDate, deadline, description, sendMail, 
-            contactNotifications, visibleTabs, 
-            permissions 
+        // Validate staff members
+        const staffMembers = await prisma.staffDetails.findMany({
+            where: { id: { in: members } },
+        });
+
+        if (staffMembers.length !== members.length) {
+            return res.status(400).json({
+                status: false,
+                message: "Some Member IDs are invalid",
+            });
+        }
+
+        // Fetch emails from staff details and user table
+        const users = await prisma.staffDetails.findMany({
+            where: { id: { in: members } },
+            select: {
+                User: {
+                    select: {
+                        id: true,
+                        email: true,
+                        role: true,
+                    }
+                }
+            }
+        });
+
+        // Extract emails
+        const emails = users.map(user => user.User?.email).filter(email => email);
+
+        // Destructure validated fields
+        const {
+            projectName, progressBar, estimatedHours, startDate, deadline,
+            description, sendMail, contactNotifications, visibleTabs
         } = validatedData;
 
-        // Create the project with nested permissions
-        const project = await prisma.project.create({
+        // Update project
+        const updatedProject = await prisma.project.update({
+            where: { id },
             data: {
                 projectName,
-                customer,
                 progressBar,
                 estimatedHours,
                 startDate,
                 deadline,
                 description,
                 sendMail,
-                contactNotifications,  // Array field
-                visibleTabs,  // Array field
+                contactNotifications,
+                visibleTabs,
+                members: { set: members.map((id) => ({ id })) }, // Reset members before adding new ones
+
+                // Update ProjectPermissions
                 ProjectPermissions: {
-                    create: {
-                        ...permissions // Spread permissions object
-                    }
+                    deleteMany: {}, // Remove old permissions
+                    create: permissions.map(permission => ({
+                        allowCustomerToViewTasks: permission.allowCustomerToViewTasks,
+                        allowCustomerToCreateTasks: permission.allowCustomerToCreateTasks,
+                        allowCustomerToEditTasks: permission.allowCustomerToEditTasks,
+                        allowCustomerToCommentOnProjectTasks: permission.allowCustomerToCommentOnProjectTasks,
+                        allowCustomerToViewTaskComments: permission.allowCustomerToViewTaskComments,
+                        allowCustomerToViewTaskAttachments: permission.allowCustomerToViewTaskAttachments,
+                        allowCustomerToViewTaskChecklistItems: permission.allowCustomerToViewTaskChecklistItems,
+                        allowCustomerToUploadAttachmentsOnTasks: permission.allowCustomerToUploadAttachmentsOnTasks,
+                        allowCustomerToViewTaskTotalLoggedTime: permission.allowCustomerToViewTaskTotalLoggedTime,
+                        allowCustomerToViewFinanceOverview: permission.allowCustomerToViewFinanceOverview,
+                        allowCustomerToUploadFiles: permission.allowCustomerToUploadFiles,
+                        allowCustomerToOpenDiscussions: permission.allowCustomerToOpenDiscussions,
+                        allowCustomerToViewMilestones: permission.allowCustomerToViewMilestones,
+                        allowCustomerToViewGantt: permission.allowCustomerToViewGantt,
+                        allowCustomerToViewTimesheets: permission.allowCustomerToViewTimesheets,
+                        allowCustomerToViewActivityLog: permission.allowCustomerToViewActivityLog,
+                        allowCustomerToViewTeamMembers: permission.allowCustomerToViewTeamMembers
+                    }))
                 }
             },
-            include: { ProjectPermissions: true } // Include permissions in response
+            include: {
+                members: true,
+                ProjectPermissions: true,
+            }
         });
 
+        // Send email notification
+        if (emails.length > 0) {
+            await sendSelectedStaffCustomers(emails);
+        }
+
         // Return success response
-        res.status(201).json({
+        res.status(200).json({
             status: true,
-            message: "Project created successfully",
-            data: project
+            message: "Project updated successfully! An email has been sent to the selected members.",
+            data: updatedProject,
         });
 
     } catch (error) {
-        console.error("Error creating project:", error);
-        res.status(500).json({
-            status: false,
-            message: "Failed to create project",
-            error: error.message
-        });
+        next(error);
     }
 };
 
-export { createProject };
+// bulk delete project using id
+
+const bulkDeleteProjectById = async (req, res, next) => {
+    try {
+        // Extract project IDs from request body
+        const { projectId } = req.body;
+
+        // Validate that ids is an array and not empty
+        if (!Array.isArray(projectId) || projectId.length === 0) {
+            return res.status(400).json({
+                status: false,
+                message: "  Please provide an array of project IDs to delete",
+            });
+        }
+
+        // Delete projects based on the provided IDs
+        const deletedProjects = await prisma.project.deleteMany({
+            where: {
+                id: { in: projectId },
+            },
+        });
+
+        // If no projects were deleted
+        if (deletedProjects.count === 0) {
+            return res.status(404).json({
+                status: false,
+                message: "No projects found to delete",
+            });
+        }
+
+        // Return success response with the number of deleted projects
+        res.status(200).json({
+            status: true,
+            message: `${deletedProjects.count} project(s) deleted successfully.`,
+        });
+
+    } catch (error) {
+        console.error("Error deleting projects:", error);
+        next(error);
+    }
+};
+
+
+export { createProject, getAllProjects, getProjectById, deleteProjectById, searchProjectByName, updateProjectById, bulkDeleteProjectById };

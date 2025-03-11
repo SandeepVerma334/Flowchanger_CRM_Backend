@@ -119,8 +119,7 @@ const sendInviteToAdmin = async (req, res) => {
             res.status(500).json({ error: "Failed to send email", details: result.error });
         }
     } catch (error) {
-        console.error("Error in sendInviteToAdmin:", error);
-        res.status(500).json({ error: "Internal Server Error", details: error.message });
+        next(error);
     }
 };
 
