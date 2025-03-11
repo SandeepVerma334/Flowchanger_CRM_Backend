@@ -290,4 +290,100 @@ const updateRoleSchema = z.object({
   permissions: allPermissionSchema.optional(),
 });
 
-export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, updateRoleSchema };
+const PunchInSchema = z.object({
+  punchInMethod: z
+    .string()
+    .refine((value) => ["BIOMETRIC", "QRSCAN", "PHOTOCLICK"].includes(value), {
+      message:
+        "PunchInType Type must be either 'BIOMETRIC', 'QRSCAN' Or 'PHOTOCLICK'.",
+    })
+    .optional(),
+  biometricData: z.string().optional(), // Only required for biometric
+  qrCodeValue: z.string().optional(), // Only required for QR scan
+  photoUrl: z.string().optional(), // Required for photo click
+  location: z.string().min(1, { message: "Location is required." }),
+  fine: z.string().optional(),
+});
+
+const PunchOutSchema = z.object({
+  punchOutMethod: z
+    .string()
+    .refine((value) => ["BIOMETRIC", "QRSCAN", "PHOTOCLICK"].includes(value), {
+      message:
+        "PunchInType Type must be either 'BIOMETRIC', 'QRSCAN' Or 'PHOTOCLICK'.",
+    })
+    .optional(),
+  biometricData: z.string().optional(), // Only required for biometric
+  qrCodeValue: z.string().optional(), // Only required for QR scan
+  photoUrl: z.string().optional(), // Required for photo click
+  location: z.string().min(1, { message: "Location is required." }),
+  overtime: z.string().optional(),
+  // staffId: z.string().min(1, { message: "Staff ID is required." }),
+});
+
+const PunchRecordsSchema = z.object({
+  punchInId: z.string().min(1, { message: "PunchInId is required." }),
+  punchOutId: z.string().min(1, { message: "PunchOutId is required." }),
+  staffId: z.string().min(1, { message: "StaffId is required." }),
+});
+
+const FineSchema = z
+  .object({
+    staffId: z.string().uuid("Invalid staff ID"), // UUID format check
+    lateEntryFineAmount: z
+      .number({ invalid_type_error: "Late Entry Fine Amount must be a number" })
+      .min(1, "Late Entry Fine Amount is required"),
+    lateEntryAmount: z
+      .number({ invalid_type_error: "Late Entry Amount must be a number" })
+      .min(0, "Late Entry Amount must be a positive number"),
+    excessBreakFineAmount: z
+      .number({
+        invalid_type_error: "Excess Break Fine Amount must be a number",
+      })
+      .optional(),
+    excessBreakAmount: z
+      .number({ invalid_type_error: "Excess Break Amount must be a number" })
+      .min(0, "Excess Break Amount must be a positive number")
+      .optional(),
+    earlyOutFineAmount: z
+      .number({ invalid_type_error: "Early Out Fine Amount must be a number" })
+      .optional(),
+    earlyOutAmount: z
+      .number({ invalid_type_error: "Early Out Amount must be a number" })
+      .min(0, "Early Out Amount must be a positive number")
+      .optional(),
+    totalAmount: z
+      .number({ invalid_type_error: "Total Amount must be a number" })
+      .min(0, "Total Amount must be a positive number"),
+    shiftIds: z.string().optional(), // Array of strings for shift IDs
+  })
+  .strict(); // Ensures no extra fields are allowed
+
+const OverTimeSchema = z.object({
+  earlyCommingEntryAmount: z
+    .number({
+      invalid_type_error: "Early Comming Entry Amount must be a number",
+    })
+    .default(1)
+    .optional(),
+  earlyEntryAmount: z
+    .number({ invalid_type_error: "Early Entry Amount must be a number" })
+    .default(0)
+    .optional(),
+  lateOutOvertimeAmount: z
+    .number({ invalid_type_error: "Late Out Overtime Amount must be a number" })
+    .default(1)
+    .optional(),
+  lateOutAmount: z
+    .number({ invalid_type_error: "Late Out Amount must be a number" })
+    .default(0)
+    .optional(),
+  totalAmount: z
+    .number({ invalid_type_error: "Total Amount must be a number" })
+    .default(0)
+    .optional(),
+  shiftIds: z.string().nullable().optional(),
+  staffId: z.string().nullable().optional(),
+});
+
+export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, updateRoleSchema, OverTimeSchema, PunchInSchema, PunchOutSchema, PunchRecordsSchema, FineSchema };

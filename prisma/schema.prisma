@@ -53,6 +53,12 @@ model StaffDetails {
   Branch        Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
   Department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   Role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  PunchRecords PunchRecords[]
+
+  Fine Fine[]
+
+  Overtime Overtime[]
 }
 
 model Branch {
@@ -361,4 +367,99 @@ enum TransactionStatus {
   VERIFIED
   FAILED
   REFUNDED
+}
+
+enum PunchInMethod {
+  BIOMETRIC
+  QRSCAN
+  PHOTOCLICK
+}
+
+enum PunchOutMethod {
+  BIOMETRIC
+  QRSCAN
+  PHOTOCLICK
+}
+
+enum punchRecordStatus {
+  ABSENT
+  PRESENT
+  // Add any other statuses you need here
+}
+
+model PunchIn {
+  id            String         @id @default(dbgenerated("gen_random_uuid()"))
+  punchInMethod PunchInMethod? @default(PHOTOCLICK)
+  punchInTime   DateTime       @default(now())
+  punchInDate   DateTime       @default(now())
+  biometricData String?
+  qrCodeValue   String?
+  photoUrl      String?
+  location      String?
+  PunchRecords  PunchRecords?
+  approve       String?        @default("Pending")
+}
+
+model PunchOut {
+  id             String          @id @default(dbgenerated("gen_random_uuid()"))
+  punchOutMethod PunchOutMethod? @default(PHOTOCLICK)
+  punchOutTime   DateTime        @default(now())
+  punchOutDate   DateTime        @default(now())
+  biometricData  String?
+  qrCodeValue    String?
+  photoUrl       String?
+  location       String?
+  overtime       String?
+  punchRecords   PunchRecords?
+}
+
+model PunchRecords {
+  id         String            @id @default(dbgenerated("gen_random_uuid()"))
+  punchDate  DateTime          @default(now())
+  isApproved Boolean           @default(false)
+  punchInId  String?           @unique
+  punchOutId String?           @unique
+  staffId    String?
+  status     punchRecordStatus @default(ABSENT)
+  fine       Fine?
+  Overtime   Overtime?
+  punchIn    PunchIn?          @relation(fields: [punchInId], references: [id], onDelete: Cascade)
+  punchOut   PunchOut?         @relation(fields: [punchOutId], references: [id], onDelete: Cascade)
+  staff      StaffDetails?     @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, punchDate])
+}
+
+model Fine {
+  id                       String        @id @default(dbgenerated("gen_random_uuid()"))
+  lateEntryFineHoursTime   String?
+  lateEntryFineAmount      Float?        @default(1)
+  lateEntryAmount          Float?        @default(0)
+  excessBreakFineHoursTime String?
+  excessBreakFineAmount    Float?        @default(1)
+  excessBreakAmount        Float?        @default(0)
+  earlyOutFineHoursTime    String?
+  earlyOutFineAmount       Float?        @default(1)
+  earlyOutAmount           Float?        @default(0)
+  totalAmount              Float?        @default(0)
+  punchRecordId            String        @unique
+  staffId                  String?
+  createdAt                DateTime      @default(now())
+  punchRecord              PunchRecords  @relation(fields: [punchRecordId], references: [id], onDelete: Cascade)
+  staff                    StaffDetails? @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+model Overtime {
+  id                         String        @id @default(dbgenerated("gen_random_uuid()"))
+  earlyCommingEntryHoursTime String?
+  earlyCommingEntryAmount    Float?        @default(1)
+  earlyEntryAmount           Float?        @default(0)
+  lateOutOvertimeHoursTime   String?
+  lateOutOvertimeAmount      Float?        @default(1)
+  lateOutAmount              Float?        @default(0)
+  totalAmount                Float?        @default(0)
+  punchRecordId              String?       @unique
+  staffId                    String?
+  punchRecord                PunchRecords? @relation(fields: [punchRecordId], references: [id], onDelete: Cascade)
+  staff                      StaffDetails? @relation(fields: [staffId], references: [id], onDelete: Cascade)
 }
