@@ -3,6 +3,10 @@ import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import { promisify } from 'util';
 import axios from 'axios';
+import dotenv from 'dotenv';
+import prisma from '../prisma/prisma.js';
+
+dotenv.config();
 
 const createCredentialPdf = async (filePath, username, email, password, pdfPassword) => {
     return new Promise(async (resolve, reject) => {
@@ -96,7 +100,7 @@ const createCredentialPdf = async (filePath, username, email, password, pdfPassw
             let contentY = loginBoxTop + boxPadding;
 
             doc.fillColor('#5A3AA5').fontSize(13).font('Helvetica-Bold')
-                .text('Login Details', 60, contentY-3);
+                .text('Login Details', 60, contentY - 3);
 
             contentY += 15;
             doc.moveTo(40, contentY).lineTo(435, contentY).stroke('#5A3AA5');
@@ -203,7 +207,7 @@ const sendOtpEmail = async (email) => {
         data: { otp, otpExpiresAt }
     });
 
-    const htmlContent = `
+    const message = `
         <div style="font-family: Arial, sans-serif; line-height: 1.5;">
             <h2>Your OTP Code</h2>
             <p>Hello,</p>
@@ -212,62 +216,103 @@ const sendOtpEmail = async (email) => {
             <p>Regards,<br/>Flowchanger Support Team</p>
         </div>
     `;
-    await sendEmail(email, 'Your OTP Code', htmlContent);
+    await sendEmail(email, 'Your OTP Code', message);
 };
 
 
 
 // Verification link email template
 const sendVerificationLinkEmail = async (email, link) => {
-    const htmlContent = `
+    const message = `
         <div style="font-family: Arial, sans-serif; line-height: 1.5;">
             <h2>Verify Your Account</h2>
             <p>Hello,</p>
             <p>Click the link below to verify your account:</p>
-            <a href="${link}" style="display:inline-block; padding:10px 20px; background-color:#007bff; color:#fff; text-decoration:none; border-radius:5px;">Verify Account</a>
+            <a href="${link}" style="display:inline-block; padding:10px 20px; background-color:#532D94; color:#fff; text-decoration:none; border-radius:5px;">Verify Account</a>
             <p>If you did not sign up, you can safely ignore this email.</p>
             <p>Regards,<br/>Flowchanger Support Team</p>
         </div>
     `;
-    await sendEmail(email, 'Verify Your Account', htmlContent);
+    await sendEmail(email, 'Verify Your Account', message);
 };
 
 // General message email template
-const sendGeneralMessage = async (email, subject, message) => {
-    const htmlContent = `
+const sendGeneralMessage = async (email, subject, content) => {
+    const message = `
         <div style="font-family: Arial, sans-serif; line-height: 1.5;">
-            <p>${message}</p>
+            <p>${content}</p>
             <p>Regards,<br/>Flowchanger Support Team</p>
         </div>
     `;
-    await sendEmail(email, subject, htmlContent);
+    await sendEmail(email, subject, message);
+};
+const sendPasswordResetAndForgotEmail = async (email, name, resetToken, type) => {
+    try {
+        const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}&email=${email}`;
+
+        const expiryTime = process.env.RESET_LINK_EXPIRY || "15 minutes";
+        const subject = type === "reset"
+            ? "Reset Your Password - Flow Changer"
+            : "Access Your Account - Flow Changer";
+
+        const messageContent = type === "reset"
+            ? "You requested a password reset. Click the button below to reset your password:"
+            : "You requested access to your account. Click the button below to log in without resetting your password:";
+
+        const buttonText = type === "reset" ? "Reset Password" : "Login Now";
+
+        const note = type === "reset" ? `<p><strong>Note:</strong> This link will expire in ${expiryTime}.</p>` : "";
+        const message = `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <h2 style="color: #2C3E50;">Hello, ${name}</h2>            
+                <p>${messageContent}</p>
+
+                <div style="text-align:  left; margin: 20px 0;">
+                    <a href="${resetLink}" 
+                       style="background-color: #532D94; color: #ffffff; padding: 12px 20px; text-decoration: none; font-size: 16px; border-radius: 5px; display: inline-block;">
+                       ${buttonText}
+                    </a>
+                </div>
+                ${note}
+                <p>If you did not request this, please ignore this email.</p>
+
+                <p>Best Regards,</p>
+                <p><strong>Flow Changer Team</strong></p>
+            </div>
+        `;
+
+        await sendEmail(email, subject, message);
+    } catch (error) {
+        console.error("Error sending password reset email:", error);
+        throw new Error("Failed to send password reset email");
+    }
 };
 
-const sendLoginCredentialsEmail = async (email, password, loginLink) => {
-    const htmlContent = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.5;">
-            <h2>Your Account Details</h2>
-            <p>Hello,</p>
-            <p>Your account has been created successfully. Below are your login credentials:</p>
-            <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
-                <tr>
-                    <td style="padding: 10px; border: 1px solid #ddd;"><strong>Email:</strong></td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${email}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 10px; border: 1px solid #ddd;"><strong>Password:</strong></td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${password}</td>
-                </tr>
-            </table>
-            <p>You can log in using the button below:</p>
-            <a href="${loginLink}" style="display:inline-block; padding:10px 20px; background-color:#28a745; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">Login Now</a>
-            <p>Please change your password after logging in for security reasons.</p>
-            <p>Regards,<br/>Flowchanger Support Team</p>
-        </div>
-    `;
+// const sendLoginCredentialsEmail = async (email, password, loginLink) => {
+//     const message = `
+//         <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+//             <h2>Your Account Details</h2>
+//             <p>Hello,</p>
+//             <p>Your account has been created successfully. Below are your login credentials:</p>
+//             <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
+//                 <tr>
+//                     <td style="padding: 10px; border: 1px solid #ddd;"><strong>Email:</strong></td>
+//                     <td style="padding: 10px; border: 1px solid #ddd;">${email}</td>
+//                 </tr>
+//                 <tr>
+//                     <td style="padding: 10px; border: 1px solid #ddd;"><strong>Password:</strong></td>
+//                     <td style="padding: 10px; border: 1px solid #ddd;">${password}</td>
+//                 </tr>
+//             </table>
+//             <p>You can log in using the button below:</p>
+//             <a href="${loginLink}" style="display:inline-block; padding:10px 20px; background-color: #532D94; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">Login Now</a>
+//             <p>Please change your password after logging in for security reasons.</p>
+//             <p>Regards,<br/>Flowchanger Support Team</p>
+//         </div>
+//     `;
 
-    await sendEmail(email, 'Your Flowchanger Account Details', htmlContent);
-};
+//     await sendEmail(email, 'Your Flowchanger Account Details', message);
+// };
 
 
 const unlinkAsync = promisify(fs.unlink);
@@ -330,6 +375,7 @@ export {
     sendOtpEmail,
     sendVerificationLinkEmail,
     sendGeneralMessage,
-    sendLoginCredentialsEmail,
-    sendEmailWithPdf
+    // sendLoginCredentialsEmail,
+    sendEmailWithPdf,
+    sendPasswordResetAndForgotEmail
 };

@@ -3,9 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -22,20 +22,24 @@ model User {
   otpExpiresAt  DateTime?
   adminDetails  AdminDetails?
   superAdmin    SuperAdminDetails?
-  adminId       String? // Foreign key to reference a manager User
-  admin         User?              @relation("UserAdmin", fields: [adminId], references: [id], onDelete: Cascade) // One Admin
-  subordinates  User[]             @relation("UserAdmin") // Many subordinates
   StaffDetails  StaffDetails?
   Branch        Branch[]
   Department    Department[]
   Role          Role[]
   ClientDetails ClientDetails?
+  adminId       String?
+  Note          Note[]
+
+  // New relation for subordinates without an adminId
+  subordinates User[]       @relation("UserSubordinates")
+  managers     User[]       @relation("UserSubordinates")
+  Discussion   Discussion[]
 }
 
 model StaffDetails {
-  id            String     @id @default(dbgenerated("gen_random_uuid()"))
-  userId        String     @unique
-  User          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  userId        String       @unique
+  User          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   jobTitle      String?
   loginOtp      Int?
   gender        String?
@@ -49,9 +53,9 @@ model StaffDetails {
   roleId        String
   adminId       String
   Admin         AdminDetails @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  Branch        Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  Department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  Role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  Branch        Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  Department    Department   @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  Role          Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
 }
 
 model Branch {
@@ -300,7 +304,7 @@ model Subscription {
 }
 
 model Package {
-  id               String         @id @default(uuid())
+  id               String         @id @default(dbgenerated("gen_random_uuid()"))
   packageName      String
   packageNumber    Int?
   numberOfProjects Int
@@ -319,13 +323,13 @@ model Package {
 }
 
 model Module {
-  id       String    @id @default(uuid())
+  id       String    @id @default(dbgenerated("gen_random_uuid()"))
   name     String    @unique
   packages Package[]
 }
 
 model Transaction {
-  id             String            @id @default(uuid())
+  id             String            @id @default(dbgenerated("gen_random_uuid()"))
   subscriptionId String // Foreign Key
   subscription   Subscription      @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   paymentId      String            @unique
@@ -340,6 +344,27 @@ model Transaction {
   updatedAt      DateTime          @updatedAt
   adminId        String
   admin          AdminDetails      @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}
+
+model Note {
+  id          String  @id @default(dbgenerated("gen_random_uuid()"))
+  title       String
+  description String?
+  color       String?
+  adminId     String?
+  userId      String?
+  user        User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Discussion {
+  id          String   @id @default(dbgenerated("gen_random_uuid()"))
+  subject     String
+  description String?
+  tags        String[]
+  attachFiles String[]
+  adminId     String?
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum UnitType {

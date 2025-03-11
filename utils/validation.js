@@ -46,7 +46,7 @@ const staffDetailSchema = z.object({
     .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date format" })
     .optional()
     .nullable(),
-    dateOfBirth: z
+  dateOfBirth: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date format" })
     .optional()
@@ -291,4 +291,18 @@ const updateRoleSchema = z.object({
   permissions: allPermissionSchema.optional(),
 });
 
-export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, updateRoleSchema };
+const discussionSchema = z.object({
+  subject: z.string({ required_error: "Subject is required" }).min(1, "Subject is required"),
+  description: z.string({ required_error: "Description is required" }).min(1, "Description is required"),
+  tags: z.array(z.string()).optional(),
+  attachFiles: z.array(z.string()).optional(),
+  userId: z.string({ required_error: "User ID is required" }).uuid("Invalid USER ID format"),
+});
+const noteSchema = z.object({
+  title: z.string({ required_error: "Title is required" }).min(3, "At least 3 characters"),
+  description: z.string({ required_error: "Description is required" }).min(3, "At least 3 characters required"),
+  userId: z.string({ required_error: "User ID is required" }).uuid("Invalid USER ID format"),
+});
+
+
+export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, updateRoleSchema, discussionSchema, noteSchema };

@@ -42,7 +42,7 @@ const createSuperAdmin = async (req, res, next) => {
                 role: 'SUPERADMIN',
             },
         });
-    
+
 
         // Return success response
         res.status(201).json({
@@ -100,7 +100,7 @@ const superAdminLogin = async (req, res, next) => {
 };
 
 // send email to admin for invite sign up
-const sendInviteToAdmin = async (req, res) => {
+const sendInviteToAdmin = async (req, res, next) => {
     try {
         const { email } = req.body;
 
@@ -119,8 +119,9 @@ const sendInviteToAdmin = async (req, res) => {
             res.status(500).json({ error: "Failed to send email", details: result.error });
         }
     } catch (error) {
-        console.error("Error in sendInviteToAdmin:", error);
-        res.status(500).json({ error: "Internal Server Error", details: error.message });
+        next(error)
+        // console.error("Error in sendInviteToAdmin:", error);
+        // res.status(500).json({ error: "Internal Server Error", details: error.message });
     }
 };
 
@@ -187,7 +188,7 @@ const superAdminPasswordResetLink = async (req, res, next) => {
 // update password after clik reset link
 const superAdminResetPassword = async (req, res, next) => {
     try {
-        const { email,password } = req.body;
+        const { email, password } = req.body;
 
         const superAdminDetails = await prisma.superAdminDetails.findUnique({
             where: { email },
@@ -210,6 +211,6 @@ const superAdminResetPassword = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
-            }
+}
 
 export { superAdminLogin, createSuperAdmin, sendInviteToAdmin, superAdminPasswordResetLink, superAdminResetPassword };
