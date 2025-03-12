@@ -29,5 +29,5 @@ const authorizationMiddleware = (req, res, next) => {
     });
   }
 };
-
+ 
 export {authorizationMiddleware}

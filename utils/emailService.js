@@ -245,31 +245,31 @@ const sendEmailWithPdf = async (email, username, password, pdfPassword, loginLin
 };
 
 // send email login creadential
-const sendLoginCredentialsEmail = async (email, password, loginLink) => {
-    const message = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.5;">
-            <h2>Your Account Details</h2>
-            <p>Hello,</p>
-            <p>Your account has been created successfully. Below are your login credentials:</p>
-            <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
-                <tr>
-                    <td style="padding: 10px; border: 1px solid #ddd;"><strong>Email:</strong></td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${email}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 10px; border: 1px solid #ddd;"><strong>Password:</strong></td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${password}</td>
-                </tr>
-            </table>
-            <p>You can log in using the button below:</p>
-            <a href="${loginLink}" style="display:inline-block; padding:10px 20px; background-color: #532D94; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">Login Now</a>
-            <p>Please change your password after logging in for security reasons.</p>
-            <p>Regards,<br/>Flowchanger Support Team</p>
-        </div>
-    `;
+// const sendLoginCredentialsEmail = async (email, password, loginLink) => {
+//     const message = `
+//         <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+//             <h2>Your Account Details</h2>
+//             <p>Hello,</p>
+//             <p>Your account has been created successfully. Below are your login credentials:</p>
+//             <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
+//                 <tr>
+//                     <td style="padding: 10px; border: 1px solid #ddd;"><strong>Email:</strong></td>
+//                     <td style="padding: 10px; border: 1px solid #ddd;">${email}</td>
+//                 </tr>
+//                 <tr>
+//                     <td style="padding: 10px; border: 1px solid #ddd;"><strong>Password:</strong></td>
+//                     <td style="padding: 10px; border: 1px solid #ddd;">${password}</td>
+//                 </tr>
+//             </table>
+//             <p>You can log in using the button below:</p>
+//             <a href="${loginLink}" style="display:inline-block; padding:10px 20px; background-color: #532D94; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">Login Now</a>
+//             <p>Please change your password after logging in for security reasons.</p>
+//             <p>Regards,<br/>Flowchanger Support Team</p>
+//         </div>
+//     `;
 
-    await sendEmail(email, 'Your Flowchanger Account Details', message);
-};
+//     await sendEmail(email, 'Your Flowchanger Account Details', message);
+// };
 
 
 // Reusable email sender
@@ -294,7 +294,7 @@ const sendOtpEmail = async (email) => {
         data: { otp, otpExpiresAt }
     });
 
-    const htmlContent = `
+    const message = `
         <div style="font-family: Arial, sans-serif; line-height: 1.5;">
             <h2>Your OTP Code</h2>
             <p>Hello,</p>
@@ -303,14 +303,14 @@ const sendOtpEmail = async (email) => {
             <p>Regards,<br/>Flowchanger Support Team</p>
         </div>
     `;
-    await sendEmail(email, 'Your OTP Code', htmlContent);
+    await sendEmail(email, 'Your OTP Code', message);
 };
 
 
 
 // Verification link email template
 const sendVerificationLinkEmail = async (email, link) => {
-    const htmlContent = `
+    const message = `
         <div style="font-family: Arial, sans-serif; line-height: 1.5;">
             <h2>Verify Your Account</h2>
             <p>Hello,</p>
@@ -320,18 +320,18 @@ const sendVerificationLinkEmail = async (email, link) => {
             <p>Regards,<br/>Flowchanger Support Team</p>
         </div>
     `;
-    await sendEmail(email, 'Verify Your Account', htmlContent);
+    await sendEmail(email, 'Verify Your Account', message);
 };
 
 // General message email template
-const sendGeneralMessage = async (email, subject, message) => {
-    const htmlContent = `
+const sendGeneralMessage = async (email, subject, content) => {
+    const message = `
         <div style="font-family: Arial, sans-serif; line-height: 1.5;">
-            <p>${message}</p>
+            <p>${content}</p>
             <p>Regards,<br/>Flowchanger Support Team</p>
         </div>
     `;
-    await sendEmail(email, subject, htmlContent);
+    await sendEmail(email, subject, message);
 };
 
 const sendPasswordResetAndForgotEmail = async (email, name, resetToken, type) => {
@@ -463,7 +463,7 @@ export {
     sendGeneralMessage,
     sendPasswordResetAndForgotEmail,
     sendInviteToAdminMail,
-    sendLoginCredentialsEmail,
+    // sendLoginCredentialsEmail,
     sendEmailWithPdf,
     sendSelectedStaffCustomers
 };

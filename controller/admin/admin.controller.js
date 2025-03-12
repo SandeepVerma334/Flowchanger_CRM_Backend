@@ -1,9 +1,9 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from "../../prisma/prisma.js";
-import { adminSignupSchema } from "../../utils/validation.js";
-import { sendOtpEmail } from '../../utils/emailService.js';
+import { sendOtpEmail, sendPasswordResetAndForgotEmail } from '../../utils/emailService.js';
 import { pagination } from '../../utils/pagination.js';
+import { adminSignupSchema } from "../../utils/validation.js";
 
 const adminSignup = async (req, res, next) => {
     try {
@@ -45,6 +45,7 @@ const updateAdminProfile = async (req, res, next) => {
         const {
             email,
             mobile,
+            password,
             companyName,
             timeZone,
             address,
@@ -58,13 +59,10 @@ const updateAdminProfile = async (req, res, next) => {
             services,
             companySize,
             role,
-            password,
             packageId
         } = req.body;
 
 
-        console.log(companyName,password, timeZone, address, city, state, zipCode, country, gender, designation, businessType, services, companySize, role)
-        // Find the user by email
         const user = await prisma.user.findUnique({
             where: { email: email }
         });
@@ -138,7 +136,7 @@ const adminLogin = async (req, res, next) => {
 
         res.status(200).json({
             message: "Login successfuly",
-            token,
+            token, 
             data: user  // Send token in response
         });
 
@@ -162,8 +160,7 @@ const verifyOTP = async (req, res, next) => {
         // Check OTP and Expiry
         const now = new Date();
 
-        console.log(user.otp, otp)
-
+        
         if (user.otp === parseInt(otp) && user.otpExpiresAt > now) {
             await prisma.user.update({
                 where: { email },
@@ -183,6 +180,7 @@ const verifyOTP = async (req, res, next) => {
         next(error);
     }
 };
+
 const sendOTP = async (req, res, next) => {
     try {
         const { email } = req.body;
@@ -282,5 +280,71 @@ const searchUsers = async (req, res, next) => {
     }
 };
 
+const adminPasswordResetLink = async (req, res, next) => {
+    const { email, } = req.body;
 
-export { adminSignup, updateAdminProfile, adminLogin, getAllUsers, searchUsers, getUserById, deleteUserById, verifyOTP, sendOTP };
+    try {
+
+        if (!email) {
+            return res.status(400).json({ message: "Email is required." });
+        }
+
+        const adminDetails = await prisma.user.findUnique({
+            where: { email },
+        });
+
+        if (!adminDetails) {
+            return res.status(404).json({ message: "Admin not found!" });
+        }
+
+
+        const token = jwt.sign(
+            { id: adminDetails.id },
+            process.env.JWT_SECRET,
+            { expiresIn: '15m' }
+        );
+
+        // Reset Password Link
+        await sendPasswordResetAndForgotEmail(email, adminDetails.firstName, token, "reset");
+        res.status(200).json({
+            message: "We have sent a reset link to your registered official email. You can reset your password from there. This link will expire in 15 minutes.",
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+// update password after clik reset link
+const adminResetPassword = async (req, res, next) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ message: "Email and password are required." });
+        }
+        const adminDetails = await prisma.user.findUnique({
+            where: { email },
+        });
+
+        if (!adminDetails) {
+            return res.status(404).json({ message: "Admin not found!" });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        await prisma.user.update({
+            where: { email },
+            data: {
+                password: hashedPassword,
+            },
+        });
+
+        await sendPasswordResetAndForgotEmail(email, adminDetails.firstName, "", "login");
+        res.status(200).json({ message: "Password reset successfully" });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export { adminLogin, adminPasswordResetLink, adminResetPassword, adminSignup, deleteUserById, getAllUsers, getUserById, searchUsers, sendOTP, updateAdminProfile, verifyOTP }; 

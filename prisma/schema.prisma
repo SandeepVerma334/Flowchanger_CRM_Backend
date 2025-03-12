@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  // directUrl = env("DIRECT_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -22,9 +22,6 @@ model User {
   otpExpiresAt  DateTime?
   adminDetails  AdminDetails?
   superAdmin    SuperAdminDetails?
-  adminId       String? // Foreign key to reference a manager User
-  admin         User?              @relation("UserAdmin", fields: [adminId], references: [id], onDelete: Cascade) // One Admin
-  subordinates  User[]             @relation("UserAdmin") // Many subordinates
   StaffDetails  StaffDetails?
   Branch        Branch[]
   Department    Department[]
@@ -35,6 +32,14 @@ model User {
   // adminId       String?            @unique @map("admin_id") // Ensure correct relation
   // admin         AdminDetails?      @relation(fields: [adminId], references: [id])
   projects      Project[]
+  adminId       String?
+  Note          Note[]
+
+  // New relation for subordinates without an adminId
+  subordinates User[]       @relation("UserSubordinates")
+  managers     User[]       @relation("UserSubordinates")
+  Discussion   Discussion[]
+  Report       Report[]
 }
 
 model StaffDetails {
@@ -64,8 +69,10 @@ model StaffDetails {
   Fine Fine[]
 
   Overtime Overtime[]
-  Project       Project[]
-  task          Task[]
+  Project  Project[]
+  task     Task[]
+  adminId  String
+  Admin    AdminDetails @relation(fields: [adminId], references: [id], onDelete: Cascade)
 }
 
 model Branch {
@@ -269,6 +276,7 @@ model AdminDetails {
   companySize   String?
   role          String?
   ClientDetails ClientDetails[]
+  StaffDetails  StaffDetails[]
 }
 
 model ClientDetails {
@@ -385,7 +393,7 @@ model Subscription {
 }
 
 model Package {
-  id               String         @id @default(uuid())
+  id               String         @id @default(dbgenerated("gen_random_uuid()"))
   packageName      String
   packageNumber    Int?
   numberOfProjects Int
@@ -405,13 +413,13 @@ model Package {
 }
 
 model Module {
-  id       String    @id @default(uuid())
+  id       String    @id @default(dbgenerated("gen_random_uuid()"))
   name     String    @unique
   packages Package[]
 }
 
 model Transaction {
-  id             String            @id @default(uuid())
+  id             String            @id @default(dbgenerated("gen_random_uuid()"))
   subscriptionId String // Foreign Key
   subscription   Subscription      @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   paymentId      String            @unique
@@ -426,6 +434,53 @@ model Transaction {
   updatedAt      DateTime          @updatedAt
   adminId        String
   admin          AdminDetails      @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}
+
+model Note {
+  id          String   @id @default(dbgenerated("gen_random_uuid()"))
+  title       String
+  description String?
+  color       String?
+  adminId     String?
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Discussion {
+  id          String   @id @default(dbgenerated("gen_random_uuid()"))
+  subject     String
+  description String?
+  tags        String[]
+  attachFiles String[]
+  adminId     String?
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Report {
+  id          String       @id @default(dbgenerated("gen_random_uuid()"))
+  name        String
+  subject     String
+  description String?
+  status      ReportStatus @default(PENDING)
+  token       String
+  userId      String?
+  adminId     String?
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum ReportStatus {
+  PENDING
+  REJECTED
+  RESOLVED
+  IN_PROGRESS
+  ESCALATED
 }
 
 enum UnitType {

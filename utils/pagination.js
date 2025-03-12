@@ -9,7 +9,7 @@ const pagination = async (model, options = {}) => {
     const totalData = await model.count({ where });
     const data = await model.findMany({ skip, take: limit, where, orderBy, include });
 
-    return {
+    return { 
         data,
         totalData,
         totalPages: Math.ceil(totalData / limit),

@@ -122,7 +122,7 @@ const getClientById = async (req, res, next) => {
         const client = await prisma.user.findUnique({
             where: { id },
             include: {
-                clientDetails: true
+                ClientDetails: true
             },
         });
         if (!client) {
@@ -138,22 +138,40 @@ const searchClientByName = async (req, res, next) => {
     try {
         const admin = await checkAdmin(req.userId);
 
-        const { page, limit, name } = req.query;
+        const { page, limit, search } = req.query;
 
-        if (!name) {
+        if (!search) {
             return res.status(400).json({ message: "Name query parameter is required" });
         }
 
         const where = {
             role: "CLIENT",
-            firstName: {
-                contains: name,
-                mode: "insensitive" // Case-insensitive search
-            }
+            OR: [
+                {
+                    firstName: {
+                        contains: search,
+                        mode: "insensitive" // Case-insensitive search
+                    }
+                },
+                {
+                    email: {
+                        contains: search,
+                        mode: "insensitive" // Case-insensitive search
+                    }
+                },
+                {
+                    mobile: {
+                        contains: search,
+                        mode: "insensitive" // Case-insensitive search
+                    },
+                }
+
+            ],
+            adminId: admin.id
         };
 
         const include = {
-            clientDetails: true
+            ClientDetails: true
         };
 
         const result = await pagination(prisma.user, { page, limit, where, include });
@@ -163,7 +181,7 @@ const searchClientByName = async (req, res, next) => {
         }
 
         res.status(200).json({
-            message: `Clients found successfully matching name: ${name}`,
+            message: `Clients found successfully matching search : ${search}`,
             ...result
         });
 

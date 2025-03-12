@@ -422,4 +422,39 @@ const taskSchema = z.object({
 });
 
 
-export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, projectSchema, taskSchema, adminSignupSchema, updateRoleSchema };
+const discussionSchema = z.object({
+  subject: z.string({ required_error: "Subject is required" }).min(1, "Subject is required"),
+  description: z.string({ required_error: "Description is required" }).min(1, "Description is required"),
+  tags: z.array(z.string()).optional(),
+  attachFiles: z.array(z.string()).optional(),
+  userId: z.string({ required_error: "User ID is required" }).uuid("Invalid USER ID format"),
+});
+const noteSchema = z.object({
+  title: z.string({ required_error: "Title is required" }).min(3, "At least 3 characters"),
+  description: z.string({ required_error: "Description is required" }).min(3, "At least 3 characters required"),
+  userId: z.string({ required_error: "User ID is required" }).uuid("Invalid USER ID format"),
+});
+
+const ReportStatus = Object.freeze({
+  PENDING: "PENDING",
+  REJECTED: "REJECTED",
+  RESOLVED: "RESOLVED",
+  IN_PROGRESS: "IN_PROGRESS",
+  ESCALATED: "ESCALATED",
+});
+
+const reportSchema = z.object({
+  name: z.string({ required_error: "Report name is required" }).min(3, "Report name must be at least 3 characters"),
+  description: z.string().min(3, "Description must be at least 3 characters").optional(),
+  subject: z.string({ required_error: "Report subject is required" }).min(3, "Subject must be at least 3 characters"),
+  userId: z.string({ required_error: "User ID is required" }).uuid("Invalid User ID format"),
+  adminId: z.string({ required_error: "Admin ID is required" }).uuid("Invalid Admin ID format"),
+  // token: z.string({ required_error: "Token is required" }).min(3, "Token must be at least 3 characters"),
+  status: z.nativeEnum(ReportStatus, {
+    invalid_type_error: "Status must be a valid report status (PENDING, REJECTED, RESOLVED, IN_PROGRESS, ESCALATED)",
+  }).default(ReportStatus.PENDING),
+});
+
+
+
+export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, projectSchema, taskSchema, adminSignupSchema, updateRoleSchema, noteSchema, discussionSchema, reportSchema };

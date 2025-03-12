@@ -1,4 +1,7 @@
 -- CreateEnum
+CREATE TYPE "ReportStatus" AS ENUM ('PENDING', 'REJECTED', 'RESOLVED', 'IN_PROGRESS', 'ESCALATED');
+
+-- CreateEnum
 CREATE TYPE "UnitType" AS ENUM ('GB', 'TB', 'MB');
 
 -- CreateEnum
@@ -6,6 +9,15 @@ CREATE TYPE "UserType" AS ENUM ('ADMIN', 'STAFF', 'CLIENT', 'SUPERADMIN');
 
 -- CreateEnum
 CREATE TYPE "TransactionStatus" AS ENUM ('PENDING', 'VERIFIED', 'FAILED', 'REFUNDED');
+
+-- CreateEnum
+CREATE TYPE "PunchInMethod" AS ENUM ('BIOMETRIC', 'QRSCAN', 'PHOTOCLICK');
+
+-- CreateEnum
+CREATE TYPE "PunchOutMethod" AS ENUM ('BIOMETRIC', 'QRSCAN', 'PHOTOCLICK');
+
+-- CreateEnum
+CREATE TYPE "punchRecordStatus" AS ENUM ('ABSENT', 'PRESENT');
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -20,6 +32,7 @@ CREATE TABLE "User" (
     "isVerified" BOOLEAN NOT NULL DEFAULT false,
     "otp" INTEGER,
     "otpExpiresAt" TIMESTAMP(3),
+    "packageId" TEXT,
     "adminId" TEXT,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
@@ -35,6 +48,7 @@ CREATE TABLE "StaffDetails" (
     "officialMail" TEXT,
     "dateOfJoining" TIMESTAMP(3),
     "dateOfBirth" TIMESTAMP(3),
+    "employeeId" TEXT,
     "maritalStatus" TEXT,
     "address" TEXT,
     "branchId" TEXT NOT NULL,
@@ -285,6 +299,72 @@ CREATE TABLE "ClientDetails" (
 );
 
 -- CreateTable
+CREATE TABLE "Project" (
+    "id" TEXT NOT NULL,
+    "projectName" TEXT,
+    "progressBar" INTEGER,
+    "estimatedHours" INTEGER,
+    "startDate" TIMESTAMP(3),
+    "deadline" TIMESTAMP(3),
+    "description" TEXT,
+    "sendMail" BOOLEAN,
+    "createdAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3),
+    "contactNotifications" TEXT[],
+    "visibleTabs" TEXT[],
+
+    CONSTRAINT "Project_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Task" (
+    "id" TEXT NOT NULL,
+    "subject" TEXT,
+    "hourlyRate" TEXT,
+    "startDate" TIMESTAMP(3),
+    "dueDate" TIMESTAMP(3),
+    "priority" TEXT,
+    "repeateEvery" TEXT,
+    "relatedTo" TEXT,
+    "insertChecklishtTemplates" TEXT,
+    "postingDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "description" TEXT,
+    "public" BOOLEAN DEFAULT false,
+    "billable" BOOLEAN DEFAULT false,
+    "attachFiles" TEXT[],
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "projectId" TEXT,
+
+    CONSTRAINT "Task_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ProjectPermissions" (
+    "id" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "allowCustomerToViewTasks" BOOLEAN,
+    "allowCustomerToCreateTasks" BOOLEAN,
+    "allowCustomerToEditTasks" BOOLEAN,
+    "allowCustomerToCommentOnProjectTasks" BOOLEAN,
+    "allowCustomerToViewTaskComments" BOOLEAN,
+    "allowCustomerToViewTaskAttachments" BOOLEAN,
+    "allowCustomerToViewTaskChecklistItems" BOOLEAN,
+    "allowCustomerToUploadAttachmentsOnTasks" BOOLEAN,
+    "allowCustomerToViewTaskTotalLoggedTime" BOOLEAN,
+    "allowCustomerToViewFinanceOverview" BOOLEAN,
+    "allowCustomerToUploadFiles" BOOLEAN,
+    "allowCustomerToOpenDiscussions" BOOLEAN,
+    "allowCustomerToViewMilestones" BOOLEAN,
+    "allowCustomerToViewGantt" BOOLEAN,
+    "allowCustomerToViewTimesheets" BOOLEAN,
+    "allowCustomerToViewActivityLog" BOOLEAN,
+    "allowCustomerToViewTeamMembers" BOOLEAN,
+
+    CONSTRAINT "ProjectPermissions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Subscription" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "adminId" TEXT NOT NULL,
@@ -357,6 +437,8 @@ CREATE TABLE "Note" (
     "color" TEXT,
     "adminId" TEXT,
     "userId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Note_pkey" PRIMARY KEY ("id")
 );
@@ -366,12 +448,109 @@ CREATE TABLE "Discussion" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "subject" TEXT NOT NULL,
     "description" TEXT,
-    "attachFile" TEXT[],
     "tags" TEXT[],
+    "attachFiles" TEXT[],
     "adminId" TEXT,
     "userId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Discussion_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Report" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "name" TEXT NOT NULL,
+    "subject" TEXT NOT NULL,
+    "description" TEXT,
+    "status" "ReportStatus" NOT NULL DEFAULT 'PENDING',
+    "token" TEXT NOT NULL,
+    "userId" TEXT,
+    "adminId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Report_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PunchIn" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "punchInMethod" "PunchInMethod" DEFAULT 'PHOTOCLICK',
+    "punchInTime" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "punchInDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "biometricData" TEXT,
+    "qrCodeValue" TEXT,
+    "photoUrl" TEXT,
+    "location" TEXT,
+    "approve" TEXT DEFAULT 'Pending',
+
+    CONSTRAINT "PunchIn_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PunchOut" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "punchOutMethod" "PunchOutMethod" DEFAULT 'PHOTOCLICK',
+    "punchOutTime" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "punchOutDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "biometricData" TEXT,
+    "qrCodeValue" TEXT,
+    "photoUrl" TEXT,
+    "location" TEXT,
+    "overtime" TEXT,
+
+    CONSTRAINT "PunchOut_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PunchRecords" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "punchDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "isApproved" BOOLEAN NOT NULL DEFAULT false,
+    "punchInId" TEXT,
+    "punchOutId" TEXT,
+    "staffId" TEXT,
+    "status" "punchRecordStatus" NOT NULL DEFAULT 'ABSENT',
+
+    CONSTRAINT "PunchRecords_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Fine" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "lateEntryFineHoursTime" TEXT,
+    "lateEntryFineAmount" DOUBLE PRECISION DEFAULT 1,
+    "lateEntryAmount" DOUBLE PRECISION DEFAULT 0,
+    "excessBreakFineHoursTime" TEXT,
+    "excessBreakFineAmount" DOUBLE PRECISION DEFAULT 1,
+    "excessBreakAmount" DOUBLE PRECISION DEFAULT 0,
+    "earlyOutFineHoursTime" TEXT,
+    "earlyOutFineAmount" DOUBLE PRECISION DEFAULT 1,
+    "earlyOutAmount" DOUBLE PRECISION DEFAULT 0,
+    "totalAmount" DOUBLE PRECISION DEFAULT 0,
+    "punchRecordId" TEXT NOT NULL,
+    "staffId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Fine_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Overtime" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "earlyCommingEntryHoursTime" TEXT,
+    "earlyCommingEntryAmount" DOUBLE PRECISION DEFAULT 1,
+    "earlyEntryAmount" DOUBLE PRECISION DEFAULT 0,
+    "lateOutOvertimeHoursTime" TEXT,
+    "lateOutOvertimeAmount" DOUBLE PRECISION DEFAULT 1,
+    "lateOutAmount" DOUBLE PRECISION DEFAULT 0,
+    "totalAmount" DOUBLE PRECISION DEFAULT 0,
+    "punchRecordId" TEXT,
+    "staffId" TEXT,
+
+    CONSTRAINT "Overtime_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -380,6 +559,38 @@ CREATE TABLE "_UserSubordinates" (
     "B" TEXT NOT NULL,
 
     CONSTRAINT "_UserSubordinates_AB_pkey" PRIMARY KEY ("A","B")
+);
+
+-- CreateTable
+CREATE TABLE "_StaffDetailsToTask" (
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL,
+
+    CONSTRAINT "_StaffDetailsToTask_AB_pkey" PRIMARY KEY ("A","B")
+);
+
+-- CreateTable
+CREATE TABLE "_ClientDetailsToProject" (
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL,
+
+    CONSTRAINT "_ClientDetailsToProject_AB_pkey" PRIMARY KEY ("A","B")
+);
+
+-- CreateTable
+CREATE TABLE "_ProjectToStaffDetails" (
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL,
+
+    CONSTRAINT "_ProjectToStaffDetails_AB_pkey" PRIMARY KEY ("A","B")
+);
+
+-- CreateTable
+CREATE TABLE "_ProjectToUser" (
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL,
+
+    CONSTRAINT "_ProjectToUser_AB_pkey" PRIMARY KEY ("A","B")
 );
 
 -- CreateTable
@@ -448,16 +659,43 @@ CREATE UNIQUE INDEX "Module_name_key" ON "Module"("name");
 CREATE UNIQUE INDEX "Transaction_paymentId_key" ON "Transaction"("paymentId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "PunchRecords_punchInId_key" ON "PunchRecords"("punchInId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PunchRecords_punchOutId_key" ON "PunchRecords"("punchOutId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PunchRecords_staffId_punchDate_key" ON "PunchRecords"("staffId", "punchDate");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Fine_punchRecordId_key" ON "Fine"("punchRecordId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Overtime_punchRecordId_key" ON "Overtime"("punchRecordId");
+
+-- CreateIndex
 CREATE INDEX "_UserSubordinates_B_index" ON "_UserSubordinates"("B");
+
+-- CreateIndex
+CREATE INDEX "_StaffDetailsToTask_B_index" ON "_StaffDetailsToTask"("B");
+
+-- CreateIndex
+CREATE INDEX "_ClientDetailsToProject_B_index" ON "_ClientDetailsToProject"("B");
+
+-- CreateIndex
+CREATE INDEX "_ProjectToStaffDetails_B_index" ON "_ProjectToStaffDetails"("B");
+
+-- CreateIndex
+CREATE INDEX "_ProjectToUser_B_index" ON "_ProjectToUser"("B");
 
 -- CreateIndex
 CREATE INDEX "_ModuleToPackage_B_index" ON "_ModuleToPackage"("B");
 
 -- AddForeignKey
-ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "User" ADD CONSTRAINT "User_packageId_fkey" FOREIGN KEY ("packageId") REFERENCES "Package"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "AdminDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_branchId_fkey" FOREIGN KEY ("branchId") REFERENCES "Branch"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -467,6 +705,9 @@ ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_departmentId_fkey" FOREI
 
 -- AddForeignKey
 ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "AdminDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Branch" ADD CONSTRAINT "Branch_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -526,6 +767,12 @@ ALTER TABLE "ClientDetails" ADD CONSTRAINT "ClientDetails_adminId_fkey" FOREIGN 
 ALTER TABLE "ClientDetails" ADD CONSTRAINT "ClientDetails_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Task" ADD CONSTRAINT "Task_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ProjectPermissions" ADD CONSTRAINT "ProjectPermissions_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "AdminDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -544,10 +791,58 @@ ALTER TABLE "Note" ADD CONSTRAINT "Note_userId_fkey" FOREIGN KEY ("userId") REFE
 ALTER TABLE "Discussion" ADD CONSTRAINT "Discussion_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Report" ADD CONSTRAINT "Report_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PunchRecords" ADD CONSTRAINT "PunchRecords_punchInId_fkey" FOREIGN KEY ("punchInId") REFERENCES "PunchIn"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PunchRecords" ADD CONSTRAINT "PunchRecords_punchOutId_fkey" FOREIGN KEY ("punchOutId") REFERENCES "PunchOut"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PunchRecords" ADD CONSTRAINT "PunchRecords_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Fine" ADD CONSTRAINT "Fine_punchRecordId_fkey" FOREIGN KEY ("punchRecordId") REFERENCES "PunchRecords"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Fine" ADD CONSTRAINT "Fine_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Overtime" ADD CONSTRAINT "Overtime_punchRecordId_fkey" FOREIGN KEY ("punchRecordId") REFERENCES "PunchRecords"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Overtime" ADD CONSTRAINT "Overtime_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "_UserSubordinates" ADD CONSTRAINT "_UserSubordinates_A_fkey" FOREIGN KEY ("A") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_UserSubordinates" ADD CONSTRAINT "_UserSubordinates_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_StaffDetailsToTask" ADD CONSTRAINT "_StaffDetailsToTask_A_fkey" FOREIGN KEY ("A") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_StaffDetailsToTask" ADD CONSTRAINT "_StaffDetailsToTask_B_fkey" FOREIGN KEY ("B") REFERENCES "Task"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_ClientDetailsToProject" ADD CONSTRAINT "_ClientDetailsToProject_A_fkey" FOREIGN KEY ("A") REFERENCES "ClientDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_ClientDetailsToProject" ADD CONSTRAINT "_ClientDetailsToProject_B_fkey" FOREIGN KEY ("B") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_ProjectToStaffDetails" ADD CONSTRAINT "_ProjectToStaffDetails_A_fkey" FOREIGN KEY ("A") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_ProjectToStaffDetails" ADD CONSTRAINT "_ProjectToStaffDetails_B_fkey" FOREIGN KEY ("B") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_ProjectToUser" ADD CONSTRAINT "_ProjectToUser_A_fkey" FOREIGN KEY ("A") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_ProjectToUser" ADD CONSTRAINT "_ProjectToUser_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_ModuleToPackage" ADD CONSTRAINT "_ModuleToPackage_A_fkey" FOREIGN KEY ("A") REFERENCES "Module"("id") ON DELETE CASCADE ON UPDATE CASCADE;
