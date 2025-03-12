@@ -57,11 +57,14 @@ const updateAdminProfile = async (req, res, next) => {
             businessType,
             services,
             companySize,
-            role
+            role,
+            password,
+            packageId
         } = req.body;
 
 
-        console.log(companyName, timeZone, address, city, state, zipCode, country, gender, designation, businessType, services, companySize, role)
+        console.log(companyName,password, timeZone, address, city, state, zipCode, country, gender, designation, businessType, services, companySize, role)
+        // Find the user by email
         const user = await prisma.user.findUnique({
             where: { email: email }
         });
@@ -75,6 +78,7 @@ const updateAdminProfile = async (req, res, next) => {
             where: { email },
             data: {
                 mobile,
+                password,
                 adminDetails: {
                     create: {
                         companyName,
@@ -107,6 +111,7 @@ const updateAdminProfile = async (req, res, next) => {
         next(error);
     }
 };
+
 
 const adminLogin = async (req, res, next) => {
     try {

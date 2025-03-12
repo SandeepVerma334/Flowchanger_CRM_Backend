@@ -15,6 +15,7 @@ const authorizationMiddleware = (req, res, next) => {
       ? authHeader.split(" ")[1]
       : authHeader;
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    console.log(decodedToken)
     if (!decodedToken) {
       return res
         .status(401)

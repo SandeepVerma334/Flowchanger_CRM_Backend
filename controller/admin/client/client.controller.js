@@ -3,12 +3,12 @@ import { clientSchema } from "../../../utils/validation.js";
 import checkAdmin from "../../../utils/adminChecks.js";
 import bcrypt from 'bcrypt';
 import { pagination } from "../../../utils/pagination.js";
-import { sendEmailWithPdf, sendLoginCredentialsEmail } from "../../../utils/emailService.js";
+import { sendEmailWithPdf } from "../../../utils/emailService.js";
 
 const createClient = async (req, res, next) => {
     try {
-        console.log(req.userId);
         const admin = await checkAdmin(req.userId);
+        console.log(admin);
         const validatedData = clientSchema.parse(req.body);
         const { email, password, name, phoneNumber, ...restValidation } = validatedData;
         const user = await prisma.user.findUnique({
@@ -21,7 +21,6 @@ const createClient = async (req, res, next) => {
         if (user) {
             return res.status(400).json({ message: "Client with this email already exists" });
         }
-
         const hashedPassword = await bcrypt.hash(password, 10);
         const client = await prisma.user.create({
             data: {
@@ -31,7 +30,7 @@ const createClient = async (req, res, next) => {
                 firstName: name,
                 mobile: phoneNumber,
                 adminId: admin.id,
-                clientDetails: {
+                ClientDetails: {
                     create: {
                         adminId: admin.adminDetails.id,
                         ...restValidation
@@ -39,7 +38,7 @@ const createClient = async (req, res, next) => {
                 }
             },
             include: {
-                clientDetails: true
+                ClientDetails: true
             }
         })
         await sendEmailWithPdf(email, validatedData.name, password, validatedData.panNumber, `${process.env.CLIENT_URL}/login`);
@@ -65,7 +64,7 @@ const getClients = async (req, res, next) => {
         };
 
         const include = {
-            clientDetails: true
+            ClientDetails: true
         };
 
         const result = await pagination(prisma.user, { page, limit, where, include });
@@ -173,5 +172,42 @@ const searchClientByName = async (req, res, next) => {
     }
 };
 
+const deleteClient = async (req, res, next) => {
+    try {
+        const id = req.params.id;
+        const admin = await checkAdmin(req.userId);
+        const client = await prisma.user.findUnique({ where: { id } });
+        if (!client) {
+            return res.status(404).json({ message: "Client not found" });
+        }
+        await prisma.user.delete({ where: { id } });
+        res.status(200).json({ message: "Client deleted successfully" });
+    } catch (error) {
+        next(error);
+    }
+}
 
-export { createClient, getClients, updateClient, getClientById, searchClientByName };
+const bulkDeleteClient = async (req, res, next) => {
+    try {
+        await checkAdmin(req.userId);
+
+        const { ids } = req.body;
+        if (!Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ message: "Invalid or empty IDs list." });
+        }
+
+        ids.forEach(async (id) => {
+            const client = await prisma.user.findUnique({ where: { id } });
+            if (client) {
+                await prisma.user.delete({ where: { id } });
+            }
+        });
+
+        res.status(200).json({ message: "Clients deleted successfully" });
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+export { createClient, getClients, updateClient, getClientById, searchClientByName, deleteClient, bulkDeleteClient };

@@ -14,7 +14,7 @@ const packageSchema = z.object({
   validityTerms: z.array(z.string({ required_error: "Validity term is required" }).min(1, "Validity term cannot be empty")).default(["Monthly"]),
   description: z.string().nullable().optional(),
   modules: z.array(z.string({ required_error: "Modules are required" }), { required_error: "At least one module must be selected" }),
-  adminId: z.string({ required_error: "Admin ID is required" }).uuid(),
+  // adminId: z.string({ required_error: "Admin ID is required" }).uuid(),
   // adminId: z.string().optional(),
 });
 
@@ -45,7 +45,7 @@ const staffDetailSchema = z.object({
     .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date format" })
     .optional()
     .nullable(),
-    dateOfBirth: z
+  dateOfBirth: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date format" })
     .optional()
@@ -79,7 +79,7 @@ const superAdminDetailsSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters long'),
 });
 
-export const adminSignupSchema = z.object({
+const adminSignupSchema = z.object({
   firstName: z.string({ required_error: "First Name is required" }).min(3, "First name must be at least 3 characters"),
   lastName: z.string({ required_error: "Last Name is required" }).min(3, "Last name must be at least 3 characters"),
   email: z.string({ required_error: "Email is required" }).email("Invalid email format"),
@@ -386,4 +386,40 @@ const OverTimeSchema = z.object({
   staffId: z.string().nullable().optional(),
 });
 
-export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, updateRoleSchema, OverTimeSchema, PunchInSchema, PunchOutSchema, PunchRecordsSchema, FineSchema };
+
+const projectSchema = z.object({
+  id: z.string().optional(),
+  projectName: z.string().optional(),
+  progressBar: z.number().optional(),
+  estimatedHours: z.number().optional(),
+  members: z.array(z.string()).min(1, "At least one staff ID is required"), // Required staff IDs
+  customer: z.array(z.string()).min(1, "At least one staff ID is required"),
+  startDate: z.coerce.date().optional(),
+  deadline: z.coerce.date().optional(),
+  description: z.string().optional(),
+  sendMail: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  contactNotifications: z.array(z.string()).optional(),
+  visibleTabs: z.array(z.string()).optional(),
+});
+
+const taskSchema = z.object({
+  subject: z.string().min(3, "Subject must be at least 3 characters long"),
+  hourlyRate: z.string().regex(/^\d+(\.\d{1,2})?$/, "Hourly rate must be a valid number"),
+  startDate: z.string().refine((date) => !isNaN(Date.parse(date)), { message: "Invalid start date" }),
+  dueDate: z.string().refine((date) => !isNaN(Date.parse(date)), { message: "Invalid due date" }),
+  priority: z.string(),
+  repeateEvery: z.string().optional(),
+  relatedTo: z.string().optional(),
+  insertChecklishtTemplates: z.string().default(false),
+  postingDate: z.string().refine((date) => !isNaN(Date.parse(date)), { message: "Invalid posting date" }).optional(),
+  description: z.string().optional(),
+  public: z.boolean().default(false),
+  billable: z.boolean().default(false),
+  attachFiles: z.array(z.string()).optional(), // File paths or URLs
+  assignedBy: z.array(z.string()).min(1, "At least one staff ID is required"),
+});
+
+
+export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, projectSchema, taskSchema, adminSignupSchema, updateRoleSchema };

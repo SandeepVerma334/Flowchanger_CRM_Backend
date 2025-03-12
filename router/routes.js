@@ -11,6 +11,8 @@ import superAdminRouter from "./superAdmin/superAdmin.router.js";
 import transactionRouter from "./superAdmin/transaction.router.js";
 import clientRouter from "./client/client.router.js";
 import roleRouter from "./admin/role.router.js";
+import projectRouter from "./admin/project.router.js";
+import taskRouter from "./admin/task.router.js";
 
 rootRouter.use("/branch", branchRouter);
 rootRouter.use("/department", departmentRouter);
@@ -22,4 +24,6 @@ rootRouter.use("/subscription", subscriptionRouter);
 rootRouter.use("/admin", adminSignup);
 rootRouter.use("/client", clientRouter);
 rootRouter.use("/role", roleRouter);
+rootRouter.use("/project", projectRouter);
+rootRouter.use("/task", taskRouter);
 export default rootRouter;

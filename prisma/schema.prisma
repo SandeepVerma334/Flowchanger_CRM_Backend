@@ -3,9 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -30,6 +30,11 @@ model User {
   Department    Department[]
   Role          Role[]
   ClientDetails ClientDetails?
+  packageId     String?
+  package       Package?           @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  // adminId       String?            @unique @map("admin_id") // Ensure correct relation
+  // admin         AdminDetails?      @relation(fields: [adminId], references: [id])
+  projects      Project[]
 }
 
 model StaffDetails {
@@ -59,6 +64,8 @@ model StaffDetails {
   Fine Fine[]
 
   Overtime Overtime[]
+  Project       Project[]
+  task          Task[]
 }
 
 model Branch {
@@ -130,6 +137,7 @@ model ProjectsPermissions {
   created_at    DateTime     @default(now())
   updated_at    DateTime     @updatedAt
   Permissions   Permissions? @relation(fields: [permissionsId], references: [id], onDelete: Cascade)
+  // Project       Project[]
 }
 
 model ReportPermissions {
@@ -261,8 +269,6 @@ model AdminDetails {
   companySize   String?
   role          String?
   ClientDetails ClientDetails[]
-
-  // StaffDetails StaffDetails[]
 }
 
 model ClientDetails {
@@ -285,6 +291,78 @@ model ClientDetails {
   adminDetails     AdminDetails? @relation(fields: [adminId], references: [id], onDelete: Cascade)
   userId           String        @unique
   user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Project          Project[]
+}
+
+model Project {
+  id                   String               @id @default(uuid())
+  projectName          String?
+  // customer              String               @db.VarChar(255)
+  progressBar          Int?
+  estimatedHours       Int?
+  members              StaffDetails[]
+  startDate            DateTime?
+  deadline             DateTime?
+  description          String?
+  sendMail             Boolean?
+  createdAt            DateTime?            @default(now())
+  updatedAt            DateTime?            @updatedAt
+  customer             ClientDetails[]
+  // customer             String[]
+  // client               ClientDetails?       @relation(fields: [customer], references: [id], onDelete: Cascade)
+  contactNotifications String[]
+  visibleTabs          String[]
+  userDetails          User[]
+  // Add relation to ProjectPermissions
+  ProjectPermissions   ProjectPermissions[]
+  task                 Task[]
+}
+
+model Task {
+  id                        String         @id @default(uuid())
+  subject                   String?
+  hourlyRate                String?
+  startDate                 DateTime?
+  dueDate                   DateTime?
+  priority                  String?
+  repeateEvery              String?
+  relatedTo                 String?
+  insertChecklishtTemplates String?
+  postingDate               DateTime       @default(now())
+  description               String?
+  public                    Boolean?       @default(false)
+  billable                  Boolean?       @default(false)
+  attachFiles               String[]
+  // assignedBy                String[]
+  createdAt                 DateTime       @default(now())
+  updatedAt                 DateTime       @updatedAt
+  project                   Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId                 String?
+  StaffDetails              StaffDetails[]
+}
+
+model ProjectPermissions {
+  id        String  @id @default(uuid())
+  projectId String
+  Project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  allowCustomerToViewTasks                Boolean?
+  allowCustomerToCreateTasks              Boolean?
+  allowCustomerToEditTasks                Boolean?
+  allowCustomerToCommentOnProjectTasks    Boolean?
+  allowCustomerToViewTaskComments         Boolean?
+  allowCustomerToViewTaskAttachments      Boolean?
+  allowCustomerToViewTaskChecklistItems   Boolean?
+  allowCustomerToUploadAttachmentsOnTasks Boolean?
+  allowCustomerToViewTaskTotalLoggedTime  Boolean?
+  allowCustomerToViewFinanceOverview      Boolean?
+  allowCustomerToUploadFiles              Boolean?
+  allowCustomerToOpenDiscussions          Boolean?
+  allowCustomerToViewMilestones           Boolean?
+  allowCustomerToViewGantt                Boolean?
+  allowCustomerToViewTimesheets           Boolean?
+  allowCustomerToViewActivityLog          Boolean?
+  allowCustomerToViewTeamMembers          Boolean?
 }
 
 model Subscription {
@@ -323,6 +401,7 @@ model Package {
   adminId          String?
   adminDetails     AdminDetails[]
   Subscription     Subscription[]
+  User             User[]
 }
 
 model Module {
