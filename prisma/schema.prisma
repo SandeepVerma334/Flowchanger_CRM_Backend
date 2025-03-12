@@ -58,8 +58,7 @@ model StaffDetails {
   Branch        Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
   Department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   Role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  Project       Project?   @relation(fields: [projectId], references: [id])
-  projectId     String[]
+  Project       Project[]
   task          Task[]
 }
 
@@ -290,7 +289,7 @@ model ClientDetails {
 }
 
 model Project {
-  id                   String         @id @default(uuid())
+  id                   String               @id @default(uuid())
   projectName          String?
   // customer              String               @db.VarChar(255)
   progressBar          Int?
@@ -300,21 +299,21 @@ model Project {
   deadline             DateTime?
   description          String?
   sendMail             Boolean?
-  createdAt            DateTime?      @default(now())
-  updatedAt            DateTime?      @updatedAt
-  customer             String?
-  client               ClientDetails? @relation(fields: [customer], references: [id], onDelete: Cascade)
+  createdAt            DateTime?            @default(now())
+  updatedAt            DateTime?            @updatedAt
+  customer             ClientDetails[]
+  // customer             String[]
+  // client               ClientDetails?       @relation(fields: [customer], references: [id], onDelete: Cascade)
   contactNotifications String[]
   visibleTabs          String[]
   userDetails          User[]
-
   // Add relation to ProjectPermissions
-  ProjectPermissions ProjectPermissions[]
-  task               Task[]
+  ProjectPermissions   ProjectPermissions[]
+  task                 Task[]
 }
 
 model Task {
-  id                        String    @id @default(uuid())
+  id                        String         @id @default(uuid())
   subject                   String?
   hourlyRate                String?
   startDate                 DateTime?
@@ -323,20 +322,17 @@ model Task {
   repeateEvery              String?
   relatedTo                 String?
   insertChecklishtTemplates String?
-  postingDate               DateTime  @default(now())
+  postingDate               DateTime       @default(now())
   description               String?
-  public                    Boolean?  @default(false)
-  billable                  Boolean?  @default(false)
+  public                    Boolean?       @default(false)
+  billable                  Boolean?       @default(false)
   attachFiles               String[]
-  assignedBy                String[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  Project        Project?      @relation(fields: [projectId], references: [id])
-  projectId      String?
-  StaffDetails   StaffDetails? @relation(fields: [staffDetailsId], references: [id])
-  staffDetailsId String?
+  // assignedBy                String[]
+  createdAt                 DateTime       @default(now())
+  updatedAt                 DateTime       @updatedAt
+  project                   Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId                 String?
+  StaffDetails              StaffDetails[]
 }
 
 model ProjectPermissions {

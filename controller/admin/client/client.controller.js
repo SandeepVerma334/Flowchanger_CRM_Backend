@@ -8,8 +8,7 @@ import { sendEmailWithPdf } from "../../../utils/emailService.js";
 const createClient = async (req, res, next) => {
     try {
         const admin = await checkAdmin(req.userId);
-        // console.log(admin);
-        console.log("admin " + admin);
+        console.log(admin);
         const validatedData = clientSchema.parse(req.body);
         const { email, password, name, phoneNumber, ...restValidation } = validatedData;
         const user = await prisma.user.findUnique({
@@ -22,7 +21,6 @@ const createClient = async (req, res, next) => {
         if (user) {
             return res.status(400).json({ message: "Client with this email already exists" });
         }
-
         const hashedPassword = await bcrypt.hash(password, 10);
         const client = await prisma.user.create({
             data: {
@@ -32,7 +30,7 @@ const createClient = async (req, res, next) => {
                 firstName: name,
                 mobile: phoneNumber,
                 adminId: admin.id,
-                clientDetails: {
+                ClientDetails: {
                     create: {
                         adminId: admin.adminDetails.id,
                         ...restValidation
@@ -40,7 +38,7 @@ const createClient = async (req, res, next) => {
                 }
             },
             include: {
-                clientDetails: true
+                ClientDetails: true
             }
         })
         await sendEmailWithPdf(email, validatedData.name, password, validatedData.panNumber, `${process.env.CLIENT_URL}/login`);
@@ -66,7 +64,7 @@ const getClients = async (req, res, next) => {
         };
 
         const include = {
-            clientDetails: true
+            ClientDetails: true
         };
 
         const result = await pagination(prisma.user, { page, limit, where, include });

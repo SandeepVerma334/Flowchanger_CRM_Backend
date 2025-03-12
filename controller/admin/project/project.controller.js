@@ -3,11 +3,12 @@ import { projectSchema } from "../../../utils/validation.js";
 import { sendSelectedStaffCustomers } from '../../../utils/emailService.js';
 import { pagination } from "../../../utils/pagination.js";
 
-const createProject = async (req, res) => {
+const createProject = async (req, res, next) => {
     try {
         // Extract members and permissions from the request body
         const {
             members,
+            customer,
             permissions
         } = req.body;
 
@@ -37,15 +38,32 @@ const createProject = async (req, res) => {
             where: { id: { in: members } },
         });
 
-        console.log(staffMembers);
-
         if (staffMembers.length !== members.length) {
             return res.status(400).json({
                 status: false,
                 message: "Some Member IDs are invalid",
             });
         }
-        // fetch all emails from staff details and user table 
+
+        // Validate Customers
+        const customerClients = await prisma.clientDetails.findMany({
+            where: { id: { in: customer } },
+        });
+        console.log("Customer Clients:", customerClients);
+        if (customerClients.length !== customer.length) {
+            return res.status(400).json({ status: false, message: "Some Customer IDs are invalid" });
+        }
+
+        const clientUsers = await prisma.user.findMany({
+            where: {
+                ClientDetails: {
+                    id: { in: customer }
+                },
+                role: "CLIENT",
+            },
+            select: { email: true },
+        });
+
         const users = await prisma.staffDetails.findMany({
             where: {
                 id: { in: members },
@@ -60,9 +78,9 @@ const createProject = async (req, res) => {
                 }
             }
         });
-
-        // Extract only emails
+        const clientEmails = clientUsers.map(user => user.email).filter(email => email);
         const emails = users.map(user => user.User?.email).filter(email => email);
+        const allEmails = [...emails, ...clientEmails];
 
         // Destructure validated fields (excluding permissions)
         const {
@@ -82,6 +100,7 @@ const createProject = async (req, res) => {
                 contactNotifications,
                 visibleTabs,
                 members: { connect: members.map((id) => ({ id })) },
+                customer: { connect: customer.map((id) => ({ id })) },
 
                 // Add ProjectPermissions
                 ProjectPermissions: {
@@ -112,8 +131,8 @@ const createProject = async (req, res) => {
             }
         });
         // send mail for selected members and customers
-        if (emails.length > 0) {
-            await sendSelectedStaffCustomers(emails);
+        if (allEmails.length > 0) {
+            await sendSelectedStaffCustomers(allEmails);
         }
         // Return success response
         res.status(201).json({
@@ -129,7 +148,7 @@ const createProject = async (req, res) => {
 
 // get all project
 const getAllProjects = async (req, res, next) => {
-    const { id } = req.params; // Project ID from params
+    const { id } = req.params;
     try {
         const { page, limit } = req.query;
 

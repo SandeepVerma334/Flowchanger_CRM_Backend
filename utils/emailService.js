@@ -19,7 +19,171 @@ const transporter = nodemailer.createTransport({
 
 // send mail with pdf attachment
 const unlinkAsync = promisify(fs.unlink);
+const createCredentialPdf = async (filePath, username, email, password, pdfPassword) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const logoResponse = await axios.get(
+                'https://th.bing.com/th/id/OIP.o4psCQ-mkEsCHRbldlmfgAAAAA?rs=1&pid=ImgDetMain',
+                { responseType: 'arraybuffer' }
+            );
+            const logoBuffer = Buffer.from(logoResponse.data, 'binary');
 
+            const doc = new PDFDocument({
+                size: 'A4',
+                margin: 40,
+                userPassword: pdfPassword,
+                permissions: {
+                    printing: 'highResolution',
+                    modifying: false,
+                    copying: false,
+                    annotating: false,
+                }
+            });
+
+            const stream = fs.createWriteStream(filePath);
+            doc.pipe(stream);
+
+            // Header section
+            doc.rect(0, 0, doc.page.width, 120).fill('#ffffff');
+            doc.image(logoBuffer, 40, 15, { width: 100 });
+            doc.fillColor('#5A3AA5')
+                .fontSize(10)
+                .font('Helvetica-Bold')
+                .text('UDYAM-RJ-15-0077988', doc.page.width - 180, 20, {
+                    width: 140,
+                    align: 'right',
+                });
+
+            // Purple Address Bar
+            doc.save();
+            doc.fillColor('#5A3AA5').rect(0, 100, doc.page.width, 40).fill();
+            doc.restore();
+
+            doc.fillColor('#ffffff')
+                .fontSize(9)
+                .font('Helvetica')
+                .text(
+                    'Aggarwal colony - 8A,1st Floor, B Block, Nosegay School Road,\nHanumangarh Rd, Sri Ganganagar, Rajasthan 335001',
+                    40, 110, { width: doc.page.width - 200 }
+                );
+
+            // Watermark logo
+            const pageWidth = doc.page.width;
+            const pageHeight = doc.page.height;
+            const watermarkWidth = 300; // Adjust as needed
+            const watermarkHeight = 300; // Adjust to maintain aspect ratio if needed
+
+            const centerX = (pageWidth - watermarkWidth) / 2;
+            const centerY = (pageHeight - watermarkHeight) / 2;
+
+            doc.save();
+            doc.fillOpacity(0.05);
+            doc.image(logoBuffer, centerX, centerY, { width: watermarkWidth });
+            doc.restore();
+
+            // Confidential title section
+            doc.save();
+            doc.fillColor('#5A3AA5').rect(40, 180, 515, 30).fill();
+            doc.fillColor('white').fontSize(16).font('Helvetica-Bold')
+                .text('CONFIDENTIAL LOGIN CREDENTIALS', 40, 188, { align: 'center', width: 515 });
+            doc.restore();
+
+            // Main body text
+            doc.y = 230;
+            doc.fillColor('#333333').fontSize(11).font('Helvetica')
+                .text(`Dear ${username},`, { align: 'left' });
+            doc.y += 15;
+
+            doc.text('We are pleased to share your login credentials for accessing your Flow Changer account. These credentials give you access to our client portal where you can track your project progress and communicate with our team.');
+            doc.y += 30;
+
+            // ===== Login Box Section (with spacing above and below) =====
+            const loginBoxTop = 310;  // Adjust this value to move box up/down
+            const loginBoxHeight = 140;  // Increased for better spacing
+            const boxPadding = 15;  // Internal padding within the box
+
+            // Draw box
+            doc.save();
+            doc.roundedRect(40, loginBoxTop, 395, loginBoxHeight, 10).stroke('#5A3AA5');
+            doc.restore();
+
+            // Content inside box
+            let contentY = loginBoxTop + boxPadding;
+
+            doc.fillColor('#5A3AA5').fontSize(13).font('Helvetica-Bold')
+                .text('Login Details', 60, contentY - 3);
+
+            contentY += 15;
+            doc.moveTo(40, contentY).lineTo(435, contentY).stroke('#5A3AA5');
+            contentY += 15;
+
+            doc.fillColor('#333333').fontSize(11).font('Helvetica')
+                .text('Email:', 60, contentY);
+            doc.font('Helvetica-Bold').text(email, 160, contentY);
+
+            contentY += 20;
+            doc.font('Helvetica').text('Password:', 60, contentY);
+            doc.font('Helvetica-Bold').text(password, 160, contentY);
+
+            contentY += 25;
+
+            // URL button
+            // Draw the button border (optional, for visible button with stroke, remove fill() for transparency)
+            doc.roundedRect(160, contentY, 200, 22, 5)
+                .fillAndStroke('#5A3AA5', '#5A3AA5');  // Solid button with purple fill and stroke
+
+            // Add text inside the button
+            doc.fillColor('white')
+                .font('Helvetica-Bold')
+                .fontSize(11)
+                .text('Login to App', 220, contentY + 6, { width: 100, align: 'center' });
+
+            // Add a clickable link over the button
+            doc.link(160, contentY, 200, 22, 'https://app.owchanger.com/login');
+            // ===== Instructions below box =====
+            doc.y = loginBoxTop + loginBoxHeight + 20;
+            doc.fillColor('#333333').fontSize(10).text(
+                'Please keep these credentials safe and do not share them with anyone. If you have any issues logging in, feel free to contact our support team.', 40, doc.y
+            );
+
+            // Signature section
+            doc.moveDown(2);
+            doc.fillColor('#333333').font('Helvetica')
+                .fontSize(10)
+                .text('Warm regards,', 40, doc.y);
+
+            doc.moveDown(0.5);
+            doc.font('Helvetica-Bold').fontSize(12).text('PRADEEP KUMAR', 40);
+            doc.moveDown(0.5);
+            doc.font('Helvetica').fontSize(10).text('Founder & CEO');
+            doc.text('Flowchanger Digital Marketing Agency');
+
+
+            // Footer
+            doc.strokeColor('#5A3AA5').lineWidth(1).moveTo(40, 680).lineTo(555, 680).stroke();
+
+            // Contact info
+            doc.circle(70, 710, 8).fillAndStroke('#5A3AA5', '#5A3AA5');
+            doc.fillColor('white').fontSize(10).text('+', 67, 705);
+            doc.fillColor('#333333').text('+91 6378277791', 85, 705);
+
+            doc.circle(215, 710, 8).fillAndStroke('#5A3AA5', '#5A3AA5');
+            doc.fillColor('white').text('w', 212, 705);
+            doc.fillColor('#333333').text('www.flowchanger.com', 230, 705);
+
+            doc.circle(390, 710, 8).fillAndStroke('#5A3AA5', '#5A3AA5');
+            doc.fillColor('white').text('@', 385, 705);
+            doc.fillColor('#333333').text('flowchangeragency@gmail.com', 403, 705);
+
+            // Finalize
+            doc.end();
+            stream.on('finish', resolve);
+            stream.on('error', reject);
+        } catch (error) {
+            reject(error);
+        }
+    });
+};
 const sendEmailWithPdf = async (email, username, password, pdfPassword, loginLink) => {
     const filePath = `./${username}.pdf`; // ✅ Fixed path syntax
 
@@ -218,7 +382,7 @@ const sendSelectedStaffCustomers = async (emails) => {
     try {
         const subject = "Project Created - Flow Changer Agency";
         const text = `Hello,\n\nA new project has been created for you. Please check your dashboard for details.\n\nBest Regards,\nFlow Changer Agency`;
-        
+
         const message = `
             <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                 <h3 style="color: #000000;">Dear Team Members,</h3>

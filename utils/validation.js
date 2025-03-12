@@ -298,18 +298,33 @@ const projectSchema = z.object({
   progressBar: z.number().optional(),
   estimatedHours: z.number().optional(),
   members: z.array(z.string()).min(1, "At least one staff ID is required"), // Required staff IDs
+  customer:z.array(z.string()).min(1, "At least one staff ID is required"), 
   startDate: z.coerce.date().optional(),
   deadline: z.coerce.date().optional(),
   description: z.string().optional(),
   sendMail: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  // projectsPermissionsId: z.string().optional(),
-  customer: z.string().optional(), // Required customer ID
   contactNotifications: z.array(z.string()).optional(),
   visibleTabs: z.array(z.string()).optional(),
-  
+});
+
+const taskSchema = z.object({
+  subject: z.string().min(3, "Subject must be at least 3 characters long"),
+  hourlyRate: z.string().regex(/^\d+(\.\d{1,2})?$/, "Hourly rate must be a valid number"),
+  startDate: z.string().refine((date) => !isNaN(Date.parse(date)), { message: "Invalid start date" }),
+  dueDate: z.string().refine((date) => !isNaN(Date.parse(date)), { message: "Invalid due date" }),
+  priority: z.string(),
+  repeateEvery: z.string().optional(),
+  relatedTo: z.string().optional(),
+  insertChecklishtTemplates: z.string().default(false),
+  postingDate: z.string().refine((date) => !isNaN(Date.parse(date)), { message: "Invalid posting date" }).optional(),
+  description: z.string().optional(),
+  public: z.boolean().default(false),
+  billable: z.boolean().default(false),
+  attachFiles: z.array(z.string()).optional(), // File paths or URLs
+  assignedBy: z.array(z.string()).min(1, "At least one staff ID is required"),
 });
 
 
-export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, updateRoleSchema, projectSchema };
+export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, updateRoleSchema, projectSchema, taskSchema };
