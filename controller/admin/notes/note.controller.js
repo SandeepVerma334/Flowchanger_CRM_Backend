@@ -77,12 +77,14 @@ const searchNotes = async (req, res, next) => {
 
         const where = {
             adminId: admin.id,
-            OR: search
-                ? [
-                    { title: { contains: search, mode: "insensitive" } },
-                    { description: { contains: search, mode: "insensitive" } }
-                ]
-                : undefined
+            ...(search
+                ? {
+                    OR: [
+                        { title: { contains: search, mode: "insensitive" } },
+                        { description: { contains: search, mode: "insensitive" } }
+                    ],
+                }
+                : {}),
         };
 
         const include = {

@@ -12,6 +12,7 @@ import transactionRouter from "./superAdmin/transaction.router.js";
 import clientRouter from "./client/client.router.js";
 import noteRouter from "./admin/note.router.js";
 import discussionRouter from "./admin/discusstion.router.js";
+import reportRouter from "./admin/report.router.js";
 
 rootRouter.use("/branch", branchRouter);
 rootRouter.use("/department", departmentRouter);
@@ -24,4 +25,6 @@ rootRouter.use("/admin", adminSignup);
 rootRouter.use("/client", clientRouter);
 rootRouter.use("/note", noteRouter);
 rootRouter.use("/discussion", discussionRouter);
+rootRouter.use("/report", reportRouter);
+
 export default rootRouter;

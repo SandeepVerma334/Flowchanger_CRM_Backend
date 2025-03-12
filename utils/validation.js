@@ -304,5 +304,26 @@ const noteSchema = z.object({
   userId: z.string({ required_error: "User ID is required" }).uuid("Invalid USER ID format"),
 });
 
+const ReportStatus = Object.freeze({
+  PENDING: "PENDING",
+  REJECTED: "REJECTED",
+  RESOLVED: "RESOLVED",
+  IN_PROGRESS: "IN_PROGRESS",
+  ESCALATED: "ESCALATED",
+});
 
-export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, updateRoleSchema, discussionSchema, noteSchema };
+const reportSchema = z.object({
+  name: z.string({ required_error: "Report name is required" }).min(3, "Report name must be at least 3 characters"),
+  description: z.string().min(3, "Description must be at least 3 characters").optional(),
+  subject: z.string({ required_error: "Report subject is required" }).min(3, "Subject must be at least 3 characters"),
+  userId: z.string({ required_error: "User ID is required" }).uuid("Invalid User ID format"),
+  adminId: z.string({ required_error: "Admin ID is required" }).uuid("Invalid Admin ID format"),
+  // token: z.string({ required_error: "Token is required" }).min(3, "Token must be at least 3 characters"),
+  status: z.nativeEnum(ReportStatus, {
+    invalid_type_error: "Status must be a valid report status (PENDING, REJECTED, RESOLVED, IN_PROGRESS, ESCALATED)",
+  }).default(ReportStatus.PENDING),
+});
+
+
+
+export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, updateRoleSchema, discussionSchema, noteSchema, reportSchema };
