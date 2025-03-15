@@ -3,9 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -82,6 +82,79 @@ model StaffDetails {
   Admin                       AdminDetails?                 @relation(fields: [adminId], references: [id], onDelete: Cascade)
   StaffEducationQualification StaffEducationQualification[]
   FinancialDetails            FinancialDetails[]
+  SalaryDetail                SalaryDetail[]
+}
+
+model SalaryDetail {
+  id              String   @id @default(uuid())
+  effectiveDate   DateTime
+  salaryType      String
+  salaryStructure String
+  ctcAmount       Float    @default(0.0)
+
+  earnings    Earnings?
+  compliances Compliances?
+  deductions  Deduction[]
+
+  staffId   String?
+  Staff     StaffDetails? @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model Earnings {
+  id             String       @id @default(uuid())
+  salaryDetailId String       @unique
+  salaryDetail   SalaryDetail @relation(fields: [salaryDetailId], references: [id])
+
+  basic      Float       @default(0.0)
+  allowances Allowance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Allowance {
+  id         String   @id @default(uuid())
+  earningsId String
+  earnings   Earnings @relation(fields: [earningsId], references: [id])
+
+  name   String
+  amount Float  @default(0.0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Compliances {
+  id             String       @id @default(uuid())
+  salaryDetailId String       @unique
+  salaryDetail   SalaryDetail @relation(fields: [salaryDetailId], references: [id])
+
+  employerPF  Float @default(0.0)
+  pfEdliAdmin Float @default(0.0)
+  employerESI Float @default(0.0)
+  employerLWF Float @default(0.0)
+
+  employeePF      Float @default(0.0)
+  employeeESI     Float @default(0.0)
+  professionalTax Float @default(0.0)
+  employeeLWF     Float @default(0.0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Deduction {
+  id             String       @id @default(uuid())
+  salaryDetailId String
+  salaryDetail   SalaryDetail @relation(fields: [salaryDetailId], references: [id])
+
+  name   String
+  amount Float  @default(0.0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model StaffEducationQualification {

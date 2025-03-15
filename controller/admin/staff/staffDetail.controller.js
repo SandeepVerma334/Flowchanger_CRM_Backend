@@ -33,7 +33,7 @@ const createStaff = async (req, res, next) => {
         password: validation.data.password,
         mobile: validation.data.mobile,
         mobile2: validation.data.mobile2,
-        profileImage: validation.data.porfileImage,
+        profileImage: req.file.path,
         role: "STAFF",
         email: validation.data.officialMail,
         otp: validation.data.otp,
@@ -65,10 +65,10 @@ const createStaff = async (req, res, next) => {
             },
             // roleId:validation.data.roleId,
             employeeId: uniqueEmployeeId,
-            offerLetter: validation.data.offerLetter,
-            birthCertificate: validation.data.birthCertificate,
-            guarantorForm: validation.data.guarantorForm,
-            degreeCertificate: validation.data.degreeCertificate,
+            // offerLetter: validation.data.offerLetter,
+            // birthCertificate: validation.data.birthCertificate,
+            // guarantorForm: validation.data.guarantorForm,
+            // degreeCertificate: validation.data.degreeCertificate,
           }
         }
       }
@@ -157,6 +157,7 @@ const getStaffById = async (req, res) => {
 const updateStaff = async (req, res, next) => {
   try {
     const { id } = req.params; // Get staff ID from request parameters
+    console.log(req.files);
     const validation = staffDetailSchema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({
@@ -174,7 +175,7 @@ const updateStaff = async (req, res, next) => {
       return res.status(404).json({ message: "Staff not found!" });
     }
 
-    console.log(validation.data)
+    // console.log(validation.data)
 
     // Update staff data
     const updatedStaff = await prisma.user.update({
@@ -185,10 +186,10 @@ const updateStaff = async (req, res, next) => {
         password: validation.data.password,
         mobile: validation.data.mobile,
         mobile2: validation.data.mobile2,
-        profileImage: validation.data.profileImage,
+        // profileImage: req.file.path,
         email: validation.data.officialMail,
         otp: validation.data.otp,
-
+        profileImage: req.files.profileImage[0].path,
         StaffDetails: {
           update: {
             jobTitle: validation.data.jobTitle,
@@ -212,13 +213,22 @@ const updateStaff = async (req, res, next) => {
                 connect: { id: validation.data.roleId },
               },
             }),
-            offerLetter: validation.data.offerLetter,
-            birthCertificate: validation.data.birthCertificate,
-            guarantorForm: validation.data.guarantorForm,
-            degreeCertificate: validation.data.degreeCertificate,
+            offerLetter: req.files.offerLetter[0].path,
+            birthCertificate: req.files.birthCertificate[0].path,
+            guarantorForm: req.files.guarantorForm[0].path,
+            degreeCertificate: req.files.degreeCertificate[0].path,
           },
         },
       },
+      include:{
+        StaffDetails: {
+          include: {
+            Role: true,
+            Department: true,
+            Branch: true, // Added Branch for consistency with updateStaff
+          },
+        },
+      }
     });
 
     return res.status(200).json({
