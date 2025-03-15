@@ -16,7 +16,8 @@ import taskRouter from "./admin/task.router.js";
 import noteRouter from "./admin/note.router.js";
 import discussionRouter from "./admin/discusstion.router.js";
 import reportRouter from "./admin/report.router.js";
-import { uploadMultipleFields, uploadMultipleInSingleField, uploadSingle } from "../middleware/multer.middleware.js";
+import educationRouter from "./admin/staff/education.router.js"
+import financialRouter from "./admin/staff/financial.router.js"
 
 rootRouter.use("/branch", branchRouter);
 rootRouter.use("/department", departmentRouter);
@@ -31,7 +32,9 @@ rootRouter.use("/note", noteRouter);
 rootRouter.use("/discussion", discussionRouter);
 rootRouter.use("/report", reportRouter);
 rootRouter.use("/role", roleRouter);
-rootRouter.use("/department", departmentRouter);
+rootRouter.use("/task", taskRouter);
 rootRouter.use("/project", projectRouter);
+rootRouter.use("/education", educationRouter);
+rootRouter.use("/financial", financialRouter);
 
 export default rootRouter;

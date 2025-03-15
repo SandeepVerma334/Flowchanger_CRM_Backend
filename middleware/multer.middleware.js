@@ -30,4 +30,3 @@ const uploadMultipleFields = (fields) => upload.fields(fields); // Multiple fiel
 const uploadMultipleInSingleField = (field) => upload.array(`${field}`); // Multiple files in a single field
 
 export { uploadSingle, uploadMultipleFields, uploadMultipleInSingleField }
- 

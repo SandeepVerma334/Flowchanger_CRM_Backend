@@ -22,11 +22,12 @@ CREATE TYPE "punchRecordStatus" AS ENUM ('ABSENT', 'PRESENT');
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
-    "email" TEXT NOT NULL,
+    "email" TEXT,
     "password" TEXT,
     "firstName" TEXT,
     "lastName" TEXT,
     "mobile" TEXT,
+    "mobile2" TEXT,
     "profileImage" TEXT,
     "role" "UserType" NOT NULL DEFAULT 'STAFF',
     "isVerified" BOOLEAN NOT NULL DEFAULT false,
@@ -41,22 +42,63 @@ CREATE TABLE "User" (
 -- CreateTable
 CREATE TABLE "StaffDetails" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
-    "userId" TEXT NOT NULL,
+    "userId" TEXT,
     "jobTitle" TEXT,
     "loginOtp" INTEGER,
     "gender" TEXT,
     "officialMail" TEXT,
-    "dateOfJoining" TIMESTAMP(3),
-    "dateOfBirth" TIMESTAMP(3),
+    "offerLetter" TEXT,
+    "birthCertificate" TEXT,
+    "guarantorForm" TEXT,
+    "degreeCertificate" TEXT,
+    "dateOfJoining" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+    "dateOfBirth" TEXT,
     "employeeId" TEXT,
     "maritalStatus" TEXT,
+    "cityOfresidence" TEXT,
     "address" TEXT,
-    "branchId" TEXT NOT NULL,
-    "departmentId" TEXT NOT NULL,
-    "roleId" TEXT NOT NULL,
-    "adminId" TEXT NOT NULL,
+    "branchId" TEXT,
+    "departmentId" TEXT,
+    "roleId" TEXT,
+    "adminId" TEXT,
 
     CONSTRAINT "StaffDetails_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "StaffEducationQualification" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "instituteName" TEXT,
+    "department" TEXT,
+    "course" TEXT,
+    "location" TEXT,
+    "startDate" TEXT,
+    "endDate" TEXT,
+    "discription" TEXT,
+    "staffId" TEXT,
+    "adminId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "userId" TEXT,
+
+    CONSTRAINT "StaffEducationQualification_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "FinancialDetails" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "bankName" TEXT,
+    "accountNumber" TEXT,
+    "accountName" TEXT,
+    "ifscCode" TEXT,
+    "branchName" TEXT,
+    "pinCode" TEXT,
+    "state" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "staffId" TEXT,
+
+    CONSTRAINT "FinancialDetails_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -708,6 +750,18 @@ ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_roleId_fkey" FOREIGN KEY
 
 -- AddForeignKey
 ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "AdminDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StaffEducationQualification" ADD CONSTRAINT "StaffEducationQualification_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "AdminDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StaffEducationQualification" ADD CONSTRAINT "StaffEducationQualification_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StaffEducationQualification" ADD CONSTRAINT "StaffEducationQualification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "FinancialDetails" ADD CONSTRAINT "FinancialDetails_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Branch" ADD CONSTRAINT "Branch_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
