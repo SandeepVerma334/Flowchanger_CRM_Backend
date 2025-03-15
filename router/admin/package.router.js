@@ -1,14 +1,15 @@
 import express from "express";
+import { createPackage, deletePackage, getAllModules, getAllPackages, getPackageById, updatePackageById } from "../../controller/admin/package.controller.js";
 import errorHandler from "../../middleware/errorhandler.js";
-import { createPackage, getAllModules, getAllPackages, updatePackageById, getPackageByAdminId } from "../../controller/admin/package.controller.js";
 
 const packageRouter = express.Router();
 
 packageRouter.post("/", createPackage);
-packageRouter.get("/:adminId", getPackageByAdminId);
-packageRouter.get("/", getAllPackages);
 packageRouter.get("/modules", getAllModules);
+packageRouter.get("/:id", getPackageById);
+packageRouter.get("/", getAllPackages);
 packageRouter.put("/:id", updatePackageById);
+packageRouter.delete("/:id", deletePackage);
 
 packageRouter.use(errorHandler);
 

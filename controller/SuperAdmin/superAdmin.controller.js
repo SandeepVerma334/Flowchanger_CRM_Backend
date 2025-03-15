@@ -195,4 +195,5 @@ const superAdminResetPassword = async (req, res, next) => {
     }
 }
 
+
 export { superAdminLogin, createSuperAdmin, sendInviteToAdmin, superAdminPasswordResetLink, superAdminResetPassword };

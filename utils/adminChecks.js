@@ -1,21 +1,27 @@
 import prisma from "../prisma/prisma.js";
 
-const checkAdmin = async (userId) => {
-    console.log(userId)
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        include: { adminDetails: true }
-    });
+const checkAdmin = async (userId, role = "ADMIN") => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            include: {
+                adminDetails: role === "ADMIN",
+                staffDetails: role === "STAFF"
+            }
+        });
 
-    if (!user) {
-        throw new Error("User not found");
+        if (!user) {
+            return { error: true, status: 404, message: "User not found" };
+        }
+
+        if (!(user.role === "ADMIN" || user.role === "STAFF")) {
+            return { error: true, status: 403, message: `Access denied. User is not an ${role}` };
+        }
+
+        return { user }; // Return the user if they have the correct role
+    } catch (error) {
+        return { error: "Internal Server Error", status: 500 };
     }
-
-    if (user.role !== 'ADMIN') {
-        throw new Error("Access denied. User is not an admin.");
-    }
-
-    return user; // Return the user with adminDetails if needed
 };
 
 export default checkAdmin;

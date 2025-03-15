@@ -1,20 +1,13 @@
 import { z } from "zod";
 import prisma from "../../prisma/prisma.js";
 import { packageSchema } from "../../utils/validation.js";
+import { pagination } from "../../utils/pagination.js";
+import { error } from "pdf-lib";
 
-export const createPackage = async (req, res, next) => {
+const createPackage = async (req, res, next) => {
     try {
         // Validate request body
         const validatedData = packageSchema.parse(req.body);
-console.log(validatedData);
-        // Check if admin exists
-        // const adminExists = await prisma.adminDetails.findUnique({
-        //     where: { id: validatedData.adminId },
-        // });
-        // console.log(adminExists);
-        // if (!adminExists) {
-        //     return res.status(404).json({ error: "Admin not found" });
-        // }
 
         // Create or connect modules dynamically
         const modules = await Promise.all(
@@ -59,22 +52,29 @@ console.log(validatedData);
     }
 };
 
-export const getAllPackages = async (req, res, next) => {
+const getAllPackages = async (req, res, next) => {
     try {
-        const packages = await prisma.package.findMany({
-            include: {
-                modules: true,
-                adminDetails: true,
-                Subscription: true,
-            },
+        const { page, limit } = req.query;
+
+        const include = {
+            modules: true,
+            adminDetails: true,
+            Subscription: true,
+        };
+
+        const allPackages = await pagination(prisma.package, { page, limit, include });
+
+        return res.status(200).json({
+            message: allPackages.data.length === 0 ? "No packages found" : "Packages found successfully",
+            ...allPackages
         });
-        return res.status(200).json(packages);
+
     } catch (error) {
         next(error);
     }
 };
 
-export const updatePackageById = async (req, res) => {
+const updatePackageById = async (req, res, next) => {
     try {
         const { id } = req.params;
         const validatedData = packageSchema.parse(req.body);
@@ -95,7 +95,6 @@ export const updatePackageById = async (req, res) => {
                 });
             })
         );
-
         // Update package
         const updatedPackage = await prisma.package.update({
             where: { id },
@@ -110,6 +109,11 @@ export const updatePackageById = async (req, res) => {
                 validityTerms: validatedData.validityTerms,
                 description: validatedData.description,
                 adminId: validatedData.adminId,
+                adminDetails: {
+                    connect: {
+                        id: validatedData.adminId
+                    }
+                },
                 modules: {
                     set: [], // Clear existing modules
                     connect: modules.map((module) => ({ id: module.id })),
@@ -121,64 +125,89 @@ export const updatePackageById = async (req, res) => {
             },
         });
 
-        return res.status(200).json(updatedPackage);
+        return res.status(200).json({
+            message: "Package updated successfully",
+            data: updatedPackage
+        });
     } catch (error) {
         next(error)
     }
 };
 
 
-export const getAllModules = async (req, res) => {
+const getAllModules = async (req, res, next) => {
     try {
-        const modules = await prisma.module.findMany({
-            include: {
-                packages: true,
-            },
+        const { page, limit } = req.query
+        const include = {
+            packages: true
+        }
+
+        const allModules = await pagination(prisma.module, {
+            include, page, limit
+        })
+        return res.status(200).json({
+            message: "All modules fetched successfully",
+            ...allModules
         });
-        return res.status(200).json(modules);
     } catch (error) {
-        console.error("Error fetching modules:", error);
-        return res.status(500).json({ error: "Internal server error" });
+        next(error);
     }
 };
 
 //get package by admin id
 
-export const getPackageByAdminId = async (req, res) => {
+const getPackageById = async (req, res, next) => {
     try {
-        const { adminId } = req.params; // get admin id from request params
+        const { id } = req.params;
+        const { type } = req.query// get admin id from request params
         const packages = await prisma.package.findMany({
             where: {
-                adminId: adminId,
+                ...(type === "admin" && {
+                    adminId: id,
+                }),
+                ...(type === "package" && {
+                    id: id,
+                })
             },
             include: {
                 modules: true,
                 adminDetails: true,
             },
         });
-        return res.status(200).json(packages);
+        return res.status(200).json({
+            message: type === "admin" ? "Admin packages fetched successfully" : "Package details fetched successfully",
+            data: type === "admin" ? packages : packages[0]
+        });
     } catch (error) {
-        console.error("Error fetching packages:", error);
-        return res.status(500).json({ error: "Internal server error" });
+        next(error)
     }
 };
 
-// get package by id
-export const getPackageById = async (req, res) => {
+
+const deletePackage = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const pkg = await prisma.package.findUnique({
+        console.log(id);
+        const findPackage = await prisma.package.findUnique({
+            where: {
+                id
+            }
+        });
+
+        if (!findPackage) {
+            return res.status(404).json({ message: "Package not found" })
+        }
+        await prisma.package.delete({
             where: {
                 id: id,
             },
-            include: {
-                modules: true,
-                adminDetails: true,
-            },
         });
-        return res.status(200).json(pkg);
-    } catch (error) {
-        console.error("Error fetching package:", error);
-        return res.status(500).json({ error: "Internal server error" });
+
+        return res.status(200).json({ message: "Package deleted successfully" });
     }
-};
+    catch (error) {
+        next(error);
+    }
+}
+
+export { createPackage, updatePackageById, getAllModules, getPackageById, getAllPackages, deletePackage }
