@@ -86,7 +86,7 @@ const superAdminLogin = async (req, res, next) => {
             { expiresIn: '7d' }
         );
 
-        return res.status(200).json({
+        return res.status(201).json({
             message: "Login successful",
             superAdminDetails: {
                 id: superAdminDetails.id,
@@ -109,12 +109,12 @@ const sendInviteToAdmin = async (req, res, next) => {
             return res.status(400).json({ error: "Email is required" });
         }
 
-       
+
 
         const result = await sendInviteToAdminMail(email);
 
         if (result.success) {
-            res.status(200).json({ message: "Email sent successfully", info: result.info });
+            res.status(201).json({ message: "Email sent successfully", info: result.info });
         } else {
             res.status(500).json({ error: "Failed to send email", details: result.error });
         }
@@ -156,7 +156,7 @@ const superAdminPasswordResetLink = async (req, res, next) => {
         await sendPasswordResetAndForgotEmail(email, superAdminDetails.name, token, "reset");
 
 
-        res.status(200).json({
+        res.status(201).json({
             message: "We have sent a reset link to your registered official email. You can reset your password from there. This link will expire in 15 minutes.",
         });
 
@@ -189,7 +189,7 @@ const superAdminResetPassword = async (req, res, next) => {
 
         await sendPasswordResetAndForgotEmail(email, superAdminDetails.name, "", "Login");
 
-        res.status(200).json({ message: "Password reset successfully" });
+        res.status(201).json({ message: "Password reset successfully" });
     } catch (error) {
         next(error);
     }
