@@ -5,16 +5,17 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  // directUrl = env("DIRECT_URL")
 }
 
 model User {
   id            String             @id @default(dbgenerated("gen_random_uuid()"))
-  email         String             @unique
+  email         String?            @unique
   password      String?
   firstName     String?
   lastName      String?
   mobile        String?
+  mobile2       String?
   profileImage  String?
   role          UserType           @default(STAFF)
   isVerified    Boolean            @default(false)
@@ -36,43 +37,86 @@ model User {
   Note          Note[]
 
   // New relation for subordinates without an adminId
-  subordinates User[]       @relation("UserSubordinates")
-  managers     User[]       @relation("UserSubordinates")
-  Discussion   Discussion[]
-  Report       Report[]
+  subordinates                User[]                        @relation("UserSubordinates")
+  managers                    User[]                        @relation("UserSubordinates")
+  Discussion                  Discussion[]
+  Report                      Report[]
+  StaffEducationQualification StaffEducationQualification[]
 }
 
 model StaffDetails {
-  id            String     @id @default(dbgenerated("gen_random_uuid()"))
-  userId        String     @unique
-  User          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobTitle      String?
-  loginOtp      Int?
-  gender        String?
-  officialMail  String?
-  dateOfJoining DateTime?
-  dateOfBirth   DateTime?
-  employeeId    String?
-  maritalStatus String?
-  address       String?
-  branchId      String
-  departmentId  String
-  roleId        String
+  id                String      @id @default(dbgenerated("gen_random_uuid()"))
+  userId            String?     @unique
+  User              User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobTitle          String?
+  loginOtp          Int?
+  gender            String?
+  officialMail      String?
+  offerLetter       String?
+  birthCertificate  String?
+  guarantorForm     String?
+  degreeCertificate String?
+  dateOfJoining     DateTime?   @default(now())
+  dateOfBirth       String?
+  employeeId        String?
+  maritalStatus     String?
+  cityOfresidence   String?
+  address           String?
+  branchId          String?
+  departmentId      String?
+  roleId            String?
   // adminId       String
   // Admin         AdminDetails @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  Branch        Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  Department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  Role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  Branch            Branch?     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  Department        Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  Role              Role?       @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   PunchRecords PunchRecords[]
 
   Fine Fine[]
 
-  Overtime Overtime[]
-  Project  Project[]
-  task     Task[]
-  adminId  String
-  Admin    AdminDetails @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  Overtime                    Overtime[]
+  Project                     Project[]
+  task                        Task[]
+  adminId                     String?
+  Admin                       AdminDetails?                 @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  StaffEducationQualification StaffEducationQualification[]
+  FinancialDetails            FinancialDetails[]
+}
+
+model StaffEducationQualification {
+  id            String        @id @default(dbgenerated("gen_random_uuid()"))
+  instituteName String?
+  department    String?
+  // Department    Department?   @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  course        String?
+  location      String?
+  startDate     String?
+  endDate       String?
+  discription   String?
+  staffId       String?
+  adminId       String?
+  AdminDetails  AdminDetails? @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  staffDetails  StaffDetails? @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @default(now())
+  User          User?         @relation(fields: [userId], references: [id])
+  userId        String?
+}
+
+model FinancialDetails {
+  id            String        @id @default(dbgenerated("gen_random_uuid()"))
+  bankName      String?
+  accountNumber String?
+  accountName   String?
+  ifscCode      String?
+  branchName    String?
+  pinCode       String?
+  state         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @default(now())
+  staffId       String?
+  staffDetails  StaffDetails? @relation(fields: [staffId], references: [id], onDelete: Cascade)
 }
 
 model Branch {
@@ -249,34 +293,35 @@ model SuperAdminDetails {
 }
 
 model AdminDetails {
-  id            String          @id @default(dbgenerated("gen_random_uuid()"))
-  userId        String          @unique
-  companyName   String?
-  companyLogo   String?
-  profileImage  String?
-  timeFormat    String?
-  timeZone      String?
-  dateFormat    String?
-  weekFormat    String?
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Subscription  Subscription[]
-  packageId     String? // Reference to Package model
-  package       Package?        @relation(fields: [packageId], references: [id], onDelete: SetNull)
-  Transaction   Transaction[]
-  adminId       String?
-  gender        String?
-  designation   String?
-  address       String?
-  city          String?
-  state         String?
-  zipCode       String?
-  country       String?
-  businessType  String?
-  services      String[]
-  companySize   String?
-  role          String?
-  ClientDetails ClientDetails[]
-  StaffDetails  StaffDetails[]
+  id                          String                        @id @default(dbgenerated("gen_random_uuid()"))
+  userId                      String                        @unique
+  companyName                 String?
+  companyLogo                 String?
+  profileImage                String?
+  timeFormat                  String?
+  timeZone                    String?
+  dateFormat                  String?
+  weekFormat                  String?
+  user                        User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Subscription                Subscription[]
+  packageId                   String? // Reference to Package model
+  package                     Package?                      @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  Transaction                 Transaction[]
+  adminId                     String?
+  gender                      String?
+  designation                 String?
+  address                     String?
+  city                        String?
+  state                       String?
+  zipCode                     String?
+  country                     String?
+  businessType                String?
+  services                    String[]
+  companySize                 String?
+  role                        String?
+  ClientDetails               ClientDetails[]
+  StaffDetails                StaffDetails[]
+  StaffEducationQualification StaffEducationQualification[]
 }
 
 model ClientDetails {

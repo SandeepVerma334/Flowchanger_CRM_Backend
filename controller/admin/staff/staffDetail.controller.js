@@ -1,121 +1,84 @@
-import { PrismaClient } from "@prisma/client";
 import { staffDetailSchema } from "../../../utils/validation.js";
-const prisma = new PrismaClient();
+import checkAdmin from "../../../utils/adminChecks.js";
+import prisma from "../../../prisma/prisma.js";
 
 import { v4 as uuidv4 } from "uuid";
 
-const createStaff = async (req, res) => {
-  const validation = staffDetailSchema.safeParse(req.body);
-  // console.log("Validation:", validation);
-
-  if (!validation.success) {
-    return res.status(400).json({
-      error: "Invalid data format",
-      issues: validation.error.issues.map((err) => err.message),
-    });
-  }
-
-  const {
-    firstName,
-    lastName,
-    password,
-    mobile,
-    officialMail,
-    loginOtp,
-    jobTitle,
-    gender,
-    dateOfJoining,
-    maritalStatus,
-    dateOfBirth,
-    address,
-    branchId,
-    departmentId,
-    roleId,
-    employeeId,
-  } = validation.data;
-  // console.log(validation.data);
-
+// create staff
+const createStaff = async (req, res, next) => {
   try {
-    // Check if email already exists
+    const validation = staffDetailSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status().json({
+        error: "Invalid data format",
+        issues: validation.error.issues.map((err) => err.message),
+      });
+    }
     const existingEmail = await prisma.user.findUnique({
-      where: { email: officialMail },
+      where: { email: validation.data.officialMail },
     });
-
     if (existingEmail) {
       return res.status(400).json({
         message: "Email already exists!",
       });
     }
 
-    // Check if the admin exists and has the right role
-    const admin = await prisma.user.findUnique({
-      where: {
-        id: req.userId,
-      }
-    })
-    if (!admin) {
-      return res.status(400).json({
-        status: false,
-        message: "Admin not found",
-      });
-    }
-    if (admin.role !== "ADMIN") {
-      return res.status(400).json({
-        status: false,
-        message: "Unauthorized access",
-      });
-    }
+    const admin = await checkAdmin(req.userId);
 
-    // Generate unique employee ID
     const uniqueEmployeeId = `FLOW#-${new Date().getTime()}-${uuidv4().replace(/-/g, "").substring(0, 5)}`;
-
-    // Create new staff user
-    const user = await prisma.user.create({
+    const staffData = await prisma.user.create({
       data: {
-        firstName,
-        lastName,
-        password,
-        mobile,
+        firstName: validation.data.firstName,
+        lastName: validation.data.lastName,
+        password: validation.data.password,
+        mobile: validation.data.mobile,
+        mobile2: validation.data.mobile2,
+        profileImage: validation.data.porfileImage,
         role: "STAFF",
-        email: officialMail,
-        otp: loginOtp,
-        // Use relation instead of adminId
-        admin: {
-          connect: { id: req.userId }
-        },
+        email: validation.data.officialMail,
+        otp: validation.data.otp,
+        // adminId:validation.data.adminId,
         StaffDetails: {
           create: {
-            jobTitle,
-            gender,
-            dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
-            dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
-            address,
-            maritalStatus,
-            branchId,
-            departmentId,
-            roleId,
+            jobTitle: validation.data.jobTitle,
+            gender: validation.data.gender,
+            dateOfJoining: new Date(validation.data.dateOfJoining),
+            dateOfBirth: validation.data.dateOfBirth,
+            address: validation.data.address,
+            maritalStatus: validation.data.maritalStatus,
+            // branchId:validation.data.branchId,
+            Branch: {
+              connect: {
+                id: validation.data.branchId
+              },
+            },
+            // departmentId:validation.data.departmentId,
+            Department: {
+              connect: {
+                id: validation.data.departmentId
+              },
+            },
+            Role: {
+              connect: {
+                id: validation.data.roleId
+              },
+            },
+            // roleId:validation.data.roleId,
             employeeId: uniqueEmployeeId,
-          },
-        },
-      },
-      include: {
-        StaffDetails: {
-          select: {
-            employeeId: true, // Include employeeId in the response
-          },
-        },
-      },
+            offerLetter: validation.data.offerLetter,
+            birthCertificate: validation.data.birthCertificate,
+            guarantorForm: validation.data.guarantorForm,
+            degreeCertificate: validation.data.degreeCertificate,
+          }
+        }
+      }
     });
-    console.log(user)
+    return res.status(201).json({ status: 201, message: "Staff created successfully", data: staffData });
 
-    res.status(201).json({ message: "Staff created successfully!", user });
   } catch (error) {
-    res.status(500).json({
-      error: "Failed to create staff member",
-      details: error.message,
-    });
+    next(error);
   }
-};
+}
 
 // get all staff
 const getAllStaff = async (req, res) => {
@@ -190,48 +153,81 @@ const getStaffById = async (req, res) => {
   }
 };
 
-// Update Staff by ID
-const updateStaff = async (req, res) => {
-  const { id } = req.params;
-  const { jobTitle, gender, dateOfJoining, dateOfBirth, address, maritalStatus, branchId, departmentId, roleId } = req.body;
-
+// Update staff details | profile update | 
+const updateStaff = async (req, res, next) => {
   try {
-    const staff = await prisma.user.update({
-      where: { id },
+    const { id } = req.params; // Get staff ID from request parameters
+    const validation = staffDetailSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        error: "Invalid data format",
+        issues: validation.error.issues.map((err) => err.message),
+      });
+    }
+    // console.log(staffId);
+    // Check if the staff exists
+    const existingStaff = await prisma.user.findUnique({
+      where: { id: id },
+      include: { StaffDetails: true },
+    });
+    if (!existingStaff) {
+      return res.status(404).json({ message: "Staff not found!" });
+    }
+
+    console.log(validation.data)
+
+    // Update staff data
+    const updatedStaff = await prisma.user.update({
+      where: { id: id },
       data: {
+        firstName: validation.data.firstName,
+        lastName: validation.data.lastName,
+        password: validation.data.password,
+        mobile: validation.data.mobile,
+        mobile2: validation.data.mobile2,
+        profileImage: validation.data.profileImage,
+        email: validation.data.officialMail,
+        otp: validation.data.otp,
+
         StaffDetails: {
           update: {
-            jobTitle,
-            gender,
-            dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
-            dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
-            address,
-            maritalStatus,
-            branchId,
-            departmentId,
-            roleId,
-          },
-        },
-      },
-      include: {
-        StaffDetails: {
-          include: {
-            Role: true,
-            Department: true,
-            Branch: true,
+            jobTitle: validation.data.jobTitle,
+            gender: validation.data.gender,
+            dateOfJoining: new Date(),
+            dateOfBirth: validation.data.dateOfBirth,
+            address: validation.data.address,
+            maritalStatus: validation.data.maritalStatus,
+            ...(validation.data.branchId && {
+              Branch: {
+                connect: { id: validation.data.branchId },
+              },
+            }),
+            ...(validation.data.departmentId && {
+              Department: {
+                connect: { id: validation.data.departmentId },
+              }
+            }),
+            ...(validation.data.roleId && {
+              Role: {
+                connect: { id: validation.data.roleId },
+              },
+            }),
+            offerLetter: validation.data.offerLetter,
+            birthCertificate: validation.data.birthCertificate,
+            guarantorForm: validation.data.guarantorForm,
+            degreeCertificate: validation.data.degreeCertificate,
           },
         },
       },
     });
 
-    if (!staff) {
-      return res.status(404).json({ message: "Staff not found" });
-    }
-
-    res.status(200).json(staff);
+    return res.status(200).json({
+      status: 200,
+      message: "details updated successfully",
+      data: updatedStaff,
+    });
   } catch (error) {
-    console.error("Error updating staff by ID:", error);
-    res.status(500).json({ error: "Failed to update staff by ID" });
+    next(error);
   }
 };
 
@@ -303,8 +299,6 @@ const searchStaff = async (req, res) => {
     res.status(500).json({ error: "Failed to search staff" });
   }
 };
-
-
 
 const bulkCreateStaff = async (req, res, next) => {
   try {
@@ -390,18 +384,30 @@ const bulkCreateStaff = async (req, res, next) => {
           role: "STAFF",
           email: officialMail,
           otp: loginOtp,
-          admin: { connect: { id: req.userId } }, // Linking to admin
+          adminId: req.userId,
           StaffDetails: {
             create: {
               jobTitle,
               gender,
               dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
-              dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+              dateOfBirth,
               address,
               maritalStatus,
-              branchId,
-              departmentId,
-              roleId,
+              Branch: {
+                connect: {
+                  id: branchId
+                },
+              },
+              Department: {
+                connect: {
+                  id: departmentId
+                },
+              },
+              Role: {
+                connect: {
+                  id: roleId
+                },
+              },
               employeeId: uniqueEmployeeId,
             },
           },
@@ -438,37 +444,37 @@ const bulkUpdateStaff = async (req, res, next) => {
     const branchIds = [...new Set(staffList.map((staff) => staff.branchId).filter(Boolean))];
     const departmentIds = [...new Set(staffList.map((staff) => staff.departmentId).filter(Boolean))];
     const roleIds = [...new Set(staffList.map((staff) => staff.roleId).filter(Boolean))];
-
+    // console.log("userIds " + userIds);
     // Verify existing users
     const existingUsers = await prisma.user.findMany({
-      where: { StaffDetails: { id: { in: userIds } } },
+      where: { id: { in: userIds } },
       // select: { id: true },
       include: { StaffDetails: true },
     });
-
-    const existingUserIds = new Set(existingUsers.map((u) => u?.StaffDetails?.id));
-
+    // console.log( existingUsers);
+    const existingUserIds = new Set(existingUsers.map((u) => u?.id));
+    // console.log(existingUserIds);
     // Verify foreign key existence
     const existingBranches = await prisma.branch.findMany({
       where: { id: { in: branchIds } },
       select: { id: true },
     });
-
+    console.log("brannch Id", existingBranches);
     const existingDepartments = await prisma.department.findMany({
       where: { id: { in: departmentIds } },
       select: { id: true },
     });
-
+    console.log("department Id", existingDepartments);
     const existingRoles = await prisma.role.findMany({
       where: { id: { in: roleIds } },
       select: { id: true },
     });
-
+    // console.log("role Id", existingRoles);
     // Convert to sets for easy checking
     const validBranchIds = new Set(existingBranches.map((b) => b.id));
     const validDepartmentIds = new Set(existingDepartments.map((d) => d.id));
     const validRoleIds = new Set(existingRoles.map((r) => r.id));
-
+    console.log(staffList);
     // Filter out invalid staff updates
     const validStaffList = staffList.filter(
       (staff) =>
@@ -514,7 +520,7 @@ const bulkUpdateStaff = async (req, res, next) => {
       // Check if StaffDetails exists
       const staffDetails = await prisma.staffDetails.findUnique({
         where: {
-          id: id
+          userId: id,
         },
       });
 
@@ -537,12 +543,27 @@ const bulkUpdateStaff = async (req, res, next) => {
               jobTitle,
               gender,
               dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
-              dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+              dateOfBirth,
               address,
               maritalStatus,
-              branchId: branchId || null, // Assign correct values
-              departmentId: departmentId || null,
-              roleId: roleId || null,
+              // branchId: branchId || null,
+              Branch: {
+                connect: {
+                  id: branchId
+                },
+              },
+              Department: {
+                connect: {
+                  id: departmentId
+                },
+              },
+              Role: {
+                connect: {
+                  id: roleId
+                },
+              },
+              // departmentId: departmentId || null,
+              // roleId: roleId || null,
             },
           },
         },
@@ -602,7 +623,7 @@ const bulkDeleteStaff = async (req, res, next) => {
           id: { in: staffIds }, // Delete staff details with matching IDs
         },
       }),
-      
+
       // Then, delete the related users in the user table based on userIds
       prisma.user.deleteMany({
         where: {
@@ -625,6 +646,5 @@ const bulkDeleteStaff = async (req, res, next) => {
     next(error);
   }
 };
-
 
 export { createStaff, getAllStaff, getStaffById, updateStaff, deleteStaff, bulkCreateStaff, bulkUpdateStaff, searchStaff, bulkDeleteStaff };

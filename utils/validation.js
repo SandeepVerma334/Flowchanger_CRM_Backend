@@ -29,34 +29,35 @@ const DepartmentSchema = z.object({
 const staffDetailSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
+porfileImage:z.string().optional(),
   mobile: z
     .string()
     .min(10, "Mobile number must be at least 10 digits")
-    .max(15, "Mobile number cannot exceed 15 digits"),
-  officialMail: z.string().email("Invalid email format"),
+    .max(15, "Mobile number cannot exceed 15 digits").optional(),
+    mobile2:z.string().optional(),
+  officialMail: z.string().email("Invalid email format").optional(),
   loginOtp: z.number().optional(),
   jobTitle: z.string().min(1, "Job Title is required").optional().nullable(),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters").optional(),
   employeeId: z.string().optional(),
   gender: z.string().optional(),
   maritalStatus: z.string().optional(),
   dateOfJoining: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date format" })
-    .optional()
-    .nullable(),
-  dateOfBirth: z
-    .string()
-    .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date format" })
-    .optional()
-    .nullable(),
+    .optional(),
+  dateOfBirth: z.string().optional(),
   address: z.string().min(1, "Address is required").optional().nullable(),
-  branchId: z.string().uuid("Branch ID must be a valid UUID"),
-  departmentId: z.string().uuid("Department ID must be a valid UUID"),
-  roleId: z.string().uuid("Role ID must be a valid UUID"),
+  branchId: z.string().uuid("Branch ID must be a valid UUID").optional(),
+  departmentId: z.string().uuid("Department ID must be a valid UUID").optional(),
+  roleId: z.string().uuid("Role ID must be a valid UUID").optional(),
+  cityOfresidence:z.string().optional(),
   adminId: z.string().optional(),
+  offerLetter:z.string().optional(),
+  guarantorForm:z.string().optional(),
+  birthCertificate:z.string().optional(),
+  degreeCertificate:z.string().optional(),
 });
-
 
 const subscriptionSchema = z.object({
   adminId: z.string({ required_error: "User ID is required" }).uuid({ message: "Invalid user ID" }),
@@ -70,7 +71,6 @@ const subscriptionSchema = z.object({
   status: z.string({ required_error: "Status is required" }).min(1, "Status cannot be empty"),
   paid: z.boolean().default(false),
 });
-
 
 const superAdminDetailsSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters long'),
@@ -455,6 +455,30 @@ const reportSchema = z.object({
   }).default(ReportStatus.PENDING),
 });
 
+// education schema
+const StaffEducationQualificationSchema = z.object({
+  instituteName:z.string({required_error: "Institute name is required!"}),
+  department:z.string().optional(),
+  course:z.string({required_error: "Course name is required!"}),
+  location:z.string({required_error: "location is required!"}),
+  startDate:z.string({required_error: "Start date is required!"}),
+  endDate:z.string({required_error: "End date is required!"}),
+  discription:z.string({required_error:"Discription is required!"}),
+  staffId:z.string({required_error: "StaffId is required!"}).uuid("Invalid Admin ID format"),
+  adminId:z.string().optional(),
+});
+
+// financial details schema
+const StaffFinancialDetailsSchema = z.object({
+  bankName:z.string({required_error: "Bank name is required!"}),
+  accountNumber:z.string({required_error: "Account number is required!"}),
+  accountName:z.string({required_error: "Account name is required!"}),
+  ifscCode:z.string({required_error: "IFSC code is required!"}),
+  branchName:z.string({required_error: "Branch name is required!"}),
+  pinCode:z.string({required_error: "Pin Code is required!"}),
+  state:z.string({required_error: "State is required!"}),  
+  staffId:z.string({required_error: "StaffId is required!"}).uuid("Invalid Admin ID format"),
+})
 
 
-export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, projectSchema, taskSchema, adminSignupSchema, updateRoleSchema, noteSchema, discussionSchema, reportSchema };
+export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, projectSchema, taskSchema, adminSignupSchema, updateRoleSchema, noteSchema, discussionSchema, reportSchema, StaffEducationQualificationSchema, StaffFinancialDetailsSchema };

@@ -75,6 +75,7 @@ const uploadAndSaveToCloudinary = (fieldName) => (req, res, next) => {
 const uploadMultipleAndSaveToCloudinary = (fieldName) => (req, res, next) => {
   upload().array(fieldName)(req, res, async (err) => {
     if (err) {
+      console.log(err);
       return res.status(400).send(err.message);
     }
     let folderName = determineFolderName(req.route.path);

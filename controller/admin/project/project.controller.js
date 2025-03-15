@@ -2,6 +2,7 @@ import prisma from "../../../prisma/prisma.js";
 import { projectSchema } from "../../../utils/validation.js";
 import { sendSelectedStaffCustomers } from '../../../utils/emailService.js';
 import { pagination } from "../../../utils/pagination.js";
+import checkAdmin from "../../../utils/adminChecks.js";
 
 const createProject = async (req, res, next) => {
     try {
@@ -152,24 +153,7 @@ const getAllProjects = async (req, res, next) => {
     try {
         const { page, limit } = req.query;
 
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            }
-        });
-
-        if (!admin) {
-            return res.status(400).json({
-                status: false,
-                message: "Admin not found",
-            });
-        }
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({
-                status: false,
-                message: "Unauthorized access",
-            });
-        }
+        const admin = checkAdmin(req.userId, "ADMIN", res);
 
         // Define where filter based on your use case (filter projects by id, status, etc.)
         const where = {
@@ -341,23 +325,8 @@ const deleteProjectById = async (req, res, next) => {
 
 const searchProjectByName = async (req, res, next) => {
     try {
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            }
-        })
-        if (!admin) {
-            return res.status(400).json({
-                status: false,
-                message: "Admin not found",
-            });
-        }
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({
-                status: false,
-                message: "Unauthorized access",
-            });
-        }
+        
+        const admin = checkAdmin(req.userId, "ADMIN", res);
 
         const { projectName } = req.query;
         const projects = await prisma.project.findMany({
