@@ -10,7 +10,7 @@ const createAttendance = async (req, res, next) => {
     try {
         const admin = await checkAdmin(req.userId, "ADMIN");
         console.log(admin);
-        if(!admin) return res.status(401).json({message:"User not authorized"});
+        if (!admin) return res.status(401).json({ message: "User not authorized" });
         // Validate request body
         const validation = AttendanceSchema.safeParse(req.body);
         if (!validation.success) {
@@ -69,9 +69,9 @@ const createAttendance = async (req, res, next) => {
         }
         const adminId = await prisma.user.findUnique({
             where: {
-                id: req.userId,                
+                id: req.userId,
             },
-            });
+        });
         console.log(adminId)
 
         // Create attendance record
@@ -160,19 +160,17 @@ const createBulkAttendance = async (req, res, next) => {
             const attendance = await prisma.attendanceStaff.create({
                 data: {
                     shift: validation.data.shift,
-                    date: attendanceDate.toISOString().split('T')[0], // Convert to "YYYY-MM-DD"
+                    date: attendanceDate.toISOString().split('T')[0],
                     startTime: validation.data.startTime,
                     endTime: validation.data.endTime,
                     status: validation.data.status,
-                    staffId: req.params.staffId, // Use staffId from the URL parameter
-                    adminId: req.userId // Use the logged-in user's adminId
+                    staffId: req.params.staffId,
+                    adminId: req.userId,
                 },
             });
             attendanceRecords.push(attendance);
         }
-
         res.status(200).json({ message: "Bulk attendance created successfully", data: attendanceRecords });
-
     } catch (error) {
         next(error);
     }
