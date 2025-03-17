@@ -3,11 +3,13 @@ import checkAdmin from "../../../utils/adminChecks.js";
 import prisma from "../../../prisma/prisma.js";
 
 import { v4 as uuidv4 } from "uuid";
+import { attendanceStatus } from "@prisma/client";
 
 // create staff
 const createStaff = async (req, res, next) => {
   try {
     const validation = staffDetailSchema.safeParse(req.body);
+    console.log(req.file);
     if (!validation.success) {
       return res.status().json({
         error: "Invalid data format",
@@ -24,7 +26,7 @@ const createStaff = async (req, res, next) => {
     }
 
     const admin = await checkAdmin(req.userId);
-
+console.log(admin)
     const uniqueEmployeeId = `FLOW#-${new Date().getTime()}-${uuidv4().replace(/-/g, "").substring(0, 5)}`;
     const staffData = await prisma.user.create({
       data: {
@@ -33,11 +35,11 @@ const createStaff = async (req, res, next) => {
         password: validation.data.password,
         mobile: validation.data.mobile,
         mobile2: validation.data.mobile2,
-        profileImage: validation.data.porfileImage,
+        profileImage: req.file.path || null,
         role: "STAFF",
         email: validation.data.officialMail,
         otp: validation.data.otp,
-        // adminId:validation.data.adminId,
+        adminId: req.userId,
         StaffDetails: {
           create: {
             jobTitle: validation.data.jobTitle,
@@ -65,10 +67,10 @@ const createStaff = async (req, res, next) => {
             },
             // roleId:validation.data.roleId,
             employeeId: uniqueEmployeeId,
-            offerLetter: validation.data.offerLetter,
-            birthCertificate: validation.data.birthCertificate,
-            guarantorForm: validation.data.guarantorForm,
-            degreeCertificate: validation.data.degreeCertificate,
+            // offerLetter: validation.data.offerLetter,
+            // birthCertificate: validation.data.birthCertificate,
+            // guarantorForm: validation.data.guarantorForm,
+            // degreeCertificate: validation.data.degreeCertificate,
           }
         }
       }
@@ -83,20 +85,8 @@ const createStaff = async (req, res, next) => {
 // get all staff
 const getAllStaff = async (req, res) => {
   try {
-    const admin = await prisma.user.findUnique({
-      where: {
-        id: req.userId,
-      },
-    });
+    const admin = checkAdmin(req.userId, "ADMIN", res);
 
-    if (!admin) {
-      return res.status(400).json({
-        message: "Admin not found!",
-      });
-    }
-    if (admin.role !== "ADMIN") {
-      return res.status(400).json({ message: "Only admin can get staff!" });
-    }
     const staff = await prisma.user.findMany({
       where: {
         role: "STAFF",
@@ -108,11 +98,12 @@ const getAllStaff = async (req, res) => {
             Role: true,
             Department: true,
             Branch: true,
+            AttendanceStaff: true,
           },
         },
       },
     });
-    res.status(200).json(staff);
+    res.status(200).json({ message: "Staff fetched successfully", data: staff });
   } catch (error) {
     console.error("Error fetching staff:", error);
     res.status(500).json({ error: "Failed to fetch staff" });
@@ -157,6 +148,7 @@ const getStaffById = async (req, res) => {
 const updateStaff = async (req, res, next) => {
   try {
     const { id } = req.params; // Get staff ID from request parameters
+    console.log(req.files);
     const validation = staffDetailSchema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({
@@ -174,7 +166,7 @@ const updateStaff = async (req, res, next) => {
       return res.status(404).json({ message: "Staff not found!" });
     }
 
-    console.log(validation.data)
+    // console.log(validation.data)
 
     // Update staff data
     const updatedStaff = await prisma.user.update({
@@ -185,10 +177,10 @@ const updateStaff = async (req, res, next) => {
         password: validation.data.password,
         mobile: validation.data.mobile,
         mobile2: validation.data.mobile2,
-        profileImage: validation.data.profileImage,
+        // profileImage: req.file.path,
         email: validation.data.officialMail,
         otp: validation.data.otp,
-
+        profileImage: req.files.profileImage[0].path || null,
         StaffDetails: {
           update: {
             jobTitle: validation.data.jobTitle,
@@ -212,13 +204,22 @@ const updateStaff = async (req, res, next) => {
                 connect: { id: validation.data.roleId },
               },
             }),
-            offerLetter: validation.data.offerLetter,
-            birthCertificate: validation.data.birthCertificate,
-            guarantorForm: validation.data.guarantorForm,
-            degreeCertificate: validation.data.degreeCertificate,
+            offerLetter: req.files.offerLetter[0].path || null,
+            birthCertificate: req.files.birthCertificate[0].path || null,
+            guarantorForm: req.files.guarantorForm[0].path || null,
+            degreeCertificate: req.files.degreeCertificate[0].path || null,
           },
         },
       },
+      include: {
+        StaffDetails: {
+          include: {
+            Role: true,
+            Department: true,
+            Branch: true, // Added Branch for consistency with updateStaff
+          },
+        },
+      }
     });
 
     return res.status(200).json({

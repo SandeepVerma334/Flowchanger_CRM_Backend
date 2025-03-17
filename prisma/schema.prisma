@@ -82,6 +82,49 @@ model StaffDetails {
   Admin                       AdminDetails?                 @relation(fields: [adminId], references: [id], onDelete: Cascade)
   StaffEducationQualification StaffEducationQualification[]
   FinancialDetails            FinancialDetails[]
+  AttendanceStaff             AttendanceStaff[]
+  attendanceBreakRecord       attendanceBreakRecord[]
+}
+
+model AttendanceStaff {
+  id                    String                  @id @default(dbgenerated("gen_random_uuid()"))
+  shift                 String?
+  date                  String?
+  startTime             String?
+  endTime               String?
+  status                attendanceStatus        @default(ABSENT)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @default(now())
+  staffId               String?
+  adminId               String?
+  adminDetail           AdminDetails?           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  staffDetails          StaffDetails?           @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  attendanceBreakRecord attendanceBreakRecord[]
+}
+
+model attendanceBreakRecord {
+  id              String           @id @default(dbgenerated("gen_random_uuid()"))
+  startBreak      String?
+  endBreak        String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @default(now())
+  location        String?
+  attendanceId    String?
+  startBreakImage String?
+  endBreakImage   String?
+  attendanceStaff AttendanceStaff? @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+  staffId         String?
+  staffDetails    StaffDetails?    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}
+
+enum attendanceStatus {
+  PERSENT
+  ABSENT
+  PAID_LEAVE
+  HALF_DAY
+  FINE
+  OVERTIME
+  ON_BREAK
 }
 
 model StaffEducationQualification {
@@ -302,7 +345,7 @@ model AdminDetails {
   timeZone                    String?
   dateFormat                  String?
   weekFormat                  String?
-  user                        User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                        User                          @relation(fields: [userId], references: [id])
   Subscription                Subscription[]
   packageId                   String? // Reference to Package model
   package                     Package?                      @relation(fields: [packageId], references: [id], onDelete: SetNull)
@@ -322,6 +365,7 @@ model AdminDetails {
   ClientDetails               ClientDetails[]
   StaffDetails                StaffDetails[]
   StaffEducationQualification StaffEducationQualification[]
+  AttendanceStaff             AttendanceStaff[]
 }
 
 model ClientDetails {

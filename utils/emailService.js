@@ -336,7 +336,8 @@ const sendGeneralMessage = async (email, subject, content) => {
 
 const sendPasswordResetAndForgotEmail = async (email, name, resetToken, type,) => {
     try {
-        const resetLink = ` ${process.env.FRONTEND_URL}restore-password?token=${resetToken}&email=${email}`;
+        const resetLink = `${process.env.FRONTEND_URL}/restore-password?token=${resetToken}&email=${email}`;
+
         const expiryTime = process.env.RESET_LINK_EXPIRY || "15 minutes";
         const subject = type === "reset"
             ? "Reset Your Password - Flow Changer"

@@ -3,13 +3,12 @@ import prisma from "../prisma/prisma.js";
 const checkAdmin = async (userId, role = "ADMIN") => {
     try {
         const user = await prisma.user.findUnique({
-            where: { id: userId },
+            where: { id: userId, role: role },
             include: {
                 adminDetails: role === "ADMIN",
                 staffDetails: role === "STAFF"
             }
         });
-
         if (!user) {
             return { error: true, status: 404, message: "User not found" };
         }
