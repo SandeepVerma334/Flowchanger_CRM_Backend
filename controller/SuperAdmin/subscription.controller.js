@@ -115,4 +115,15 @@ const searchSubscription = async (req, res, next) => {
     }
 }
 
-export { getAllSubscription, getSubscriptionById, createSubscription, updateSubscription, deleteSubscription, searchSubscription };
+const countSubscription = async (req, res, next) => {
+    try {
+        const allSubscriptionCount = await prisma.subscription.count();
+        return res.json({ message: "Count Subscriptions", count: allSubscriptionCount });
+    }
+    catch (error) {
+        next(error);
+    }
+}
+
+
+export { getAllSubscription, getSubscriptionById, createSubscription, updateSubscription, deleteSubscription, searchSubscription, countSubscription };

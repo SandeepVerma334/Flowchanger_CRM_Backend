@@ -108,14 +108,12 @@ const updatePackageById = async (req, res, next) => {
                 numberOfClients: validatedData.numberOfClients,
                 validityTerms: validatedData.validityTerms,
                 description: validatedData.description,
-                // adminId: validatedData.adminId,
-                ...(validatedData.adminId && {
-                    adminDetails: {
-                        connect: {
-                            id: validatedData.adminId
-                        }
-                    },
-                }),
+                adminId: validatedData.adminId,
+                adminDetails: {
+                    connect: {
+                        id: validatedData.adminId
+                    }
+                },
                 modules: {
                     set: [], // Clear existing modules
                     connect: modules.map((module) => ({ id: module.id })),

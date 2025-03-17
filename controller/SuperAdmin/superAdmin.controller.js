@@ -44,7 +44,6 @@ const createSuperAdmin = async (req, res, next) => {
             },
         });
 
-
         // Return success response
         res.status(201).json({
             message: 'Super Admin created successfully',

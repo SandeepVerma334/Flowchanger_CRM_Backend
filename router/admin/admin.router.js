@@ -1,6 +1,6 @@
 import express from "express";
 
-import { adminLogin, adminPasswordResetLink, adminResetPassword, adminSignup, deleteUserById, getAllUsers, getUserById, searchUsers, sendOTP, updateAdminProfile, verifyOTP } from "../../controller/admin/admin.controller.js";
+import { adminLogin, adminPasswordResetLink, adminResetPassword, adminSignup, countAdmin, deleteUserById, getAllUsers, getUserById, searchUsers, sendOTP, updateAdminProfile, verifyOTP } from "../../controller/admin/admin.controller.js";
 import errorHandler from "../../middleware/errorhandler.js";
 
 const adminRouter = express.Router();
@@ -8,6 +8,7 @@ const adminRouter = express.Router();
 adminRouter.get("/search", searchUsers);
 adminRouter.post("/forgot", adminPasswordResetLink)
 adminRouter.patch("/reset", adminResetPassword)
+adminRouter.get("/count", countAdmin)
 adminRouter.get("/:id", getUserById);
 adminRouter.delete("/:id", deleteUserById)
 adminRouter.post("/signup", adminSignup);
