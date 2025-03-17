@@ -63,8 +63,8 @@ const getAllStaffEducation = async (req, res, next) => {
     const { page = 1, limit = 10 } = req.query;
     // Assuming pagination is a helper function
     const education = await pagination(prisma.staffEducationQualification, {
-      page,
-      limit,
+        page,
+        limit,
       include: {
         staffDetails: true,
         AdminDetails: true,

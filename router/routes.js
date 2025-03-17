@@ -18,6 +18,7 @@ import discussionRouter from "./admin/discusstion.router.js";
 import reportRouter from "./admin/report.router.js";
 import educationRouter from "./admin/staff/education.router.js"
 import financialRouter from "./admin/staff/financial.router.js"
+import attendanceRouter from "./admin/staff/attendance.router.js"
 
 rootRouter.use("/branch", branchRouter);
 rootRouter.use("/department", departmentRouter);
@@ -36,5 +37,6 @@ rootRouter.use("/task", taskRouter);
 rootRouter.use("/project", projectRouter);
 rootRouter.use("/education", educationRouter);
 rootRouter.use("/financial", financialRouter);
+rootRouter.use("/attendance", attendanceRouter);
 
 export default rootRouter;

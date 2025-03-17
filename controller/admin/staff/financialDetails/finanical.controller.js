@@ -70,4 +70,100 @@ const getAllFinancialDetails = async (req, res, next) => {
     }
 }
 
-export { createFinancialDetails, getAllFinancialDetails };
+// get Financial details by id
+const getFinancialDetailsById = async (req, res, next) => {
+    try {
+        const admin = checkAdmin(req.userId, "ADMIN", res);
+        const { id } = req.params;
+        const financialDetails = await prisma.financialDetails.findFirst({
+            where: {
+                id,
+                adminId: admin.id
+            },
+            include: {
+                staffDetails: {
+                    include: {
+                        User: true
+                    },
+                },
+            },
+        });
+        res.status(200).json({ message: "Financial details fetched successfully", data: financialDetails });
+    } catch (error) {
+        next(error);
+    }
+}
+
+// delete financial details by id
+const deleteFinancialDetailsById = async (req, res, next) => {
+    try {
+        const admin = checkAdmin(req.userId, "ADMIN", res);
+        const { id } = req.params;
+        const financialDetails = await prisma.financialDetails.delete({
+            where: {
+                id,
+                adminId: admin.id
+            },
+        });
+        res.status(200).json({ message: "Financial details deleted successfully", data: financialDetails });
+    } catch (error) {
+        next(error);
+    }
+}
+
+// update financial details by id
+const updateFinancialDetailsById = async (req, res, next) => {
+    try {        
+        const admin = await checkAdmin(req.userId, "ADMIN");        
+        const validationData = StaffFinancialDetailsSchema.parse(req.body);
+        const { id } = req.params;
+
+        // Check if the financial detail entry exists
+        const existingFinancialDetail = await prisma.financialDetails.findUnique({
+            where: { id }
+        });
+
+        if (!existingFinancialDetail) {
+            return res.status(404).json({ message: "Financial details not found." });
+        }
+
+        if (validationData.accountNumber) {
+            const existingAccount = await prisma.financialDetails.findFirst({
+                where: {
+                    accountNumber: validationData.accountNumber,
+                    NOT: { id }
+                }
+            });
+            if (existingAccount) {
+                return res.status(400).json({ message: "Another entry with this account number already exists." });
+            }
+        }
+        if (validationData.staffId) {
+            const existingStaff = await prisma.financialDetails.findFirst({
+                where: {
+                    staffId: validationData.staffId,
+                    NOT: { id }
+                }
+            });
+            if (existingStaff) {
+                return res.status(400).json({ message: "This staff member already has a financial details entry." });
+            }
+        }
+
+        // Update financial details
+        const updatedFinancialDetails = await prisma.financialDetails.update({
+            where: { id },
+            data: validationData,
+        });
+
+        return res.status(200).json({
+            message: "Financial details updated successfully",
+            data: updatedFinancialDetails
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+export { createFinancialDetails, getAllFinancialDetails, getFinancialDetailsById, deleteFinancialDetailsById, updateFinancialDetailsById };

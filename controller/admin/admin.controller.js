@@ -4,6 +4,7 @@ import prisma from "../../prisma/prisma.js";
 import { sendOtpEmail, sendPasswordResetAndForgotEmail } from '../../utils/emailService.js';
 import { pagination } from '../../utils/pagination.js';
 import { adminSignupSchema } from "../../utils/validation.js";
+import checkAdmin from '../../utils/adminChecks.js';
 
 const adminSignup = async (req, res, next) => {
     try {
@@ -26,7 +27,11 @@ const adminSignup = async (req, res, next) => {
 
         // Create the admin user in the database
         const newUser = await prisma.user.create({
-            data: { ...validatedData, role: "ADMIN", password: hashedPassword },
+            data: { 
+                ...validatedData, 
+                role: "ADMIN",
+                password: hashedPassword 
+            },
         });
 
         // Return response
@@ -42,6 +47,8 @@ const adminSignup = async (req, res, next) => {
 
 const updateAdminProfile = async (req, res, next) => {
     try {
+        const admin = await checkAdmin(req, res, next);
+        console.log(admin);
         const {
             email,
             mobile,

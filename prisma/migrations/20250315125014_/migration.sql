@@ -1,4 +1,7 @@
 -- CreateEnum
+CREATE TYPE "attendanceStatus" AS ENUM ('PERSENT', 'ABSENT', 'PAID_LEAVE', 'HALF_DAY', 'FINE', 'OVERTIME', 'ON_BREAK');
+
+-- CreateEnum
 CREATE TYPE "ReportStatus" AS ENUM ('PENDING', 'REJECTED', 'RESOLVED', 'IN_PROGRESS', 'ESCALATED');
 
 -- CreateEnum
@@ -63,6 +66,37 @@ CREATE TABLE "StaffDetails" (
     "adminId" TEXT,
 
     CONSTRAINT "StaffDetails_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "AttendanceStaff" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "shift" TEXT,
+    "date" TEXT,
+    "startTime" TEXT,
+    "endTime" TEXT,
+    "status" "attendanceStatus" NOT NULL DEFAULT 'ABSENT',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "staffId" TEXT,
+
+    CONSTRAINT "AttendanceStaff_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "attendanceBreakRecord" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "startBreak" TEXT,
+    "endBreak" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "location" TEXT,
+    "attendanceId" TEXT,
+    "startBreakImage" TEXT,
+    "endBreakImage" TEXT,
+    "staffId" TEXT,
+
+    CONSTRAINT "attendanceBreakRecord_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -750,6 +784,15 @@ ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_roleId_fkey" FOREIGN KEY
 
 -- AddForeignKey
 ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "AdminDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AttendanceStaff" ADD CONSTRAINT "AttendanceStaff_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "attendanceBreakRecord" ADD CONSTRAINT "attendanceBreakRecord_attendanceId_fkey" FOREIGN KEY ("attendanceId") REFERENCES "AttendanceStaff"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "attendanceBreakRecord" ADD CONSTRAINT "attendanceBreakRecord_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "StaffEducationQualification" ADD CONSTRAINT "StaffEducationQualification_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "AdminDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
