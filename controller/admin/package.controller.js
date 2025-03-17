@@ -109,7 +109,7 @@ const updatePackageById = async (req, res, next) => {
                 validityTerms: validatedData.validityTerms,
                 description: validatedData.description,
                 // adminId: validatedData.adminId,
-             ...(adminId && { adminDetails: { connect: { id: validatedData.adminId } } } )
+             ...(adminId && { adminDetails: { connect: { id: validatedData.adminId } } } ),
                 modules: {
                     set: [], // Clear existing modules
                     connect: modules.map((module) => ({ id: module.id })),
