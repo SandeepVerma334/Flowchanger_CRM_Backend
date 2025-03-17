@@ -84,6 +84,7 @@ model StaffDetails {
   FinancialDetails            FinancialDetails[]
   AttendanceStaff             AttendanceStaff[]
   attendanceBreakRecord       AttendanceBreakRecord[]
+  SalaryDetail                SalaryDetail[]
 }
 
 model AttendanceStaff {
@@ -126,6 +127,99 @@ enum AttendanceStatus {
   OVERTIME
   ON_BREAK
   HOLIDAY
+}
+
+model SalaryDetail {
+  id              String @id @default(uuid())
+  effectiveDate   String
+  salaryType      String
+  salaryStructure String
+  ctcAmount       Float  @default(0.0)
+
+  earnings    Earnings?
+  compliances Compliances?
+  deductions  Deduction[]
+
+  staffId   String?
+  Staff     StaffDetails? @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model Earnings {
+  id               String       @id @default(uuid())
+  salaryDetailId   String       @unique
+  salaryDetail     SalaryDetail @relation(fields: [salaryDetailId], references: [id], onDelete: Cascade)
+  basicCalculation String?
+  basic            Float        @default(0.0)
+  allowances       Allowance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Allowance {
+  id         String   @id @default(uuid())
+  earningsId String
+  earnings   Earnings @relation(fields: [earningsId], references: [id], onDelete: Cascade)
+
+  name        String
+  calculation String?
+  amount      Float   @default(0.0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Compliances {
+  id             String       @id @default(uuid())
+  salaryDetailId String       @unique
+  salaryDetail   SalaryDetail @relation(fields: [salaryDetailId], references: [id], onDelete: Cascade)
+
+  // 🚀 Employer Contributions
+  includeEmployerPF Boolean @default(false)
+  employerPFAmount  Float   @default(0.0)
+  employerPFType    String?
+
+  includeEmployerESI Boolean @default(false)
+  employerESIAmount  Float   @default(0.0)
+  employerESIType    String?
+
+  includeEmployerLWF Boolean @default(false)
+  employerLWFAmount  Float   @default(0.0)
+  employerLWFType    String?
+
+  includePfEdliAdmin Boolean @default(false)
+  pfEdliAdminAmount  Float   @default(0.0)
+  pfEdliAdminType    String?
+
+  // 🚀 Employee Contributions
+  employeePFAmount Float   @default(0.0)
+  employeePFType   String?
+
+  employeeESIAmount Float   @default(0.0)
+  employeeESIType   String?
+
+  professionalTaxAmount Float   @default(0.0)
+  professionalTaxType   String?
+
+  employeeLWFAmount Float   @default(0.0)
+  employeeLWFType   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Deduction {
+  id             String       @id @default(uuid())
+  salaryDetailId String
+  salaryDetail   SalaryDetail @relation(fields: [salaryDetailId], references: [id], onDelete: Cascade)
+
+  name   String
+  amount Float  @default(0.0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model StaffEducationQualification {
@@ -174,11 +268,11 @@ model Branch {
 }
 
 model Department {
-  id              String         @id @default(dbgenerated("gen_random_uuid()"))
-  department_name String
-  adminId         String
-  admin           User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  staffs          StaffDetails[]
+  id             String         @id @default(dbgenerated("gen_random_uuid()"))
+  departmentName String
+  adminId        String
+  admin          User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  staffs         StaffDetails[]
 }
 
 model Permissions {

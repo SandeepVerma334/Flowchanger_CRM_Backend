@@ -23,7 +23,7 @@ const BranchSchema = z.object({
 });
 
 const DepartmentSchema = z.object({
-  department_name: z.string().min(1, "Department Name is required"),
+  departmentName: z.string().min(1, "Department Name is required"),
 });
 
 const staffDetailSchema = z.object({
@@ -488,6 +488,56 @@ const AttendanceStatus = Object.freeze({
   OVERTIME: "OVERTIME",
   FINE: "FINE",
 });
+
+const AllowanceSchema = z.object({
+  name: z.string(),
+  calculation: z.enum(["fixed", "percentage"]),
+  amount: z.number(),
+});
+
+const DeductionSchema = z.object({
+  name: z.string(),
+  amount: z.number(),
+});
+
+const CompliancesSchema = z.object({
+  includeEmployerPF: z.boolean(),
+  employerPFAmount: z.number(),
+  employerPFType: z.enum(["fixed", "percentage"]),
+  includeEmployerESI: z.boolean(),
+  employeePFAmount: z.number(),
+  employeePFType: z.enum(["fixed", "percentage"]),
+  employerESIAmount: z.number(),
+  employerESIType: z.enum(["fixed", "percentage"]),
+  employeeESIAmount: z.number(),
+  employeeESIType: z.enum(["fixed", "percentage"]),
+  professionalTaxAmount: z.number(),
+  professionalTaxType: z.enum(["fixed", "percentage"]),
+  employerLWFAmount: z.number(),
+  includeEmployerLWF: z.boolean(),
+  employerLWFType: z.enum(["fixed", "percentage"]),
+  employeeLWFAmount: z.number(),
+  employeeLWFType: z.enum(["fixed", "percentage"]),
+  includePfEdliAdmin: z.boolean(),
+  pfEdliAdminAmount: z.number(),
+  pfEdliAdminType: z.enum(["fixed", "percentage"]),
+});
+
+const SalarySchema = z.object({
+  effectiveDate: z.string().datetime(),
+  salaryType: z.string().optional(),
+  salaryStructure: z.string(),
+  ctcAmount: z.number(),
+  staffId: z.string().uuid(),
+  earnings: z.object({
+    basicCalculation: z.enum(["fixed", "percentage"]),
+    basic: z.number(),
+    allowances: z.array(AllowanceSchema),
+  }),
+  deductions: z.array(DeductionSchema),
+  compliances: CompliancesSchema,
+});
+
 
 // attendance staff
 const AttendanceSchema = z.object({

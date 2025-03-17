@@ -3,10 +3,10 @@ import checkAdmin from "../../../utils/adminChecks.js";
 import prisma from "../../../prisma/prisma.js";
 
 import { v4 as uuidv4 } from "uuid";
-import { attendanceStatus } from "@prisma/client";
 
 // create staff
 const createStaff = async (req, res, next) => {
+  console.log(req.body);
   try {
     const validation = staffDetailSchema.safeParse(req.body);
     console.log(req.file);
@@ -35,7 +35,7 @@ console.log(admin)
         password: validation.data.password,
         mobile: validation.data.mobile,
         mobile2: validation.data.mobile2,
-        profileImage: req.file.path || null,
+        profileImage: validation.data.porfileImage,
         role: "STAFF",
         email: validation.data.officialMail,
         otp: validation.data.otp,
@@ -73,6 +73,9 @@ console.log(admin)
             // degreeCertificate: validation.data.degreeCertificate,
           }
         }
+      },
+      include: {
+        StaffDetails: true
       }
     });
     return res.status(201).json({ status: 201, message: "Staff created successfully", data: staffData });
@@ -180,7 +183,7 @@ const updateStaff = async (req, res, next) => {
         // profileImage: req.file.path,
         email: validation.data.officialMail,
         otp: validation.data.otp,
-        profileImage: req.files.profileImage[0].path || null,
+
         StaffDetails: {
           update: {
             jobTitle: validation.data.jobTitle,
@@ -204,10 +207,10 @@ const updateStaff = async (req, res, next) => {
                 connect: { id: validation.data.roleId },
               },
             }),
-            offerLetter: req.files.offerLetter[0].path || null,
-            birthCertificate: req.files.birthCertificate[0].path || null,
-            guarantorForm: req.files.guarantorForm[0].path || null,
-            degreeCertificate: req.files.degreeCertificate[0].path || null,
+            offerLetter: validation.data.offerLetter,
+            birthCertificate: validation.data.birthCertificate,
+            guarantorForm: validation.data.guarantorForm,
+            degreeCertificate: validation.data.degreeCertificate,
           },
         },
       },

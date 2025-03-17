@@ -5,7 +5,7 @@ import { DepartmentSchema } from "../../utils/validation.js";
 
 const createDepartment = async (req, res) => {
     try {
-        const { department_name } = req.body;
+        const { departmentName } = req.body;
         const admin = await prisma.user.findUnique({
             where: {
                 id: req.userId,
@@ -24,7 +24,7 @@ const createDepartment = async (req, res) => {
             });
         }
         const departmentResult = DepartmentSchema.safeParse({
-            department_name,
+            departmentName,
         });
         if (!departmentResult.success) {
             return res.status(400).json({
@@ -96,9 +96,9 @@ const updateDepartment = async (req, res) => {
             .json({ message: "Only admin can update department!" });
     }
     try {
-        const { department_name } = req.body;
+        const { departmentName } = req.body;
         const validationResult = DepartmentSchema.safeParse({
-            department_name,
+            departmentName,
         });
         if (!validationResult.success) {
             return res.status(400).json({
@@ -112,7 +112,7 @@ const updateDepartment = async (req, res) => {
                 id,
             },
             data: {
-                department_name: validationResult.data.department_name,
+                departmentName: validationResult.data.departmentName,
             },
         });
         return res.status(200).json({
@@ -266,7 +266,7 @@ const showDepartment = async (req, res) => {
 // Search Department Query............................
 const searchDepartmentByName = async (req, res) => {
     try {
-        const { department_name } = req.query;
+        const { departmentName } = req.query;
         const admin = await prisma.user.findUnique({
             where: {
                 id: req.userId,
@@ -285,8 +285,8 @@ const searchDepartmentByName = async (req, res) => {
         }
         const SearchDepartment = await prisma.department.findMany({
             where: {
-                department_name: {
-                    contains: department_name,
+                departmentName: {
+                    contains: departmentName,
                     mode: "insensitive",
                 },
                 adminId: req.userId,

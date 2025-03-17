@@ -98,7 +98,12 @@ const updateAdminProfile = async (req, res, next) => {
                         businessType,
                         services,
                         companySize,
-                        role
+                        role,
+                        package: {
+                            connect: {
+                                id: packageId
+                            }
+                        }
                     }
                 }
             },
@@ -143,7 +148,7 @@ const adminLogin = async (req, res, next) => {
 
         res.status(200).json({
             message: "Login successfuly",
-            token, 
+            token,
             data: user  // Send token in response
         });
 
@@ -167,7 +172,7 @@ const verifyOTP = async (req, res, next) => {
         // Check OTP and Expiry
         const now = new Date();
 
-        
+
         if (user.otp === parseInt(otp) && user.otpExpiresAt > now) {
             await prisma.user.update({
                 where: { email },
