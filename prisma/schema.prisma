@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
   // directUrl = env("DIRECT_URL")
 }
 
@@ -87,7 +87,7 @@ model StaffDetails {
 
 model SalaryDetail {
   id              String   @id @default(uuid())
-  effectiveDate   DateTime
+  effectiveDate   String 
   salaryType      String
   salaryStructure String
   ctcAmount       Float    @default(0.0)
@@ -103,12 +103,12 @@ model SalaryDetail {
 }
 
 model Earnings {
-  id             String       @id @default(uuid())
-  salaryDetailId String       @unique
-  salaryDetail   SalaryDetail @relation(fields: [salaryDetailId], references: [id])
-
-  basic      Float       @default(0.0)
-  allowances Allowance[]
+  id               String       @id @default(uuid())
+  salaryDetailId   String       @unique
+  salaryDetail     SalaryDetail @relation(fields: [salaryDetailId], references: [id], onDelete: Cascade)
+  basicCalculation String?
+  basic            Float        @default(0.0)
+  allowances       Allowance[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -117,10 +117,11 @@ model Earnings {
 model Allowance {
   id         String   @id @default(uuid())
   earningsId String
-  earnings   Earnings @relation(fields: [earningsId], references: [id])
+  earnings   Earnings @relation(fields: [earningsId], references: [id], onDelete: Cascade)
 
-  name   String
-  amount Float  @default(0.0)
+  name        String
+  calculation String?
+  amount      Float   @default(0.0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -129,17 +130,37 @@ model Allowance {
 model Compliances {
   id             String       @id @default(uuid())
   salaryDetailId String       @unique
-  salaryDetail   SalaryDetail @relation(fields: [salaryDetailId], references: [id])
+  salaryDetail   SalaryDetail @relation(fields: [salaryDetailId], references: [id], onDelete: Cascade)
 
-  employerPF  Float @default(0.0)
-  pfEdliAdmin Float @default(0.0)
-  employerESI Float @default(0.0)
-  employerLWF Float @default(0.0)
+  // 🚀 Employer Contributions
+  includeEmployerPF Boolean @default(false)
+  employerPFAmount  Float   @default(0.0)
+  employerPFType    String?
 
-  employeePF      Float @default(0.0)
-  employeeESI     Float @default(0.0)
-  professionalTax Float @default(0.0)
-  employeeLWF     Float @default(0.0)
+  includeEmployerESI Boolean @default(false)
+  employerESIAmount  Float   @default(0.0)
+  employerESIType    String?
+
+  includeEmployerLWF Boolean @default(false)
+  employerLWFAmount  Float   @default(0.0)
+  employerLWFType    String?
+
+  includePfEdliAdmin Boolean @default(false)
+  pfEdliAdminAmount  Float   @default(0.0)
+  pfEdliAdminType    String?
+
+  // 🚀 Employee Contributions
+  employeePFAmount Float   @default(0.0)
+  employeePFType   String?
+
+  employeeESIAmount Float   @default(0.0)
+  employeeESIType   String?
+
+  professionalTaxAmount Float   @default(0.0)
+  professionalTaxType   String?
+
+  employeeLWFAmount Float   @default(0.0)
+  employeeLWFType   String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -148,7 +169,7 @@ model Compliances {
 model Deduction {
   id             String       @id @default(uuid())
   salaryDetailId String
-  salaryDetail   SalaryDetail @relation(fields: [salaryDetailId], references: [id])
+  salaryDetail   SalaryDetail @relation(fields: [salaryDetailId], references: [id], onDelete: Cascade)
 
   name   String
   amount Float  @default(0.0)
@@ -203,11 +224,11 @@ model Branch {
 }
 
 model Department {
-  id              String         @id @default(dbgenerated("gen_random_uuid()"))
-  department_name String
-  adminId         String
-  admin           User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  staffs          StaffDetails[]
+  id             String         @id @default(dbgenerated("gen_random_uuid()"))
+  departmentName String
+  adminId        String
+  admin          User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  staffs         StaffDetails[]
 }
 
 model Permissions {

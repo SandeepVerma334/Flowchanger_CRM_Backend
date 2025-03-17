@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 
 // create staff
 const createStaff = async (req, res, next) => {
+  console.log(req.body);
   try {
     const validation = staffDetailSchema.safeParse(req.body);
     if (!validation.success) {
@@ -33,7 +34,7 @@ const createStaff = async (req, res, next) => {
         password: validation.data.password,
         mobile: validation.data.mobile,
         mobile2: validation.data.mobile2,
-        profileImage: req.file.path,
+        profileImage: req?.file?.path || null,
         role: "STAFF",
         email: validation.data.officialMail,
         otp: validation.data.otp,
@@ -71,6 +72,9 @@ const createStaff = async (req, res, next) => {
             // degreeCertificate: validation.data.degreeCertificate,
           }
         }
+      },
+      include: {
+        StaffDetails: true
       }
     });
     return res.status(201).json({ status: 201, message: "Staff created successfully", data: staffData });
@@ -220,7 +224,7 @@ const updateStaff = async (req, res, next) => {
           },
         },
       },
-      include:{
+      include: {
         StaffDetails: {
           include: {
             Role: true,

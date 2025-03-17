@@ -23,18 +23,18 @@ const BranchSchema = z.object({
 });
 
 const DepartmentSchema = z.object({
-  department_name: z.string().min(1, "Department Name is required"),
+  departmentName: z.string().min(1, "Department Name is required"),
 });
 
 const staffDetailSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
-porfileImage:z.string().optional(),
+  porfileImage: z.string().optional(),
   mobile: z
     .string()
     .min(10, "Mobile number must be at least 10 digits")
     .max(15, "Mobile number cannot exceed 15 digits").optional(),
-    mobile2:z.string().optional(),
+  mobile2: z.string().optional(),
   officialMail: z.string().email("Invalid email format").optional(),
   loginOtp: z.number().optional(),
   jobTitle: z.string().min(1, "Job Title is required").optional().nullable(),
@@ -51,12 +51,12 @@ porfileImage:z.string().optional(),
   branchId: z.string().uuid("Branch ID must be a valid UUID").optional(),
   departmentId: z.string().uuid("Department ID must be a valid UUID").optional(),
   roleId: z.string().uuid("Role ID must be a valid UUID").optional(),
-  cityOfresidence:z.string().optional(),
+  cityOfresidence: z.string().optional(),
   adminId: z.string().optional(),
-  offerLetter:z.string().optional(),
-  guarantorForm:z.string().optional(),
-  birthCertificate:z.string().optional(),
-  degreeCertificate:z.string().optional(),
+  offerLetter: z.string().optional(),
+  guarantorForm: z.string().optional(),
+  birthCertificate: z.string().optional(),
+  degreeCertificate: z.string().optional(),
 });
 
 const subscriptionSchema = z.object({
@@ -457,28 +457,77 @@ const reportSchema = z.object({
 
 // education schema
 const StaffEducationQualificationSchema = z.object({
-  instituteName:z.string({required_error: "Institute name is required!"}),
-  department:z.string().optional(),
-  course:z.string({required_error: "Course name is required!"}),
-  location:z.string({required_error: "location is required!"}),
-  startDate:z.string({required_error: "Start date is required!"}),
-  endDate:z.string({required_error: "End date is required!"}),
-  discription:z.string({required_error:"Discription is required!"}),
-  staffId:z.string({required_error: "StaffId is required!"}).uuid("Invalid Admin ID format"),
-  adminId:z.string().optional(),
+  instituteName: z.string({ required_error: "Institute name is required!" }),
+  department: z.string().optional(),
+  course: z.string({ required_error: "Course name is required!" }),
+  location: z.string({ required_error: "location is required!" }),
+  startDate: z.string({ required_error: "Start date is required!" }),
+  endDate: z.string({ required_error: "End date is required!" }),
+  discription: z.string({ required_error: "Discription is required!" }),
+  staffId: z.string({ required_error: "StaffId is required!" }).uuid("Invalid Admin ID format"),
+  adminId: z.string().optional(),
 });
 
 // financial details schema
 const StaffFinancialDetailsSchema = z.object({
-  bankName:z.string({required_error: "Bank name is required!"}),
-  accountNumber:z.string({required_error: "Account number is required!"}),
-  accountName:z.string({required_error: "Account name is required!"}),
-  ifscCode:z.string({required_error: "IFSC code is required!"}),
-  branchName:z.string({required_error: "Branch name is required!"}),
-  pinCode:z.string({required_error: "Pin Code is required!"}),
-  state:z.string({required_error: "State is required!"}),  
-  staffId:z.string({required_error: "StaffId is required!"}).uuid("Invalid Admin ID format"),
+  bankName: z.string({ required_error: "Bank name is required!" }),
+  accountNumber: z.string({ required_error: "Account number is required!" }),
+  accountName: z.string({ required_error: "Account name is required!" }),
+  ifscCode: z.string({ required_error: "IFSC code is required!" }),
+  branchName: z.string({ required_error: "Branch name is required!" }),
+  pinCode: z.string({ required_error: "Pin Code is required!" }),
+  state: z.string({ required_error: "State is required!" }),
+  staffId: z.string({ required_error: "StaffId is required!" }).uuid("Invalid Admin ID format"),
 })
+
+const AllowanceSchema = z.object({
+  name: z.string(),
+  calculation: z.enum(["fixed", "percentage"]),
+  amount: z.number(),
+});
+
+const DeductionSchema = z.object({
+  name: z.string(),
+  amount: z.number(),
+});
+
+const CompliancesSchema = z.object({
+  includeEmployerPF: z.boolean(),
+  employerPFAmount: z.number(),
+  employerPFType: z.enum(["fixed", "percentage"]),
+  includeEmployerESI: z.boolean(),
+  employeePFAmount: z.number(),
+  employeePFType: z.enum(["fixed", "percentage"]),
+  employerESIAmount: z.number(),
+  employerESIType: z.enum(["fixed", "percentage"]),
+  employeeESIAmount: z.number(),
+  employeeESIType: z.enum(["fixed", "percentage"]),
+  professionalTaxAmount: z.number(),
+  professionalTaxType: z.enum(["fixed", "percentage"]),
+  employerLWFAmount: z.number(),
+  includeEmployerLWF: z.boolean(),
+  employerLWFType: z.enum(["fixed", "percentage"]),
+  employeeLWFAmount: z.number(),
+  employeeLWFType: z.enum(["fixed", "percentage"]),
+  includePfEdliAdmin: z.boolean(),
+  pfEdliAdminAmount: z.number(),
+  pfEdliAdminType: z.enum(["fixed", "percentage"]),
+});
+
+const SalarySchema = z.object({
+  effectiveDate: z.string().datetime(),
+  salaryType: z.string().optional(),
+  salaryStructure: z.string(),
+  ctcAmount: z.number(),
+  staffId: z.string().uuid(),
+  earnings: z.object({
+    basicCalculation: z.enum(["fixed", "percentage"]),
+    basic: z.number(),
+    allowances: z.array(AllowanceSchema),
+  }),
+  deductions: z.array(DeductionSchema),
+  compliances: CompliancesSchema,
+});
 
 
 export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, projectSchema, taskSchema, adminSignupSchema, updateRoleSchema, noteSchema, discussionSchema, reportSchema, StaffEducationQualificationSchema, StaffFinancialDetailsSchema };

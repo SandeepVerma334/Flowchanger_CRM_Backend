@@ -7,8 +7,8 @@ const salaryDetailRouter = express.Router();
 
 salaryDetailRouter.post("/", authorizationMiddleware, createSalary);
 salaryDetailRouter.get("/", authorizationMiddleware, getSalaries);
-salaryDetailRouter.get("/:id", authorizationMiddleware, updateSalary);
-salaryDetailRouter.put("/:id", authorizationMiddleware, deleteSalary);
+salaryDetailRouter.put("/:id", authorizationMiddleware, updateSalary);
+salaryDetailRouter.delete("/:id", authorizationMiddleware, deleteSalary);
 
 
 salaryDetailRouter.use(errorHandler);
