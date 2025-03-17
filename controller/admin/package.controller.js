@@ -108,12 +108,13 @@ const updatePackageById = async (req, res, next) => {
                 numberOfClients: validatedData.numberOfClients,
                 validityTerms: validatedData.validityTerms,
                 description: validatedData.description,
-                adminId: validatedData.adminId,
-                adminDetails: {
-                    connect: {
-                        id: validatedData.adminId
-                    }
-                },
+                ...(validatedData.adminId && {
+                    adminDetails: {
+                        connect: {
+                            id: validatedData.adminId
+                        }
+                    },
+                }),
                 modules: {
                     set: [], // Clear existing modules
                     connect: modules.map((module) => ({ id: module.id })),
@@ -210,4 +211,13 @@ const deletePackage = async (req, res, next) => {
     }
 }
 
-export { createPackage, updatePackageById, getAllModules, getPackageById, getAllPackages, deletePackage }
+const countPackage = async (req, res, next) => {
+    try {
+        const allPackageCount = await prisma.package.count();
+        return res.json({ message: "Count Packages", count: allPackageCount });
+    }
+    catch (error) {
+        next(error);
+    }
+}
+export { createPackage, updatePackageById, getAllModules, getPackageById, getAllPackages, deletePackage, countPackage }

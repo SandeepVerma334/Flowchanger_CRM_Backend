@@ -27,10 +27,10 @@ const adminSignup = async (req, res, next) => {
 
         // Create the admin user in the database
         const newUser = await prisma.user.create({
-            data: { 
-                ...validatedData, 
+            data: {
+                ...validatedData,
                 role: "ADMIN",
-                password: hashedPassword 
+                password: hashedPassword
             },
         });
 
@@ -47,8 +47,8 @@ const adminSignup = async (req, res, next) => {
 
 const updateAdminProfile = async (req, res, next) => {
     try {
-        const admin = await checkAdmin(req, res, next);
-        console.log(admin);
+        // const admin = await checkAdmin(req, res, next);
+        // console.log(admin);
         const {
             email,
             mobile,
@@ -359,4 +359,18 @@ const adminResetPassword = async (req, res, next) => {
     }
 }
 
-export { adminLogin, adminPasswordResetLink, adminResetPassword, adminSignup, deleteUserById, getAllUsers, getUserById, searchUsers, sendOTP, updateAdminProfile, verifyOTP }; 
+const countAdmin = async (req, res, next) => {
+    try {
+        const allAdminCount = await prisma.user.count({
+            where: {
+                role: 'ADMIN',
+            },
+        });
+        return res.json({ message: "Count Admin", count: allAdminCount });
+    }
+    catch (error) {
+        next(error);
+    }
+}
+
+export { adminLogin, adminPasswordResetLink, adminResetPassword, adminSignup, deleteUserById, getAllUsers, getUserById, searchUsers, sendOTP, updateAdminProfile, verifyOTP, countAdmin }; 

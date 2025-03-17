@@ -6,10 +6,13 @@ import { v4 as uuidv4 } from "uuid";
 
 // create staff
 const createStaff = async (req, res, next) => {
-  console.log(req.body);
   try {
+    const adminCheck = await checkAdmin(req.userId);
+    console.log(adminCheck)
+    if (adminCheck.error) {
+      return res.status(403).json({ message: adminCheck.message });
+    }
     const validation = staffDetailSchema.safeParse(req.body);
-    console.log(req.file);
     if (!validation.success) {
       return res.status().json({
         error: "Invalid data format",
@@ -26,7 +29,7 @@ const createStaff = async (req, res, next) => {
     }
 
     const admin = await checkAdmin(req.userId);
-console.log(admin)
+    console.log(admin)
     const uniqueEmployeeId = `FLOW#-${new Date().getTime()}-${uuidv4().replace(/-/g, "").substring(0, 5)}`;
     const staffData = await prisma.user.create({
       data: {

@@ -8,7 +8,7 @@ import { pagination } from "../../utils/pagination.js";
 const createTransaction = async (req, res, next) => {
   try {
     const validationData = transactionSchema.parse(req.body);
-
+    console.log(validationData);
     const hasTransaction = await prisma.transaction.findUnique({
       where: { paymentId: validationData.paymentId },
     });
@@ -55,11 +55,10 @@ const getTransactionByAdminId = async (req, res, next) => {
 
     const result = await pagination(prisma.transaction, { page, limit, where: { adminId: id } });
 
-    if (result.records.length === 0) {
-      return res.status(404).json({ error: "No transactions found for this admin." });
-    }
-
-    return res.status(200).json(result);
+    return res.status(200).json({
+      message: "Transactions found successfully",
+      ...result,
+    });
   } catch (error) {
     next(error);
   }

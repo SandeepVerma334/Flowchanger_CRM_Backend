@@ -3,9 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -30,8 +30,6 @@ model User {
   ClientDetails ClientDetails?
   packageId     String?
   package       Package?           @relation(fields: [packageId], references: [id], onDelete: SetNull)
-  // adminId       String?            @unique @map("admin_id") // Ensure correct relation
-  // admin         AdminDetails?      @relation(fields: [adminId], references: [id])
   projects      Project[]
   adminId       String?
   Note          Note[]
@@ -42,6 +40,7 @@ model User {
   Discussion                  Discussion[]
   Report                      Report[]
   StaffEducationQualification StaffEducationQualification[]
+  PaymentHistory              PaymentHistory[]
 }
 
 model StaffDetails {
@@ -84,7 +83,12 @@ model StaffDetails {
   FinancialDetails            FinancialDetails[]
   AttendanceStaff             AttendanceStaff[]
   attendanceBreakRecord       AttendanceBreakRecord[]
-  SalaryDetail                SalaryDetail[]
+  SalaryDetails               SalaryDetail[]
+  EmployerContribution        EmployerContribution[]
+  EmployeeContribution        EmployeeContribution[]
+  Deductions                  Deductions[]
+  Earnings                    Earnings[]
+  PaymentHistory              PaymentHistory[]
 }
 
 model AttendanceStaff {
@@ -130,96 +134,129 @@ enum AttendanceStatus {
 }
 
 model SalaryDetail {
-  id              String @id @default(uuid())
-  effectiveDate   String
-  salaryType      String
-  salaryStructure String
-  ctcAmount       Float  @default(0.0)
+  id                   String                 @id @default(uuid())
+  effective_date       DateTime?
+  salary_type          String?
+  ctc_amount           Float?
+  employer_pf          Float?
+  employer_esi         Float?
+  employer_lwf         Float?
+  employee_pf          Float?
+  employee_esi         Float?
+  professional_tax     Float?
+  employee_lwf         Float?
+  payroll_finalized    Boolean                @default(false)
+  finalized_date       DateTime?
+  final_salary         Float?
+  tds                  Float?
+  created_at           DateTime?              @default(now())
+  updated_at           DateTime?              @updatedAt
+  staffId              String
+  // Relations
+  Staff                StaffDetails           @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  employerContribution EmployerContribution[] @relation("EmployerContributionToSalaryDetails")
+  employeeContribution EmployeeContribution[] @relation("EmployeeContributionToSalaryDetails")
+  deductions           Deductions[]           @relation("DeductionsToSalaryDetails")
+  earnings             Earnings[]             @relation("EarningsToSalaryDetails")
+  paymentHistory       PaymentHistory[]       @relation("PaymentHistoryToSalaryDetails")
+}
 
-  earnings    Earnings?
-  compliances Compliances?
-  deductions  Deduction[]
+model EmployerContribution {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()"))
+  staffId            String
+  salaryDetailsId    String?
+  type               String // PF, ESI, LWF
+  calculation        String?
+  amount             Float
+  state              String?
+  includedInCTC      Boolean  @default(false)
+  contribution_month String
+  selected_earnings  String[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  staffId   String?
-  Staff     StaffDetails? @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  // Relations
+  staff         StaffDetails  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  SalaryDetails SalaryDetail? @relation(fields: [salaryDetailsId], references: [id], onDelete: Cascade, name: "EmployerContributionToSalaryDetails")
+}
+
+model EmployeeContribution {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()"))
+  staffId            String
+  salaryDetailsId    String?
+  type               String // PF, ESI, Professional Tax, LWF
+  calculation        String?
+  amount             Float
+  state              String?
+  contribution_month String
+  selected_earnings  String[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relations
+  staff         StaffDetails  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  SalaryDetails SalaryDetail? @relation(fields: [salaryDetailsId], references: [id], onDelete: Cascade, name: "EmployeeContributionToSalaryDetails")
+}
+
+model Deductions {
+  id              String  @id @default(dbgenerated("gen_random_uuid()"))
+  heads           String?
+  calculation     String?
+  amount          Float?
+  deduction_month String?
+  staffId         String?
+  salaryDetailsId String?
+
+  // Relations
+  SalaryDetails SalaryDetail? @relation(fields: [salaryDetailsId], references: [id], onDelete: Cascade, name: "DeductionsToSalaryDetails")
+  staff         StaffDetails? @relation(fields: [staffId], references: [id], onDelete: Cascade)
 }
 
 model Earnings {
-  id               String       @id @default(uuid())
-  salaryDetailId   String       @unique
-  salaryDetail     SalaryDetail @relation(fields: [salaryDetailId], references: [id], onDelete: Cascade)
-  basicCalculation String?
-  basic            Float        @default(0.0)
-  allowances       Allowance[]
+  id              String  @id @default(dbgenerated("gen_random_uuid()"))
+  heads           String?
+  calculation     String?
+  amount          Float?
+  staffId         String?
+  salary_month    String?
+  salaryDetailsId String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Relations
+  SalaryDetails SalaryDetail? @relation(fields: [salaryDetailsId], references: [id], onDelete: Cascade, name: "EarningsToSalaryDetails")
+  staff         StaffDetails? @relation(fields: [staffId], references: [id], onDelete: Cascade)
 }
 
-model Allowance {
-  id         String   @id @default(uuid())
-  earningsId String
-  earnings   Earnings @relation(fields: [earningsId], references: [id], onDelete: Cascade)
+model PaymentHistory {
+  id              String        @id @default(dbgenerated("gen_random_uuid()"))
+  staffId         String
+  salaryDetailsId String?
+  date            DateTime      @default(now())
+  amount          Float
+  type            PaymentType   @default(SALARY)
+  status          PaymentStatus @default(SAVED)
+  transactionId   String?
+  utrNumber       String?
+  note            String?
+  adminId         String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
-  name        String
-  calculation String?
-  amount      Float   @default(0.0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Relations
+  admin         User          @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  SalaryDetails SalaryDetail? @relation(fields: [salaryDetailsId], references: [id], onDelete: Cascade, name: "PaymentHistoryToSalaryDetails")
+  staff         StaffDetails  @relation(fields: [staffId], references: [id], onDelete: Cascade)
 }
 
-model Compliances {
-  id             String       @id @default(uuid())
-  salaryDetailId String       @unique
-  salaryDetail   SalaryDetail @relation(fields: [salaryDetailId], references: [id], onDelete: Cascade)
-
-  // 🚀 Employer Contributions
-  includeEmployerPF Boolean @default(false)
-  employerPFAmount  Float   @default(0.0)
-  employerPFType    String?
-
-  includeEmployerESI Boolean @default(false)
-  employerESIAmount  Float   @default(0.0)
-  employerESIType    String?
-
-  includeEmployerLWF Boolean @default(false)
-  employerLWFAmount  Float   @default(0.0)
-  employerLWFType    String?
-
-  includePfEdliAdmin Boolean @default(false)
-  pfEdliAdminAmount  Float   @default(0.0)
-  pfEdliAdminType    String?
-
-  // 🚀 Employee Contributions
-  employeePFAmount Float   @default(0.0)
-  employeePFType   String?
-
-  employeeESIAmount Float   @default(0.0)
-  employeeESIType   String?
-
-  professionalTaxAmount Float   @default(0.0)
-  professionalTaxType   String?
-
-  employeeLWFAmount Float   @default(0.0)
-  employeeLWFType   String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum PaymentType {
+  ADVANCE
+  SALARY
 }
 
-model Deduction {
-  id             String       @id @default(uuid())
-  salaryDetailId String
-  salaryDetail   SalaryDetail @relation(fields: [salaryDetailId], references: [id], onDelete: Cascade)
-
-  name   String
-  amount Float  @default(0.0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum PaymentStatus {
+  PROCESSING
+  SUCCESS
+  FAILED
+  SAVED
 }
 
 model StaffEducationQualification {
