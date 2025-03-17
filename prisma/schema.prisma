@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -83,7 +83,7 @@ model StaffDetails {
   StaffEducationQualification StaffEducationQualification[]
   FinancialDetails            FinancialDetails[]
   AttendanceStaff             AttendanceStaff[]
-  attendanceBreakRecord       attendanceBreakRecord[]
+  attendanceBreakRecord       AttendanceBreakRecord[]
 }
 
 model AttendanceStaff {
@@ -92,17 +92,17 @@ model AttendanceStaff {
   date                  String?
   startTime             String?
   endTime               String?
-  status                attendanceStatus        @default(ABSENT)
+  status                AttendanceStatus        @default(ABSENT)
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @default(now())
   staffId               String?
   adminId               String?
   adminDetail           AdminDetails?           @relation(fields: [adminId], references: [id], onDelete: Cascade)
   staffDetails          StaffDetails?           @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  attendanceBreakRecord attendanceBreakRecord[]
+  attendanceBreakRecord AttendanceBreakRecord[]
 }
 
-model attendanceBreakRecord {
+model AttendanceBreakRecord {
   id              String           @id @default(dbgenerated("gen_random_uuid()"))
   startBreak      String?
   endBreak        String?
@@ -117,7 +117,7 @@ model attendanceBreakRecord {
   staffDetails    StaffDetails?    @relation(fields: [staffId], references: [id], onDelete: Cascade)
 }
 
-enum attendanceStatus {
+enum AttendanceStatus {
   PERSENT
   ABSENT
   PAID_LEAVE
@@ -125,6 +125,7 @@ enum attendanceStatus {
   FINE
   OVERTIME
   ON_BREAK
+  HOLIDAY
 }
 
 model StaffEducationQualification {
