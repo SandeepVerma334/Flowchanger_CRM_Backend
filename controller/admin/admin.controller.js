@@ -14,13 +14,20 @@ const adminSignup = async (req, res, next) => {
         const user = await prisma.user.findUnique({
             where: {
                 email: validatedData.email
+            },
+            include: {
+                adminDetails: true,
             }
         });
 
-        if (user) {
+        console.log(user);
+
+        if (user && user.adminDetails) {
             return res.status(400).json({ message: "User already exists" });
         }
-
+        if (user && !user.adminDetails) {
+            await prisma.user.delete({ where: { id: user.id } })
+        }
         // Hash the password using bcrypt
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(validatedData.password, saltRounds);
@@ -71,7 +78,10 @@ const updateAdminProfile = async (req, res, next) => {
 
 
         const user = await prisma.user.findUnique({
-            where: { email: email }
+            where: { email: email },
+            include: {
+                adminDetails: true
+            }
         });
 
         if (!user) {
@@ -85,24 +95,51 @@ const updateAdminProfile = async (req, res, next) => {
                 mobile,
                 password,
                 adminDetails: {
-                    create: {
-                        companyName,
-                        timeZone,
-                        address,
-                        city,
-                        state,
-                        zipCode,
-                        country,
-                        gender,
-                        designation,
-                        businessType,
-                        services,
-                        companySize,
-                        role,
-                        package: {
-                            connect: {
-                                id: packageId
-                            }
+                    upsert: {
+                        where: { userId: user.id },  // Use the adminDetailId to check existence
+                        update: {
+                            companyName,
+                            timeZone,
+                            address,
+                            city,
+                            state,
+                            zipCode,
+                            country,
+                            gender,
+                            designation,
+                            businessType,
+                            services,
+                            companySize,
+                            role,
+                            ...(packageId && {
+                                package: {
+                                    connect: {
+                                        id: packageId
+                                    }
+                                }
+                            })
+                        },
+                        create: {
+                            companyName,
+                            timeZone,
+                            address,
+                            city,
+                            state,
+                            zipCode,
+                            country,
+                            gender,
+                            designation,
+                            businessType,
+                            services,
+                            companySize,
+                            role,
+                            ...(packageId && {
+                                package: {
+                                    connect: {
+                                        id: packageId
+                                    }
+                                }
+                            })
                         }
                     }
                 }
@@ -112,9 +149,12 @@ const updateAdminProfile = async (req, res, next) => {
             }
         });
 
+
+        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' }); // Generate JWT token with user ID    
         res.status(200).json({
             message: "Admin profile updated successfully",
             data: updatedUser,
+            token: token,
         });
 
     } catch (error) {

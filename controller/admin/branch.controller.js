@@ -1,314 +1,151 @@
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
-import ZodError from "zod";
+
+import { pagination } from "../../utils/pagination.js";
+import checkAdmin from "../../utils/adminChecks.js";
+import prisma from "../../prisma/prisma.js";
 import { BranchSchema } from "../../utils/validation.js";
-
-const createBranch = async (req, res) => {
+const createBranch = async (req, res, next) => {
     try {
+        const admin = await checkAdmin(req.userId);
+
+        if (admin.error) {
+            return res.status(401).json({ message: admin.message });
+        }
+
         const { branchName } = req.body;
-        const branchResult = BranchSchema.safeParse({
-            branchName,
-        });
-        if (!branchResult.success) {
-            return res.status(400).json({
-                status: false,
-                message: branchResult.error.issues[0].message,
-            });
-        }
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            }
-        })
-        if (!admin) {
-            return res.status(400).json({
-                status: false,
-                message: "Admin not found",
-            });
-        }
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({
-                status: false,
-                message: "Unauthorized access",
-            });
-        }
+
+        const validationData = BranchSchema.parse({ branchName });
+
         const branch = await prisma.branch.create({
-            data: { ...branchResult.data, adminId: req.userId },
-        });
-        res.status(200).json({ branch });
-    } catch (error) {
-        // if (error instanceof ZodError) {
-        //     return res.status(400).json({ error: error.message });
-        // }
-        res.status(400).json({ error: error.message });
-    }
-}
-
-const getAllBranches = async (req, res) => {
-    try {
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            }
-        })
-        if (!admin) {
-            return res.status(400).json({
-                status: false,
-                message: "Admin not found",
-            });
-        }
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({
-                status: false,
-                message: "Unauthorized access",
-            });
-        }
-        const branches = await prisma.branch.findMany({
-            where: {
-                adminId: req.userId,
-            }
-        });
-        res.status(200).json({ branches });
-    } catch (error) {
-        if (error instanceof ZodError) {
-            return res.status(400).json({ error: error.message });
-        }
-        res.status(400).json({ error: error.message });
-    }
-}
-
-const deleteBranch = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            },
+            data: { ...validationData, adminId: req.userId },
         });
 
-        if (!admin) {
-            return res.status(400).json({
-                message: "Admin not found!",
-            });
-        }
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({ message: "Only admin can delete branch!" });
-        }
-        const deletedBranch = await prisma.branch.delete({
-            where: { id: id },
-        });
-        res
-            .status(200)
-            .json({ message: "Branch deleted successfully", deletedBranch });
+        res.status(200).json({ message: "Branch created successfully", data: branch });
     } catch (error) {
-        // console.log(error);
-        res.status(500).json({ message: "Failed to delete branch" });
+        next(error);
     }
 };
 
-const updateBranch = async (req, res) => {
+const getAllBranches = async (req, res, next) => {
+    try {
+        const { page, limit } = req.query;
+        const admin = await checkAdmin(req.userId);
+
+        if (admin.error) {
+            return res.status(401).json({ message: admin.message });
+        }
+        const branches = await pagination(prisma.branch, {
+            page,
+            limit,
+            where: { adminId: admin.id },
+        });
+
+        res.status(200).json({ message: "Branches fetched successfully", ...branches });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const updateBranch = async (req, res, next) => {
     try {
         const { id } = req.params;
-        if (!id) {
-            return res.status(400).json({
-                status: false,
-                message: "Branch id is required",
-            });
-        }
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            },
-        });
-
-        if (!admin) {
-            return res.status(400).json({
-                message: "Admin not found!",
-            });
-        }
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({ message: "Only admin can update branch!" });
-        }
         const { branchName } = req.body;
+        const admin = await checkAdmin(req.userId);
 
-        const branchResult = BranchSchema.safeParse({
-            branchName,
-        });
-
-        if (!branchResult.success) {
-            return res.status(400).json({
-                status: false,
-                message: branchResult.error.issues[0].message,
-            });
+        if (admin.error) {
+            return res.status(401).json({ message: admin.message });
         }
+        const branchResult = BranchSchema.partial().parse({ branchName });
 
         const updatedBranch = await prisma.branch.update({
-            where: { id: id },
-            data: { branchName: branchResult.data.branchName },
+            where: { id, adminId: admin.id },
+            data: { ...branchResult },
         });
 
-        res
-            .status(200)
-            .json({ message: "Branch updated successfully", updatedBranch });
+        res.status(200).json({ message: "Branch updated successfully", data: updateBranch });
     } catch (error) {
-        // console.log(error);
-        res.status(500).json({ message: "Failed to update branch" });
-    }
-};
-// Branch Search API's Create
-
-const searchBranch = async (req, res) => {
-    try {
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            },
-        });
-
-        if (!admin) {
-            return res.status(400).json({
-                message: "Admin not found!",
-            });
-        }
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({ message: "Only admin can search branch!" });
-        }
-        const { branchName } = req.query;
-        const branches = await prisma.branch.findMany({
-            where: {
-                adminId: req.userId,
-                branchName: {
-                    contains: branchName,
-                    mode: "insensitive",
-                },
-            },
-        });
-        res.status(200).json(branches);
-    } catch (error) {
-        // console.log(error);
-        res.status(500).json({ message: "Failed to search branch" });
+        next(error);
     }
 };
 
-// count branch API
-
-const branchCount = async (req, res) => {
+const deleteBranch = async (req, res, next) => {
     try {
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            },
+        const { id } = req.params;
+        const admin = await checkAdmin(req.userId);
+
+        if (admin.error) {
+            return res.status(401).json({ message: admin.message });
+        }
+        await prisma.branch.delete({
+            where: { id, adminId: admin.id },
         });
 
-        if (!admin) {
-            return res.status(400).json({
-                message: "Admin not found!",
-            });
-        }
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({ message: "Only admin can count branch!" });
-        }
-        const count = await prisma.branch.count({
-            where: {
-                adminId: req.userId,
-            },
-        });
-        res
-            .status(200)
-            .json({ message: "Successfully fetched branch count", count });
+        res.status(200).json({ message: "Branch deleted successfully" });
     } catch (error) {
-        // console.log(error);
-        res.status(500).json({ message: "Failed to count branch" });
+        next(error);
     }
 };
 
-// Search Department Query............................
-const searchBranchByName = async (req, res) => {
+const searchBranch = async (req, res, next) => {
     try {
-        const { branchName } = req.query;
-        const admin = await prisma.user.findUnique({
+        const { page, limit, search } = req.query;
+        const admin = await checkAdmin(req.userId);
+
+        if (admin.error) {
+            return res.status(401).json({ message: admin.message });
+        }
+
+        const branches = await pagination(prisma.branch, {
+            page,
+            limit,
             where: {
-                id: req.userId,
+                adminId: admin.id,
+                branchName: { contains: search, mode: "insensitive" },
             },
         });
 
-        if (!admin) {
-            return res.status(400).json({
-                message: "Admin not found!",
-            });
-        }
-        if (admin.role !== "ADMIN") {
-            return res
-                .status(400)
-                .json({ message: "Only admin can find department!" });
-        }
-        const searchBranch = await prisma.branch.findMany({
-            where: {
-                branchName: {
-                    contains: branchName,
-                    mode: "insensitive",
-                },
-                adminId: req.userId,
-            },
-        });
-        return res.status(201).json(searchBranch);
+        res.status(200).json({ message: "Branches fetched successfully", ...branches });
     } catch (error) {
-        console.error("Error adding department:", error);
-        return res.status(500).json({
-            status: false,
-            message: "Failed to search department by name!" + error.message,
-        });
+        next(error);
     }
 };
 
-// Delete Branch In Bulk
-const deleteBranchInBulk = async (req, res) => {
+const bulkDeleteBranches = async (req, res, next) => {
     try {
-        const { branchIds } = req.body;
+        const { ids } = req.body;
+        const admin = await checkAdmin(req.userId);
+        
 
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            },
-        });
-
-        if (!admin) {
-            return res.status(400).json({
-                message: "Admin not found!",
-            });
+        if (admin.error) {
+            return res.status(401).json({ message: admin.message });
         }
 
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({
-                message: "Only admin can delete departments!",
-            });
-        }
-
-        if (!Array.isArray(branchIds) || branchIds.length === 0) {
-            return res.status(400).json({
-                message: "Please provide an array of department IDs to delete.",
-            });
+        if (!Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ message: "Invalid branch IDs" });
         }
 
         await prisma.branch.deleteMany({
-            where: {
-                id: {
-                    in: branchIds,
-                },
-                adminId: req.userId,
-            },
+            where: { id: { in: ids }, adminId: admin.id },
         });
 
-        return res.json({
-            status: 200,
-            message: "Departments deleted successfully!",
-        });
+        res.status(200).json({ message: "Branches deleted successfully" });
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            message: "An error occurred while deleting departments.",
-        });
+        next(error);
     }
 };
 
-export { createBranch, getAllBranches, deleteBranch, updateBranch, searchBranch, branchCount, searchBranchByName, deleteBranchInBulk };
+const countBranches = async (req, res, next) => {
+    try {
+        const admin = checkAdmin(req.userId);
+        if (admin.error) {
+            return res.status(401).json({ message: admin.message });
+        }
+        const count = await prisma.branch.count({
+            where: { adminId: admin.id },
+        });
+        res.status(200).json({ message: "Branch count fetched successfully", count });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export { createBranch, getAllBranches, updateBranch, deleteBranch, searchBranch, bulkDeleteBranches, countBranches };

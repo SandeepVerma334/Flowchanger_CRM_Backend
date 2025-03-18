@@ -1,305 +1,149 @@
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
-import ZodError from "zod";
+import prisma from "../../prisma/prisma.js";
+import { pagination } from "../../utils/pagination.js";
+import checkAdmin from "../../utils/adminChecks.js";
 import { DepartmentSchema } from "../../utils/validation.js";
 
-const createDepartment = async (req, res) => {
+const createDepartment = async (req, res, next) => {
     try {
+        const admin = await checkAdmin(req.userId);
+
+        if (admin.error) {
+            return res.status(401).json({ message: admin.message });
+        }
+
         const { departmentName } = req.body;
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            }
-        })
-        if (!admin) {
-            return res.status(400).json({
-                status: false,
-                message: "Admin not found",
-            });
-        }
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({
-                status: false,
-                message: "Unauthorized access",
-            });
-        }
-        const departmentResult = DepartmentSchema.safeParse({
-            departmentName,
-        });
-        if (!departmentResult.success) {
-            return res.status(400).json({
-                status: false,
-                message: departmentResult.error.issues[0].message,
-            });
-        }
+        const validationData = DepartmentSchema.parse({ departmentName });
+
         const department = await prisma.department.create({
-            data: { ...departmentResult.data, adminId: req.userId },
+            data: { ...validationData, adminId: req.userId },
         });
-        res.status(200).json({ department });
+
+        res.status(200).json({ message: "Department created successfully", data: department });
     } catch (error) {
-        if (error instanceof ZodError) {
-            return res.status(400).json({ error: error.message });
-        }
-        res.status(400).json({ error: error.message });
+        next(error);
     }
-}
+};
 
-const getAllDepartments = async (req, res) => {
+const getAllDepartments = async (req, res, next) => {
     try {
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            }
-        })
-        if (!admin) {
-            return res.status(400).json({
-                status: false,
-                message: "Admin not found",
-            });
+        const { page, limit } = req.query;
+        const admin = await checkAdmin(req.userId);
+
+        if (admin.error) {
+            return res.status(401).json({ message: admin.message });
         }
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({
-                status: false,
-                message: "Unauthorized access",
-            });
-        }
-        const departments = await prisma.department.findMany({
-            where: {
-                adminId: req.userId,
-            }
+
+        const departments = await pagination(prisma.department, {
+            page,
+            limit,
+            where: { adminId: admin.id },
         });
-        res.status(200).json({ departments });
+
+        res.status(200).json({ message: "Departments fetched successfully", ...departments });
     } catch (error) {
-        if (error instanceof ZodError) {
-            return res.status(400).json({ error: error.message });
-        }
-        res.status(400).json({ error: error.message });
+        next(error);
     }
-}
+};
 
-const updateDepartment = async (req, res) => {
-    const { id } = req.params;
-    const admin = await prisma.user.findUnique({
-        where: {
-            id: req.userId,
-        },
-    });
-
-    if (!admin) {
-        return res.status(400).json({
-            message: "Admin not found!",
-        });
-    }
-    if (admin.role !== "ADMIN") {
-        return res
-            .status(400)
-            .json({ message: "Only admin can update department!" });
-    }
+const updateDepartment = async (req, res, next) => {
     try {
+        const { id } = req.params;
         const { departmentName } = req.body;
-        const validationResult = DepartmentSchema.safeParse({
-            departmentName,
-        });
-        if (!validationResult.success) {
-            return res.status(400).json({
-                status: false,
-                message: validationResult.error.issues[0].message,
-            });
+        const admin = await checkAdmin(req.userId);
+
+        if (admin.error) {
+            return res.status(401).json({ message: admin.message });
         }
 
-        await prisma.department.update({
-            where: {
-                id,
-            },
-            data: {
-                departmentName: validationResult.data.departmentName,
-            },
+        const validationData = DepartmentSchema.partial().parse({ departmentName });
+
+        const updatedDepartment = await prisma.department.update({
+            where: { id, adminId: admin.id },
+            data: validationData,
         });
-        return res.status(200).json({
-            status: true,
-            message: "Department Name Successfully Updated!(" + id + ")",
-        });
+
+        res.status(200).json({ message: "Department updated successfully", data: updatedDepartment });
     } catch (error) {
-        console.log(error);
-        return res.status(500).json({
-            status: false,
-            message: "Failed to update department",
-            error: error.code,
-        });
+        next(error);
     }
 };
 
-// Delete Department By Id
-
-const deleteDepartment = async (req, res) => {
-    const { id } = req.params;
-    const admin = await prisma.user.findUnique({
-        where: {
-            id: req.userId,
-        },
-    });
-
-    if (!admin) {
-        return res.status(400).json({
-            message: "Admin not found!",
-        });
-    }
-    if (admin.role !== "ADMIN") {
-        return res
-            .status(400)
-            .json({ message: "Only admin can delete department!" });
-    }
+const deleteDepartment = async (req, res, next) => {
     try {
+        const { id } = req.params;
+        const admin = await checkAdmin(req.userId);
+
+        if (admin.error) {
+            return res.status(401).json({ message: admin.message });
+        }
+
         await prisma.department.delete({
-            where: {
-                id,
-            },
+            where: { id, adminId: admin.id },
         });
-        return res.status(200).json({
-            status: true,
-            message: "Department Deleted Successfully!(" + id + ")",
-        });
+
+        res.status(200).json({ message: "Department deleted successfully" });
     } catch (error) {
-        return res.status(500).json({
-            status: false,
-            message: "Failed to delete department",
-            error: error.code,
-        });
+        next(error);
     }
 };
 
-// Delete Department In Bulk
-const deleteDepartmentsInBulk = async (req, res) => {
+const bulkDeleteDepartments = async (req, res, next) => {
     try {
-        const { departmentIds } = req.body;
+        const { ids } = req.body;
+        const admin = await checkAdmin(req.userId);
 
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            },
-        });
-
-        if (!admin) {
-            return res.status(400).json({
-                message: "Admin not found!",
-            });
+        if (admin.error) {
+            return res.status(401).json({ message: admin.message });
         }
 
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({
-                message: "Only admin can delete departments!",
-            });
-        }
-
-        if (!Array.isArray(departmentIds) || departmentIds.length === 0) {
-            return res.status(400).json({
-                message: "Please provide an array of department IDs to delete.",
-            });
+        if (!Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ message: "Invalid department IDs" });
         }
 
         await prisma.department.deleteMany({
-            where: {
-                id: {
-                    in: departmentIds,
-                },
-                adminId: req.userId,
-            },
+            where: { id: { in: ids }, adminId: admin.id },
         });
 
-        return res.json({
-            status: 200,
-            message: "Departments deleted successfully!",
-        });
+        res.status(200).json({ message: "Departments deleted successfully" });
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            message: "An error occurred while deleting departments.",
-        });
+        next(error);
     }
 };
 
-// Show Department By Id
-
-const showDepartment = async (req, res) => {
-    const { id } = req.params;
-    const admin = await prisma.user.findUnique({
-        where: {
-            id: req.userId,
-        },
-    });
-
-    if (!admin) {
-        return res.status(400).json({
-            message: "Admin not found!",
-        });
-    }
-    if (admin.role !== "ADMIN") {
-        return res
-            .status(400)
-            .json({ message: "Only admin can show department by id!" });
-    }
+const searchDepartment = async (req, res, next) => {
     try {
-        const showDepartment = await prisma.department.findUnique({
-            where: {
-                id,
-            },
-        });
-        if (!showDepartment) {
-            return res
-                .status(404)
-                .json({ status: false, message: "Department not found!" });
+        const { page, limit, search } = req.query;
+        const admin = await checkAdmin(req.userId);
+
+        if (admin.error) {
+            return res.status(401).json({ message: admin.message });
         }
-        return res.status(200).json({
-            status: true,
-            message: "Department Show By ID!(" + id + ")",
-            data: showDepartment,
+
+        const departments = await pagination(prisma.department, {
+            where: { adminId: admin.id, departmentName: { contains: search, mode: "insensitive" } },
+            page,
+            limit,
         });
+
+        res.status(200).json({ message: "Departments fetched successfully", ...departments });
     } catch (error) {
-        return res.status(500).json({
-            status: false,
-            message: "Failed to show department",
-            error: error.message,
-        });
+        next(error);
     }
 };
 
-// Search Department Query............................
-const searchDepartmentByName = async (req, res) => {
+const countDepartments = async (req, res, next) => {
     try {
-        const { departmentName } = req.query;
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            },
+        const admin = checkAdmin(req.userId);
+        if (admin.error) {
+            return res.status(401).json({ message: admin.message });
+        }
+        const count = await prisma.department.count({
+            where: { adminId: req.userId },
         });
 
-        if (!admin) {
-            return res.status(400).json({
-                message: "Admin not found!",
-            });
-        }
-        if (admin.role !== "ADMIN") {
-            return res
-                .status(400)
-                .json({ message: "Only admin can find department!" });
-        }
-        const SearchDepartment = await prisma.department.findMany({
-            where: {
-                departmentName: {
-                    contains: departmentName,
-                    mode: "insensitive",
-                },
-                adminId: req.userId,
-            },
-        });
-        return res.status(201).json(SearchDepartment);
+        res.status(200).json({ message: "Department count fetched successfully", count });
     } catch (error) {
-        console.error("Error adding department:", error);
-        return res.status(500).json({
-            status: false,
-            message: "Failed to search department by name!" + error.message,
-        });
+        next(error);
     }
 };
-
-export { createDepartment, getAllDepartments, updateDepartment, deleteDepartment, deleteDepartmentsInBulk, showDepartment, searchDepartmentByName };
+export { createDepartment, getAllDepartments, updateDepartment, deleteDepartment, bulkDeleteDepartments, searchDepartment, countDepartments };

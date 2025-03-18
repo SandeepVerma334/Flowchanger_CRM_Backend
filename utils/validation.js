@@ -489,55 +489,48 @@ const AttendanceStatus = Object.freeze({
   FINE: "FINE",
 });
 
-const AllowanceSchema = z.object({
-  name: z.string(),
-  calculation: z.enum(["fixed", "percentage"]),
-  amount: z.number(),
+const EarningsSchema = z.object({
+  heads: z.string().optional(),
+  calculation: z.string().optional(),
+  amount: z.number().optional(),
+  salaryMonth: z.string().optional(),
 });
 
-const DeductionSchema = z.object({
-  name: z.string(),
-  amount: z.number(),
+const DeductionsSchema = z.object({
+  heads: z.string().optional(),
+  calculation: z.string().optional(),
+  amount: z.number().optional(),
+  deductionMonth: z.string().optional(),
 });
 
-const CompliancesSchema = z.object({
-  includeEmployerPF: z.boolean(),
-  employerPFAmount: z.number(),
-  employerPFType: z.enum(["fixed", "percentage"]),
-  includeEmployerESI: z.boolean(),
-  employeePFAmount: z.number(),
-  employeePFType: z.enum(["fixed", "percentage"]),
-  employerESIAmount: z.number(),
-  employerESIType: z.enum(["fixed", "percentage"]),
-  employeeESIAmount: z.number(),
-  employeeESIType: z.enum(["fixed", "percentage"]),
-  professionalTaxAmount: z.number(),
-  professionalTaxType: z.enum(["fixed", "percentage"]),
-  employerLWFAmount: z.number(),
-  includeEmployerLWF: z.boolean(),
-  employerLWFType: z.enum(["fixed", "percentage"]),
-  employeeLWFAmount: z.number(),
-  employeeLWFType: z.enum(["fixed", "percentage"]),
-  includePfEdliAdmin: z.boolean(),
-  pfEdliAdminAmount: z.number(),
-  pfEdliAdminType: z.enum(["fixed", "percentage"]),
+const EmployerContributionSchema = z.object({
+  type: z.string({ required_error: 'type is required' }),
+  calculation: z.string().optional(),
+  amount: z.number({ required_error: 'amount is required' }),
+  state: z.string().optional(),
+  contributionMonth: z.string({ required_error: 'contributionMonth is required' }),
+  selectedEarnings: z.array(z.string(), { required_error: 'selectedEarnings is required' }),
+});
+
+const EmployeeContributionSchema = z.object({
+  type: z.string({ required_error: 'type is required' }),
+  calculation: z.string().optional(),
+  amount: z.number({ required_error: 'amount is required' }),
+  state: z.string().optional(),
+  contributionMonth: z.string({ required_error: 'contributionMonth is required' }),
+  selectedEarnings: z.array(z.string(), { required_error: 'selectedEarnings is required' }),
 });
 
 const SalarySchema = z.object({
-  effectiveDate: z.string().datetime(),
-  salaryType: z.string().optional(),
-  salaryStructure: z.string(),
-  ctcAmount: z.number(),
-  staffId: z.string().uuid(),
-  earnings: z.object({
-    basicCalculation: z.enum(["fixed", "percentage"]),
-    basic: z.number(),
-    allowances: z.array(AllowanceSchema),
-  }),
-  deductions: z.array(DeductionSchema),
-  compliances: CompliancesSchema,
+  effectiveDate: z.string({ required_error: 'effectiveDate is required' }).datetime(),
+  salaryType: z.enum(["Monthly", "Annual"], { required_error: 'salaryType is required' }),
+  ctcAmount: z.number({ required_error: 'ctcAmount is required' }),
+  staffId: z.string({ required_error: 'staffId is required' }).uuid(),
+  earnings: z.array(EarningsSchema, { required_error: 'earnings are required' }),
+  deductions: z.array(DeductionsSchema).optional(),
+  employerContributions: z.array(EmployerContributionSchema, { required_error: 'employerContributions are required' }),
+  employeeContributions: z.array(EmployeeContributionSchema, { required_error: 'employeeContributions are required' }),
 });
-
 
 // attendance staff
 const AttendanceSchema = z.object({
@@ -565,4 +558,4 @@ const AttendanceBreakRecordSchema = z.object({
   endBreakImage: z.string().optional(),
 });
 
-export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, projectSchema, taskSchema, adminSignupSchema, updateRoleSchema, noteSchema, discussionSchema, reportSchema, StaffEducationQualificationSchema, StaffFinancialDetailsSchema, AttendanceSchema, AttendanceBreakRecordSchema };
+export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, projectSchema, taskSchema, adminSignupSchema, updateRoleSchema, noteSchema, discussionSchema, reportSchema, StaffEducationQualificationSchema, StaffFinancialDetailsSchema, AttendanceSchema, AttendanceBreakRecordSchema, SalarySchema };
