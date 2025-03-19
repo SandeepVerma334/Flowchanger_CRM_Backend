@@ -1,5 +1,11 @@
 -- CreateEnum
-CREATE TYPE "AttendanceStatus" AS ENUM ('PERSENT', 'ABSENT', 'PAID_LEAVE', 'HALF_DAY', 'FINE', 'OVERTIME', 'ON_BREAK', 'HOLIDAY');
+CREATE TYPE "AttendanceStatus" AS ENUM ('PERSENT', 'ABSENT', 'PAID_LEAVE', 'HALF_DAY', 'FINE', 'OVERTIME', 'ON_BREAK', 'HOLIDAY', 'WEEK_OFF');
+
+-- CreateEnum
+CREATE TYPE "PaymentType" AS ENUM ('ADVANCE', 'SALARY');
+
+-- CreateEnum
+CREATE TYPE "PaymentStatus" AS ENUM ('PROCESSING', 'SUCCESS', 'FAILED', 'SAVED');
 
 -- CreateEnum
 CREATE TYPE "ReportStatus" AS ENUM ('PENDING', 'REJECTED', 'RESOLVED', 'IN_PROGRESS', 'ESCALATED');
@@ -80,6 +86,7 @@ CREATE TABLE "AttendanceStaff" (
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "staffId" TEXT,
     "adminId" TEXT,
+    "salaryDetailId" TEXT,
 
     CONSTRAINT "AttendanceStaff_pkey" PRIMARY KEY ("id")
 );
@@ -95,6 +102,7 @@ CREATE TABLE "AttendanceBreakRecord" (
     "attendanceId" TEXT,
     "startBreakImage" TEXT,
     "endBreakImage" TEXT,
+    "adminId" TEXT NOT NULL,
     "staffId" TEXT,
 
     CONSTRAINT "AttendanceBreakRecord_pkey" PRIMARY KEY ("id")
@@ -103,82 +111,106 @@ CREATE TABLE "AttendanceBreakRecord" (
 -- CreateTable
 CREATE TABLE "SalaryDetail" (
     "id" TEXT NOT NULL,
-    "effectiveDate" TEXT NOT NULL,
-    "salaryType" TEXT NOT NULL,
-    "salaryStructure" TEXT NOT NULL,
-    "ctcAmount" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-    "staffId" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "effectiveDate" TIMESTAMP(3),
+    "salaryType" TEXT,
+    "ctcAmount" DOUBLE PRECISION,
+    "employerPf" DOUBLE PRECISION,
+    "employerEsi" DOUBLE PRECISION,
+    "employerLwf" DOUBLE PRECISION,
+    "employeePf" DOUBLE PRECISION,
+    "employeeEsi" DOUBLE PRECISION,
+    "professionalTax" DOUBLE PRECISION,
+    "employeeLwf" DOUBLE PRECISION,
+    "payrollFinalized" BOOLEAN NOT NULL DEFAULT false,
+    "finalizedDate" TIMESTAMP(3),
+    "finalSalary" DOUBLE PRECISION,
+    "tds" DOUBLE PRECISION,
+    "createdAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3),
+    "staffId" TEXT NOT NULL,
+    "adminId" TEXT NOT NULL,
 
     CONSTRAINT "SalaryDetail_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "Earnings" (
-    "id" TEXT NOT NULL,
-    "salaryDetailId" TEXT NOT NULL,
-    "basicCalculation" TEXT,
-    "basic" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+CREATE TABLE "EmployerContribution" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "staffId" TEXT NOT NULL,
+    "salaryDetailsId" TEXT,
+    "type" TEXT NOT NULL,
+    "calculation" TEXT,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "state" TEXT,
+    "includedInCTC" BOOLEAN NOT NULL DEFAULT false,
+    "contributionMonth" TEXT NOT NULL,
+    "selectedEarnings" TEXT[],
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "EmployerContribution_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EmployeeContribution" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "staffId" TEXT NOT NULL,
+    "salaryDetailsId" TEXT,
+    "type" TEXT NOT NULL,
+    "calculation" TEXT,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "state" TEXT,
+    "contributionMonth" TEXT NOT NULL,
+    "selectedEarnings" TEXT[],
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "EmployeeContribution_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Deductions" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "heads" TEXT,
+    "calculation" TEXT,
+    "amount" DOUBLE PRECISION,
+    "deductionMonth" TEXT,
+    "staffId" TEXT,
+    "salaryDetailsId" TEXT,
+
+    CONSTRAINT "Deductions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Earnings" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "heads" TEXT,
+    "calculation" TEXT,
+    "amount" DOUBLE PRECISION,
+    "staffId" TEXT,
+    "salaryMonth" TEXT,
+    "salaryDetailsId" TEXT,
 
     CONSTRAINT "Earnings_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "Allowance" (
-    "id" TEXT NOT NULL,
-    "earningsId" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "calculation" TEXT,
-    "amount" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+CREATE TABLE "PaymentHistory" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "staffId" TEXT NOT NULL,
+    "salaryDetailsId" TEXT,
+    "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "type" "PaymentType" NOT NULL DEFAULT 'SALARY',
+    "status" "PaymentStatus" NOT NULL DEFAULT 'SAVED',
+    "transactionId" TEXT,
+    "utrNumber" TEXT,
+    "note" TEXT,
+    "adminId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Allowance_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Compliances" (
-    "id" TEXT NOT NULL,
-    "salaryDetailId" TEXT NOT NULL,
-    "includeEmployerPF" BOOLEAN NOT NULL DEFAULT false,
-    "employerPFAmount" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-    "employerPFType" TEXT,
-    "includeEmployerESI" BOOLEAN NOT NULL DEFAULT false,
-    "employerESIAmount" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-    "employerESIType" TEXT,
-    "includeEmployerLWF" BOOLEAN NOT NULL DEFAULT false,
-    "employerLWFAmount" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-    "employerLWFType" TEXT,
-    "includePfEdliAdmin" BOOLEAN NOT NULL DEFAULT false,
-    "pfEdliAdminAmount" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-    "pfEdliAdminType" TEXT,
-    "employeePFAmount" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-    "employeePFType" TEXT,
-    "employeeESIAmount" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-    "employeeESIType" TEXT,
-    "professionalTaxAmount" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-    "professionalTaxType" TEXT,
-    "employeeLWFAmount" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-    "employeeLWFType" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Compliances_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Deduction" (
-    "id" TEXT NOT NULL,
-    "salaryDetailId" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "amount" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Deduction_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "PaymentHistory_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -213,6 +245,7 @@ CREATE TABLE "FinancialDetails" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "staffId" TEXT,
+    "adminId" TEXT NOT NULL,
 
     CONSTRAINT "FinancialDetails_pkey" PRIMARY KEY ("id")
 );
@@ -224,6 +257,7 @@ CREATE TABLE "Branch" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "adminId" TEXT NOT NULL,
+    "userId" TEXT,
 
     CONSTRAINT "Branch_pkey" PRIMARY KEY ("id")
 );
@@ -233,6 +267,7 @@ CREATE TABLE "Department" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "departmentName" TEXT NOT NULL,
     "adminId" TEXT NOT NULL,
+    "userId" TEXT,
 
     CONSTRAINT "Department_pkey" PRIMARY KEY ("id")
 );
@@ -434,6 +469,24 @@ CREATE TABLE "AdminDetails" (
 );
 
 -- CreateTable
+CREATE TABLE "BankDetails" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "bankName" TEXT NOT NULL,
+    "accountNumber" TEXT NOT NULL,
+    "ifsc" TEXT NOT NULL,
+    "country" TEXT NOT NULL,
+    "branch" TEXT NOT NULL,
+    "accountHolderName" TEXT NOT NULL,
+    "accountStatus" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "staffId" TEXT NOT NULL,
+    "adminId" TEXT NOT NULL,
+
+    CONSTRAINT "BankDetails_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "ClientDetails" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "group" TEXT NOT NULL,
@@ -470,6 +523,7 @@ CREATE TABLE "Project" (
     "updatedAt" TIMESTAMP(3),
     "contactNotifications" TEXT[],
     "visibleTabs" TEXT[],
+    "adminId" TEXT NOT NULL,
 
     CONSTRAINT "Project_pkey" PRIMARY KEY ("id")
 );
@@ -493,6 +547,7 @@ CREATE TABLE "Task" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "projectId" TEXT,
+    "adminId" TEXT NOT NULL,
 
     CONSTRAINT "Task_pkey" PRIMARY KEY ("id")
 );
@@ -688,9 +743,12 @@ CREATE TABLE "Fine" (
     "earlyOutFineAmount" DOUBLE PRECISION DEFAULT 1,
     "earlyOutAmount" DOUBLE PRECISION DEFAULT 0,
     "totalAmount" DOUBLE PRECISION DEFAULT 0,
-    "punchRecordId" TEXT NOT NULL,
+    "sendSMStoStaff" BOOLEAN,
     "staffId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "attendanceStaffId" TEXT,
+    "salaryDetailId" TEXT,
+    "adminId" TEXT NOT NULL,
 
     CONSTRAINT "Fine_pkey" PRIMARY KEY ("id")
 );
@@ -705,8 +763,11 @@ CREATE TABLE "Overtime" (
     "lateOutOvertimeAmount" DOUBLE PRECISION DEFAULT 1,
     "lateOutAmount" DOUBLE PRECISION DEFAULT 0,
     "totalAmount" DOUBLE PRECISION DEFAULT 0,
-    "punchRecordId" TEXT,
     "staffId" TEXT,
+    "attendanceStaffId" TEXT,
+    "salaryDetailId" TEXT,
+    "adminId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Overtime_pkey" PRIMARY KEY ("id")
 );
@@ -760,16 +821,7 @@ CREATE TABLE "_ModuleToPackage" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
-
--- CreateIndex
 CREATE UNIQUE INDEX "StaffDetails_userId_key" ON "StaffDetails"("userId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Earnings_salaryDetailId_key" ON "Earnings"("salaryDetailId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Compliances_salaryDetailId_key" ON "Compliances"("salaryDetailId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Permissions_roleId_key" ON "Permissions"("roleId");
@@ -832,10 +884,10 @@ CREATE UNIQUE INDEX "PunchRecords_punchOutId_key" ON "PunchRecords"("punchOutId"
 CREATE UNIQUE INDEX "PunchRecords_staffId_punchDate_key" ON "PunchRecords"("staffId", "punchDate");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Fine_punchRecordId_key" ON "Fine"("punchRecordId");
+CREATE UNIQUE INDEX "Fine_staffId_createdAt_key" ON "Fine"("staffId", "createdAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Overtime_punchRecordId_key" ON "Overtime"("punchRecordId");
+CREATE UNIQUE INDEX "Overtime_staffId_createdAt_key" ON "Overtime"("staffId", "createdAt");
 
 -- CreateIndex
 CREATE INDEX "_UserSubordinates_B_index" ON "_UserSubordinates"("B");
@@ -880,6 +932,9 @@ ALTER TABLE "AttendanceStaff" ADD CONSTRAINT "AttendanceStaff_adminId_fkey" FORE
 ALTER TABLE "AttendanceStaff" ADD CONSTRAINT "AttendanceStaff_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "AttendanceStaff" ADD CONSTRAINT "AttendanceStaff_salaryDetailId_fkey" FOREIGN KEY ("salaryDetailId") REFERENCES "SalaryDetail"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "AttendanceBreakRecord" ADD CONSTRAINT "AttendanceBreakRecord_attendanceId_fkey" FOREIGN KEY ("attendanceId") REFERENCES "AttendanceStaff"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -889,16 +944,37 @@ ALTER TABLE "AttendanceBreakRecord" ADD CONSTRAINT "AttendanceBreakRecord_staffI
 ALTER TABLE "SalaryDetail" ADD CONSTRAINT "SalaryDetail_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Earnings" ADD CONSTRAINT "Earnings_salaryDetailId_fkey" FOREIGN KEY ("salaryDetailId") REFERENCES "SalaryDetail"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "EmployerContribution" ADD CONSTRAINT "EmployerContribution_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Allowance" ADD CONSTRAINT "Allowance_earningsId_fkey" FOREIGN KEY ("earningsId") REFERENCES "Earnings"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "EmployerContribution" ADD CONSTRAINT "EmployerContribution_salaryDetailsId_fkey" FOREIGN KEY ("salaryDetailsId") REFERENCES "SalaryDetail"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Compliances" ADD CONSTRAINT "Compliances_salaryDetailId_fkey" FOREIGN KEY ("salaryDetailId") REFERENCES "SalaryDetail"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "EmployeeContribution" ADD CONSTRAINT "EmployeeContribution_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Deduction" ADD CONSTRAINT "Deduction_salaryDetailId_fkey" FOREIGN KEY ("salaryDetailId") REFERENCES "SalaryDetail"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "EmployeeContribution" ADD CONSTRAINT "EmployeeContribution_salaryDetailsId_fkey" FOREIGN KEY ("salaryDetailsId") REFERENCES "SalaryDetail"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Deductions" ADD CONSTRAINT "Deductions_salaryDetailsId_fkey" FOREIGN KEY ("salaryDetailsId") REFERENCES "SalaryDetail"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Deductions" ADD CONSTRAINT "Deductions_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Earnings" ADD CONSTRAINT "Earnings_salaryDetailsId_fkey" FOREIGN KEY ("salaryDetailsId") REFERENCES "SalaryDetail"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Earnings" ADD CONSTRAINT "Earnings_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PaymentHistory" ADD CONSTRAINT "PaymentHistory_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PaymentHistory" ADD CONSTRAINT "PaymentHistory_salaryDetailsId_fkey" FOREIGN KEY ("salaryDetailsId") REFERENCES "SalaryDetail"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PaymentHistory" ADD CONSTRAINT "PaymentHistory_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "StaffEducationQualification" ADD CONSTRAINT "StaffEducationQualification_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "AdminDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -913,16 +989,13 @@ ALTER TABLE "StaffEducationQualification" ADD CONSTRAINT "StaffEducationQualific
 ALTER TABLE "FinancialDetails" ADD CONSTRAINT "FinancialDetails_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Branch" ADD CONSTRAINT "Branch_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Branch" ADD CONSTRAINT "Branch_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Department" ADD CONSTRAINT "Department_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Department" ADD CONSTRAINT "Department_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Permissions" ADD CONSTRAINT "Permissions_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Role" ADD CONSTRAINT "Role_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ClientsPermissions" ADD CONSTRAINT "ClientsPermissions_permissionsId_fkey" FOREIGN KEY ("permissionsId") REFERENCES "Permissions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -962,6 +1035,9 @@ ALTER TABLE "AdminDetails" ADD CONSTRAINT "AdminDetails_userId_fkey" FOREIGN KEY
 
 -- AddForeignKey
 ALTER TABLE "AdminDetails" ADD CONSTRAINT "AdminDetails_packageId_fkey" FOREIGN KEY ("packageId") REFERENCES "Package"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BankDetails" ADD CONSTRAINT "BankDetails_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ClientDetails" ADD CONSTRAINT "ClientDetails_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "AdminDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1006,16 +1082,22 @@ ALTER TABLE "PunchRecords" ADD CONSTRAINT "PunchRecords_punchOutId_fkey" FOREIGN
 ALTER TABLE "PunchRecords" ADD CONSTRAINT "PunchRecords_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Fine" ADD CONSTRAINT "Fine_punchRecordId_fkey" FOREIGN KEY ("punchRecordId") REFERENCES "PunchRecords"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Fine" ADD CONSTRAINT "Fine_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Overtime" ADD CONSTRAINT "Overtime_punchRecordId_fkey" FOREIGN KEY ("punchRecordId") REFERENCES "PunchRecords"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Fine" ADD CONSTRAINT "Fine_attendanceStaffId_fkey" FOREIGN KEY ("attendanceStaffId") REFERENCES "AttendanceStaff"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Fine" ADD CONSTRAINT "Fine_salaryDetailId_fkey" FOREIGN KEY ("salaryDetailId") REFERENCES "SalaryDetail"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Overtime" ADD CONSTRAINT "Overtime_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Overtime" ADD CONSTRAINT "Overtime_attendanceStaffId_fkey" FOREIGN KEY ("attendanceStaffId") REFERENCES "AttendanceStaff"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Overtime" ADD CONSTRAINT "Overtime_salaryDetailId_fkey" FOREIGN KEY ("salaryDetailId") REFERENCES "SalaryDetail"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_UserSubordinates" ADD CONSTRAINT "_UserSubordinates_A_fkey" FOREIGN KEY ("A") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

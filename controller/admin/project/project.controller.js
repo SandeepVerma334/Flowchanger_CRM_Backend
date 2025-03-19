@@ -6,6 +6,10 @@ import checkAdmin from "../../../utils/adminChecks.js";
 
 const createProject = async (req, res, next) => {
     try {
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({ message: admin.message });
+        }
         // Extract members and permissions from the request body
         const {
             members,
@@ -16,27 +20,9 @@ const createProject = async (req, res, next) => {
         // Validate request body using zod
         const validatedData = projectSchema.parse(req.body);
         console.log(validatedData)
-
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            }
-        })
-        if (!admin) {
-            return res.status(400).json({
-                status: false,
-                message: "Admin not found",
-            });
-        }
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({
-                status: false,
-                message: "Unauthorized access",
-            });
-        }
         // Validate staff members
         const staffMembers = await prisma.staffDetails.findMany({
-            where: { id: { in: members } },
+            where: { id: { in: members, adminId: req.userId } },
         });
 
         if (staffMembers.length !== members.length) {
@@ -48,7 +34,7 @@ const createProject = async (req, res, next) => {
 
         // Validate Customers
         const customerClients = await prisma.clientDetails.findMany({
-            where: { id: { in: customer } },
+            where: { id: { in: customer, adminId: req.userId } },
         });
         console.log("Customer Clients:", customerClients);
         if (customerClients.length !== customer.length) {
@@ -151,9 +137,14 @@ const createProject = async (req, res, next) => {
 const getAllProjects = async (req, res, next) => {
     const { id } = req.params;
     try {
-        const { page, limit } = req.query;
 
         const admin = checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({
+                message: admin.message
+            });
+        }
+        const { page, limit } = req.query;
 
         // Define where filter based on your use case (filter projects by id, status, etc.)
         const where = {
@@ -161,7 +152,9 @@ const getAllProjects = async (req, res, next) => {
         };
 
         const projects = await prisma.project.findMany({
-            where,
+            where: {
+                adminId: req.userId
+            },
             include: {
                 ProjectPermissions: true,
                 members: {
@@ -227,26 +220,32 @@ const getAllProjects = async (req, res, next) => {
 const getProjectById = async (req, res, next) => {
     const { id } = req.params;
     try {
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            }
-        })
-        if (!admin) {
-            return res.status(400).json({
-                status: false,
-                message: "Admin not found",
-            });
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({ message: admin.message });
         }
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({
-                status: false,
-                message: "Unauthorized access",
-            });
-        }
+        // const admin = await prisma.user.findUnique({
+        //     where: {
+        //         id: req.userId,
+        //         adminId: req.userId 
+        //     }
+        // })
+        // if (!admin) {
+        //     return res.status(400).json({
+        //         status: false,
+        //         message: "Admin not found",
+        //     });
+        // }
+        // if (admin.role !== "ADMIN") {
+        //     return res.status(400).json({
+        //         status: false,
+        //         message: "Unauthorized access",
+        //     });
+        // }
         const projectData = await prisma.project.findUnique({
             where: {
-                id: id
+                id: id,
+                adminId: req.userId
             },
             include: {
                 ProjectPermissions: true,
@@ -285,26 +284,31 @@ const getProjectById = async (req, res, next) => {
 const deleteProjectById = async (req, res, next) => {
     const { id } = req.params;
     try {
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            }
-        })
-        if (!admin) {
-            return res.status(400).json({
-                status: false,
-                message: "Admin not found",
-            });
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({ message: admin.message });
         }
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({
-                status: false,
-                message: "Unauthorized access",
-            });
-        }
+        // const admin = await prisma.user.findUnique({
+        //     where: {
+        //         id: req.userId,
+        //     }
+        // })
+        // if (!admin) {
+        //     return res.status(400).json({
+        //         status: false,
+        //         message: "Admin not found",
+        //     });
+        // }
+        // if (admin.role !== "ADMIN") {
+        //     return res.status(400).json({
+        //         status: false,
+        //         message: "Unauthorized access",
+        //     });
+        // }
         const existProjectId = await prisma.project.findUnique({
             where: {
                 id: id,
+                adminId: req.userId
             },
         });
         if (!existProjectId) {
@@ -325,12 +329,16 @@ const deleteProjectById = async (req, res, next) => {
 
 const searchProjectByName = async (req, res, next) => {
     try {
-        
-        const admin = checkAdmin(req.userId, "ADMIN", res);
+
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({ message: admin.message });
+        }
 
         const { projectName } = req.query;
         const projects = await prisma.project.findMany({
             where: {
+                adminId: req.userId,
                 projectName: {
                     contains: projectName,
                     mode: "insensitive"
@@ -370,6 +378,10 @@ const updateProjectById = async (req, res, next) => {
     const { id } = req.params;
 
     try {
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({ message: admin.message });
+        }
         const { members, permissions } = req.body;
 
         // Log permissions to verify if they are received correctly
@@ -395,7 +407,7 @@ const updateProjectById = async (req, res, next) => {
         console.log(validatedData);
 
         // Check if the project exists
-        const existingProject = await prisma.project.findUnique({ where: { id } });
+        const existingProject = await prisma.project.findUnique({ where: { id, adminId: req.userId } });
         if (!existingProject) {
             return res.status(404).json({
                 status: false,
@@ -404,16 +416,16 @@ const updateProjectById = async (req, res, next) => {
         }
 
         // Validate admin
-        const admin = await prisma.user.findUnique({
-            where: { id: req.userId },
-        });
+        // const admin = await prisma.user.findUnique({
+        //     where: { id: req.userId },
+        // });
 
-        if (!admin || admin.role !== "ADMIN") {
-            return res.status(403).json({
-                status: false,
-                message: "Unauthorized access",
-            });
-        }
+        // if (!admin || admin.role !== "ADMIN") {
+        //     return res.status(403).json({
+        //         status: false,
+        //         message: "Unauthorized access",
+        //     });
+        // }
 
         // Validate staff members
         const staffMembers = await prisma.staffDetails.findMany({
@@ -516,6 +528,10 @@ const updateProjectById = async (req, res, next) => {
 
 const bulkDeleteProjectById = async (req, res, next) => {
     try {
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({ message: admin.message });
+        }
         // Extract project IDs from request body
         const { projectId } = req.body;
 
@@ -530,7 +546,7 @@ const bulkDeleteProjectById = async (req, res, next) => {
         // Delete projects based on the provided IDs
         const deletedProjects = await prisma.project.deleteMany({
             where: {
-                id: { in: projectId },
+                id: { in: projectId, adminId: req.userId },
             },
         });
 

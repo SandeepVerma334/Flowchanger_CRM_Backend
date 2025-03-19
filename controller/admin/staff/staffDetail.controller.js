@@ -12,24 +12,47 @@ const createStaff = async (req, res, next) => {
     if (adminCheck.error) {
       return res.status(403).json({ message: adminCheck.message });
     }
-    const validation = staffDetailSchema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status().json({
-        error: "Invalid data format",
-        issues: validation.error.issues.map((err) => err.message),
-      });
-    }
-    const existingEmail = await prisma.user.findUnique({
-      where: { email: validation.data.officialMail },
+    const validation = staffDetailSchema.parse(req.body);
+   
+    const { branchId, departmentId, roleId, officialMail } = validation;
+
+    // Check if branch, department, and role exist under the same admin
+    const branchExists = await prisma.branch.findFirst({
+      where: { id: branchId, adminId: req.userId },
     });
+console.log(branchExists);
+    const departmentExists = await prisma.department.findFirst({
+      where: { id: departmentId, adminId: req.userId },
+    });
+console.log(departmentExists);
+    const roleExists = await prisma.role.findFirst({
+      where: { id: roleId, adminId: req.userId },
+    });
+console.log(roleExists);
+    if (!branchExists) {
+      return res.status(400).json({ message: "Invalid branch ID for this admin" });
+    }
+    if (!departmentExists) {
+      return res.status(400).json({ message: "Invalid department ID for this admin" });
+    }
+    if (!roleExists) {
+      return res.status(400).json({ message: "Invalid role ID for this admin" });
+    }
+
+    const existingEmail = await prisma.user.findFirst({
+      where: { email: validation.data.officialMail, adminId: req.userId },
+    })
+
+    // console.log(existingEmail);
     if (existingEmail) {
       return res.status(400).json({
-        message: "Email already exists!",
+        message: "Email already exists"
       });
     }
 
     const admin = await checkAdmin(req.userId);
     console.log(admin)
+
     const uniqueEmployeeId = `FLOW#-${new Date().getTime()}-${uuidv4().replace(/-/g, "").substring(0, 5)}`;
     const staffData = await prisma.user.create({
       data: {
@@ -45,6 +68,11 @@ const createStaff = async (req, res, next) => {
         adminId: req.userId,
         StaffDetails: {
           create: {
+            Admin: {
+              connect: {
+                id: admin.user.adminDetails.id,
+              },
+            },
             jobTitle: validation.data.jobTitle,
             gender: validation.data.gender,
             dateOfJoining: new Date(validation.data.dateOfJoining),
@@ -70,10 +98,6 @@ const createStaff = async (req, res, next) => {
             },
             // roleId:validation.data.roleId,
             employeeId: uniqueEmployeeId,
-            // offerLetter: validation.data.offerLetter,
-            // birthCertificate: validation.data.birthCertificate,
-            // guarantorForm: validation.data.guarantorForm,
-            // degreeCertificate: validation.data.degreeCertificate,
           }
         }
       },
@@ -91,9 +115,15 @@ const createStaff = async (req, res, next) => {
 // get all staff
 const getAllStaff = async (req, res) => {
   try {
-    const admin = checkAdmin(req.userId, "ADMIN", res);
-
-    const staff = await prisma.user.findMany({
+    const admin = await checkAdmin(req.userId, "ADMIN", res);
+    const { page, limit } = req.query;
+    if (admin.error) {
+      return res.status(400).json({
+        message: admin.message
+      });
+    }
+    const staff = await pagination(prisma.user, {
+      page, limit,
       where: {
         adminId: req.userId,
       },
@@ -118,12 +148,18 @@ const getAllStaff = async (req, res) => {
 // Get Staff by ID
 const getStaffById = async (req, res) => {
   try {
+    const admin = await checkAdmin(req.userId, "ADMIN", res);
+    if (admin.error) {
+      return res.status(400).json({
+        message: admin.message
+      });
+    }
     if (!req.userId) {
       return res.status(400).json({ error: "User ID is required" });
     }
 
     const staff = await prisma.user.findUnique({
-      where: { id: req.userId },
+      where: { id: req.userId, adminId: req.userId, },
       include: {
         StaffDetails: {
           include: {
@@ -152,6 +188,12 @@ const getStaffById = async (req, res) => {
 // Update staff details | profile update | 
 const updateStaff = async (req, res, next) => {
   try {
+    const admin = await checkAdmin(req.userId, "ADMIN", res);
+    if (admin.error) {
+      return res.status(400).json({
+        message: admin.message
+      });
+    }
     const { id } = req.params; // Get staff ID from request parameters
     console.log(req.files);
     const validation = staffDetailSchema.safeParse(req.body);
@@ -164,7 +206,7 @@ const updateStaff = async (req, res, next) => {
     // console.log(staffId);
     // Check if the staff exists
     const existingStaff = await prisma.user.findUnique({
-      where: { id: id },
+      where: { id: id, adminId: req.userId, },
       include: { StaffDetails: true },
     });
     if (!existingStaff) {
@@ -241,9 +283,17 @@ const updateStaff = async (req, res, next) => {
 const deleteStaff = async (req, res) => {
   const { id } = req.params; // 'id' represents the user's id
   try {
+    const admin = await checkAdmin(req.userId, "ADMIN", res);
+    if (admin.error) {
+      return res.status(400).json({
+        message: admin.message
+      });
+    }
+
+
     // Check if staff exists by looking up the staff details via userId
-    const existingStaff = await prisma.staffDetails.findUnique({
-      where: { userId: id },
+    const existingStaff = await prisma.user.findFirst({
+      where: { id, adminId: req.userId, },
     });
 
     if (!existingStaff) {
@@ -279,9 +329,16 @@ const searchStaff = async (req, res) => {
   const { search } = req.query;
 
   try {
+    const admin = await checkAdmin(req.userId, "ADMIN", res);
+    if (admin.error) {
+      return res.status(400).json({
+        message: admin.message
+      });
+    }
     const staff = await prisma.user.findMany({
       where: {
         role: "STAFF",
+        adminId: req.userId,
         OR: [
           { firstName: { contains: search, mode: "insensitive" } },
           { email: { contains: search, mode: "insensitive" } },
@@ -308,6 +365,12 @@ const searchStaff = async (req, res) => {
 
 const bulkCreateStaff = async (req, res, next) => {
   try {
+    const admin = await checkAdmin(req.userId, "ADMIN", res);
+    if (admin.error) {
+      return res.status(400).json({
+        message: admin.message
+      });
+    }
     const { staffList } = req.body; // Expecting an array of staff objects
 
     if (!Array.isArray(staffList) || staffList.length === 0) {
@@ -436,6 +499,12 @@ const bulkCreateStaff = async (req, res, next) => {
 // bulk update staff
 const bulkUpdateStaff = async (req, res, next) => {
   try {
+    const admin = await checkAdmin(req.userId, "ADMIN", res);
+    if (admin.error) {
+      return res.status(400).json({
+        message: admin.message
+      });
+    }
     const { staffList } = req.body;
 
     if (!Array.isArray(staffList) || staffList.length === 0) {
@@ -527,6 +596,7 @@ const bulkUpdateStaff = async (req, res, next) => {
       const staffDetails = await prisma.staffDetails.findUnique({
         where: {
           userId: id,
+          adminId: req.userId
         },
       });
 
@@ -590,6 +660,12 @@ const bulkUpdateStaff = async (req, res, next) => {
 // Bulk delete staff using ID
 const bulkDeleteStaff = async (req, res, next) => {
   try {
+    const admin = await checkAdmin(req.userId, "ADMIN", res);
+    if (admin.error) {
+      return res.status(400).json({
+        message: admin.message
+      });
+    }
     const { staffIds } = req.body; // IDs of the staff details you want to delete
     console.log("Received staff IDs: ", staffIds);
 
@@ -603,7 +679,7 @@ const bulkDeleteStaff = async (req, res, next) => {
     // Fetch the related userIds from the staffDetails table
     const staffDetails = await prisma.staffDetails.findMany({
       where: {
-        id: { in: staffIds }, // Find staff details with matching IDs
+        id: { in: staffIds, adminId: req.userId }, // Find staff details with matching IDs
       },
       select: {
         userId: true, // Assuming `staffDetails` has a reference to `userId`

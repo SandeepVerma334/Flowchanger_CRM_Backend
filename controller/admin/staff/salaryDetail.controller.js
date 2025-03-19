@@ -208,7 +208,7 @@ const updateSalary = async (req, res, next) => {
 const deleteSalary = async (req, res, next) => {
     try {
         const { id } = req.params;
-        await prisma.salaryDetail.delete({ where: { id } });
+        await prisma.salaryDetail.delete({ where: { id, adminId: req.userId } });
         res.status(200).json({ message: 'Salary record deleted successfully' });
     } catch (error) {
         next(error);

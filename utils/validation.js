@@ -382,7 +382,6 @@ const OverTimeSchema = z.object({
     .number({ invalid_type_error: "Total Amount must be a number" })
     .default(0)
     .optional(),
-  shiftIds: z.string().nullable().optional(),
   staffId: z.string().nullable().optional(),
 });
 
@@ -487,6 +486,7 @@ const AttendanceStatus = Object.freeze({
   PAID_LEAVE: "PAID_LEAVE",
   OVERTIME: "OVERTIME",
   FINE: "FINE",
+  WEEK_OFF: "WEEK_OFF",
 });
 
 const EarningsSchema = z.object({
@@ -540,7 +540,7 @@ const AttendanceSchema = z.object({
   startTime: z.string().optional(),
   endTime: z.string().optional(),
   status: z.nativeEnum(AttendanceStatus, {
-    invalid_type_error: "Status must be a valid report status (PERSENT, ABSENT, HALF_DAY, PAID_LEAVE, OVERTIME, FINE)",
+    invalid_type_error: "Status must be a valid report status (PERSENT, ABSENT, HALF_DAY, PAID_LEAVE, OVERTIME, FINE, WEEK_OFF)",
   }).default(AttendanceStatus.PERSENT),
 });
 
@@ -558,4 +558,24 @@ const AttendanceBreakRecordSchema = z.object({
   endBreakImage: z.string().optional(),
 });
 
-export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, projectSchema, taskSchema, adminSignupSchema, updateRoleSchema, noteSchema, discussionSchema, reportSchema, StaffEducationQualificationSchema, StaffFinancialDetailsSchema, AttendanceSchema, AttendanceBreakRecordSchema, SalarySchema };
+const BankDetailsStatus = Object.freeze({
+  Avtive: "ACTIVE",
+  INACTIVE: "INACTIVE",
+});
+
+const bankDetailsSchema = z.object({
+  bankName: z.string().min(1, "Bank name is required").max(100, "Bank name should be less than 100 characters"),
+  accountNumber: z.string().min(1, "Account number is required").max(20, "Account number should be less than 20 characters"),
+  ifsc: z.string().min(1, "IFSC code is required").max(20, "IFSC code should be less than 20 characters"),
+  country: z.string().min(1, "Country is required").max(100, "Country name should be less than 100 characters"),
+  branch: z.string().min(1, "Branch is required").max(100, "Branch name should be less than 100 characters"),
+  accountHolderName: z.string().min(1, "Account holder name is required").max(100, "Account holder name should be less than 100 characters"),
+  // accountStatus: z.enum(["ACTIVE", "INACTIVE"], "Account status must be either ACTIVE or INACTIVE"), 
+  accountStatus: z.nativeEnum(BankDetailsStatus, {
+    invalid_type_error: "Account status must be either ACTIVE or INACTIVE",
+  }),
+  staffId: z.string().uuid("Invalid staff ID format"),
+  adminId: z.string().uuid("Invalid admin ID format"),
+});
+
+export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, projectSchema, taskSchema, adminSignupSchema, updateRoleSchema, noteSchema, discussionSchema, reportSchema, StaffEducationQualificationSchema, StaffFinancialDetailsSchema, AttendanceSchema, AttendanceBreakRecordSchema, OverTimeSchema, FineSchema, bankDetailsSchema };

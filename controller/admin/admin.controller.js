@@ -11,7 +11,7 @@ const adminSignup = async (req, res, next) => {
         // Validate the request body using Zod schema
         const validatedData = adminSignupSchema.parse(req.body);
 
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findFirst({
             where: {
                 email: validatedData.email
             },
@@ -90,7 +90,7 @@ const updateAdminProfile = async (req, res, next) => {
 
         // Update User fields
         const updatedUser = await prisma.user.update({
-            where: { email },
+            where: { id: user.id },
             data: {
                 mobile,
                 password,
@@ -167,7 +167,7 @@ const adminLogin = async (req, res, next) => {
     try {
         const { email, password } = req.body;
 
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findFirst({
             where: { email: email }
         });
         if (!user) {

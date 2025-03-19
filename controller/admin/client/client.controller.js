@@ -16,7 +16,8 @@ const createClient = async (req, res, next) => {
         const user = await prisma.user.findUnique({
             where: {
                 email: email,
-                role: "CLIENT"
+                role: "CLIENT",
+                adminId: req.userId
             }
         })
 
@@ -64,7 +65,7 @@ const getClients = async (req, res, next) => {
 
         const where = {
             role: "CLIENT",
-            adminId: admin.id
+            adminId: req.userId
         };
 
         const include = {
@@ -87,15 +88,15 @@ const getClients = async (req, res, next) => {
 
 const updateClient = async (req, res, next) => {
     try {
-        const id = req.params.id;
-        const admin = await checkAdmin(req.userId);
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
         if (admin.error) {
-            return res.status(401).json(admin.message);
+            return res.status(400).json({ message: admin.message });
         }
+        const id = req.params.id;
         const validatedData = clientSchema.optional().parse(req.body);
         const { email, password, name, phoneNumber, ...restValidation } = validatedData;
 
-        const client = await prisma.user.findUnique({ where: { id } });
+        const client = await prisma.user.findUnique({ where: { id, adminId: req.userId } });
         if (!client) {
             return res.status(404).json({ message: "Client not found" });
         }
@@ -130,7 +131,7 @@ const getClientById = async (req, res, next) => {
             return res.status(401).json(admin.message);
         }
         const client = await prisma.user.findUnique({
-            where: { id },
+            where: { id, adminId: req.userId },
             include: {
                 ClientDetails: true
             },

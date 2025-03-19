@@ -3,14 +3,14 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 model User {
   id            String             @id @default(dbgenerated("gen_random_uuid()"))
-  email         String?            @unique
+  email         String?
   password      String?
   firstName     String?
   lastName      String?
@@ -24,9 +24,9 @@ model User {
   adminDetails  AdminDetails?
   superAdmin    SuperAdminDetails?
   StaffDetails  StaffDetails?
-  Branch        Branch[]
-  Department    Department[]
-  Role          Role[]
+  // Branch        Branch[]
+  // Department    Department[]
+  // Role          Role[]
   ClientDetails ClientDetails?
   packageId     String?
   package       Package?           @relation(fields: [packageId], references: [id], onDelete: SetNull)
@@ -41,6 +41,8 @@ model User {
   Report                      Report[]
   StaffEducationQualification StaffEducationQualification[]
   PaymentHistory              PaymentHistory[]
+  Branch                      Branch[]
+  Department                  Department[]
 }
 
 model StaffDetails {
@@ -89,6 +91,7 @@ model StaffDetails {
   Deductions                  Deductions[]
   Earnings                    Earnings[]
   PaymentHistory              PaymentHistory[]
+  BankDetails                 BankDetails[]
 }
 
 model AttendanceStaff {
@@ -105,6 +108,10 @@ model AttendanceStaff {
   adminDetail           AdminDetails?           @relation(fields: [adminId], references: [id], onDelete: Cascade)
   staffDetails          StaffDetails?           @relation(fields: [staffId], references: [id], onDelete: Cascade)
   attendanceBreakRecord AttendanceBreakRecord[]
+  fine                  Fine[]
+  overTime              Overtime[]
+  SalaryDetail          SalaryDetail?           @relation(fields: [salaryDetailId], references: [id])
+  salaryDetailId        String?
 }
 
 model AttendanceBreakRecord {
@@ -117,6 +124,7 @@ model AttendanceBreakRecord {
   attendanceId    String?
   startBreakImage String?
   endBreakImage   String?
+  adminId         String
   attendanceStaff AttendanceStaff? @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
   staffId         String?
   staffDetails    StaffDetails?    @relation(fields: [staffId], references: [id], onDelete: Cascade)
@@ -131,26 +139,27 @@ enum AttendanceStatus {
   OVERTIME
   ON_BREAK
   HOLIDAY
+  WEEK_OFF
 }
 
 model SalaryDetail {
   id                   String                 @id @default(uuid())
-  effectiveDate       DateTime?
-  salaryType          String?
-  ctcAmount           Float?
-  employerPf          Float?
-  employerEsi         Float?
-  employerLwf         Float?
-  employeePf          Float?
-  employeeEsi         Float?
-  professionalTax     Float?
-  employeeLwf         Float?
-  payrollFinalized    Boolean                @default(false)
-  finalizedDate       DateTime?
-  finalSalary         Float?
+  effectiveDate        DateTime?
+  salaryType           String?
+  ctcAmount            Float?
+  employerPf           Float?
+  employerEsi          Float?
+  employerLwf          Float?
+  employeePf           Float?
+  employeeEsi          Float?
+  professionalTax      Float?
+  employeeLwf          Float?
+  payrollFinalized     Boolean                @default(false)
+  finalizedDate        DateTime?
+  finalSalary          Float?
   tds                  Float?
-  createdAt           DateTime?              @default(now())
-  updatedAt           DateTime?              @updatedAt
+  createdAt            DateTime?              @default(now())
+  updatedAt            DateTime?              @updatedAt
   staffId              String
   adminId              String
   // Relations
@@ -160,21 +169,24 @@ model SalaryDetail {
   deductions           Deductions[]           @relation("DeductionsToSalaryDetails")
   earnings             Earnings[]             @relation("EarningsToSalaryDetails")
   paymentHistory       PaymentHistory[]       @relation("PaymentHistoryToSalaryDetails")
+  AttendanceStaff      AttendanceStaff[]
+  Fine                 Fine[]
+  Overtime             Overtime[]
 }
 
 model EmployerContribution {
-  id                 String   @id @default(dbgenerated("gen_random_uuid()"))
-  staffId            String
-  salaryDetailsId    String?
-  type               String // PF, ESI, LWF
-  calculation        String?
-  amount             Float
-  state              String?
-  includedInCTC      Boolean  @default(false)
+  id                String   @id @default(dbgenerated("gen_random_uuid()"))
+  staffId           String
+  salaryDetailsId   String?
+  type              String // PF, ESI, LWF
+  calculation       String?
+  amount            Float
+  state             String?
+  includedInCTC     Boolean  @default(false)
   contributionMonth String
   selectedEarnings  String[]
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   // Relations
   staff         StaffDetails  @relation(fields: [staffId], references: [id], onDelete: Cascade)
@@ -182,17 +194,17 @@ model EmployerContribution {
 }
 
 model EmployeeContribution {
-  id                 String   @id @default(dbgenerated("gen_random_uuid()"))
-  staffId            String
-  salaryDetailsId    String?
-  type               String // PF, ESI, Professional Tax, LWF
-  calculation        String?
-  amount             Float
-  state              String?
+  id                String   @id @default(dbgenerated("gen_random_uuid()"))
+  staffId           String
+  salaryDetailsId   String?
+  type              String // PF, ESI, Professional Tax, LWF
+  calculation       String?
+  amount            Float
+  state             String?
   contributionMonth String
   selectedEarnings  String[]
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   // Relations
   staff         StaffDetails  @relation(fields: [staffId], references: [id], onDelete: Cascade)
@@ -204,7 +216,7 @@ model Deductions {
   heads           String?
   calculation     String?
   amount          Float?
-  deductionMonth String?
+  deductionMonth  String?
   staffId         String?
   salaryDetailsId String?
 
@@ -219,7 +231,7 @@ model Earnings {
   calculation     String?
   amount          Float?
   staffId         String?
-  salaryMonth    String?
+  salaryMonth     String?
   salaryDetailsId String?
 
   // Relations
@@ -292,6 +304,7 @@ model FinancialDetails {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @default(now())
   staffId       String?
+  adminId       String
   staffDetails  StaffDetails? @relation(fields: [staffId], references: [id], onDelete: Cascade)
 }
 
@@ -301,16 +314,19 @@ model Branch {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   adminId      String
-  admin        User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  // admin        User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
   StaffDetails StaffDetails[]
+  User         User?          @relation(fields: [userId], references: [id])
+  userId       String?
 }
 
 model Department {
   id             String         @id @default(dbgenerated("gen_random_uuid()"))
   departmentName String
   adminId        String
-  admin          User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
   staffs         StaffDetails[]
+  User           User?          @relation(fields: [userId], references: [id])
+  userId         String?
 }
 
 model Permissions {
@@ -338,8 +354,9 @@ model Role {
   updated_at  DateTime       @updatedAt
   permissions Permissions?
   staffs      StaffDetails[]
+  // adminId     String
+  // admin       User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
   adminId     String
-  admin       User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
 }
 
 model ClientsPermissions {
@@ -501,6 +518,22 @@ model AdminDetails {
   AttendanceStaff             AttendanceStaff[]
 }
 
+model BankDetails {
+  id                String       @id @default(dbgenerated("gen_random_uuid()"))
+  bankName          String
+  accountNumber     String
+  ifsc              String
+  country           String
+  branch            String
+  accountHolderName String
+  accountStatus     String
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @default(now())
+  staffId           String
+  staffDetails      StaffDetails @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  adminId           String
+}
+
 model ClientDetails {
   id               String        @id @default(dbgenerated("gen_random_uuid()"))
   group            String
@@ -546,6 +579,7 @@ model Project {
   // Add relation to ProjectPermissions
   ProjectPermissions   ProjectPermissions[]
   task                 Task[]
+  adminId              String
 }
 
 model Task {
@@ -569,6 +603,7 @@ model Task {
   project                   Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId                 String?
   StaffDetails              StaffDetails[]
+  adminId                   String
 }
 
 model ProjectPermissions {
@@ -777,45 +812,59 @@ model PunchRecords {
   punchOutId String?           @unique
   staffId    String?
   status     punchRecordStatus @default(ABSENT)
-  fine       Fine?
-  Overtime   Overtime?
+  // fine       Fine?             @relation(fields: [fineId], references: [id])
+  // Overtime   Overtime?
   punchIn    PunchIn?          @relation(fields: [punchInId], references: [id], onDelete: Cascade)
   punchOut   PunchOut?         @relation(fields: [punchOutId], references: [id], onDelete: Cascade)
   staff      StaffDetails?     @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  // fineId     String?
 
   @@unique([staffId, punchDate])
 }
 
 model Fine {
-  id                       String        @id @default(dbgenerated("gen_random_uuid()"))
+  id                       String           @id @default(dbgenerated("gen_random_uuid()"))
   lateEntryFineHoursTime   String?
-  lateEntryFineAmount      Float?        @default(1)
-  lateEntryAmount          Float?        @default(0)
+  lateEntryFineAmount      Float?           @default(1)
+  lateEntryAmount          Float?           @default(0)
   excessBreakFineHoursTime String?
-  excessBreakFineAmount    Float?        @default(1)
-  excessBreakAmount        Float?        @default(0)
+  excessBreakFineAmount    Float?           @default(1)
+  excessBreakAmount        Float?           @default(0)
   earlyOutFineHoursTime    String?
-  earlyOutFineAmount       Float?        @default(1)
-  earlyOutAmount           Float?        @default(0)
-  totalAmount              Float?        @default(0)
-  punchRecordId            String        @unique
+  earlyOutFineAmount       Float?           @default(1)
+  earlyOutAmount           Float?           @default(0)
+  totalAmount              Float?           @default(0)
+  sendSMStoStaff           Boolean?
   staffId                  String?
-  createdAt                DateTime      @default(now())
-  punchRecord              PunchRecords  @relation(fields: [punchRecordId], references: [id], onDelete: Cascade)
-  staff                    StaffDetails? @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  createdAt                DateTime         @default(now())
+  staff                    StaffDetails?    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  AttendanceStaff          AttendanceStaff? @relation(fields: [attendanceStaffId], references: [id])
+  attendanceStaffId        String?
+  SalaryDetail             SalaryDetail?    @relation(fields: [salaryDetailId], references: [id])
+  salaryDetailId           String?
+  adminId                  String
+
+  @@unique([staffId, createdAt]) // Ensure one fine per staff per day
 }
 
 model Overtime {
-  id                         String        @id @default(dbgenerated("gen_random_uuid()"))
+  id                         String           @id @default(dbgenerated("gen_random_uuid()"))
   earlyCommingEntryHoursTime String?
-  earlyCommingEntryAmount    Float?        @default(1)
-  earlyEntryAmount           Float?        @default(0)
+  earlyCommingEntryAmount    Float?           @default(1)
+  earlyEntryAmount           Float?           @default(0)
   lateOutOvertimeHoursTime   String?
-  lateOutOvertimeAmount      Float?        @default(1)
-  lateOutAmount              Float?        @default(0)
-  totalAmount                Float?        @default(0)
-  punchRecordId              String?       @unique
+  lateOutOvertimeAmount      Float?           @default(1)
+  lateOutAmount              Float?           @default(0)
+  totalAmount                Float?           @default(0)
   staffId                    String?
-  punchRecord                PunchRecords? @relation(fields: [punchRecordId], references: [id], onDelete: Cascade)
-  staff                      StaffDetails? @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  staff                      StaffDetails?    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  AttendanceStaff            AttendanceStaff? @relation(fields: [attendanceStaffId], references: [id])
+  attendanceStaffId          String?
+  SalaryDetail               SalaryDetail?    @relation(fields: [salaryDetailId], references: [id])
+  salaryDetailId             String?
+  adminId                    String
+
+  createdAt DateTime @default(now())
+
+  @@unique([staffId, createdAt]) // Ensure one fine per staff per day
 }
