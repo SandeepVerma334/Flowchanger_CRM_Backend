@@ -135,23 +135,24 @@ enum AttendanceStatus {
 
 model SalaryDetail {
   id                   String                 @id @default(uuid())
-  effective_date       DateTime?
-  salary_type          String?
-  ctc_amount           Float?
-  employer_pf          Float?
-  employer_esi         Float?
-  employer_lwf         Float?
-  employee_pf          Float?
-  employee_esi         Float?
-  professional_tax     Float?
-  employee_lwf         Float?
-  payroll_finalized    Boolean                @default(false)
-  finalized_date       DateTime?
-  final_salary         Float?
+  effectiveDate       DateTime?
+  salaryType          String?
+  ctcAmount           Float?
+  employerPf          Float?
+  employerEsi         Float?
+  employerLwf         Float?
+  employeePf          Float?
+  employeeEsi         Float?
+  professionalTax     Float?
+  employeeLwf         Float?
+  payrollFinalized    Boolean                @default(false)
+  finalizedDate       DateTime?
+  finalSalary         Float?
   tds                  Float?
-  created_at           DateTime?              @default(now())
-  updated_at           DateTime?              @updatedAt
+  createdAt           DateTime?              @default(now())
+  updatedAt           DateTime?              @updatedAt
   staffId              String
+  adminId              String
   // Relations
   Staff                StaffDetails           @relation(fields: [staffId], references: [id], onDelete: Cascade)
   employerContribution EmployerContribution[] @relation("EmployerContributionToSalaryDetails")
@@ -170,8 +171,8 @@ model EmployerContribution {
   amount             Float
   state              String?
   includedInCTC      Boolean  @default(false)
-  contribution_month String
-  selected_earnings  String[]
+  contributionMonth String
+  selectedEarnings  String[]
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -188,8 +189,8 @@ model EmployeeContribution {
   calculation        String?
   amount             Float
   state              String?
-  contribution_month String
-  selected_earnings  String[]
+  contributionMonth String
+  selectedEarnings  String[]
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -203,7 +204,7 @@ model Deductions {
   heads           String?
   calculation     String?
   amount          Float?
-  deduction_month String?
+  deductionMonth String?
   staffId         String?
   salaryDetailsId String?
 
@@ -218,7 +219,7 @@ model Earnings {
   calculation     String?
   amount          Float?
   staffId         String?
-  salary_month    String?
+  salaryMonth    String?
   salaryDetailsId String?
 
   // Relations

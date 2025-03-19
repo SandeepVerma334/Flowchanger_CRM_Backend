@@ -1,7 +1,7 @@
 import { staffDetailSchema } from "../../../utils/validation.js";
 import checkAdmin from "../../../utils/adminChecks.js";
 import prisma from "../../../prisma/prisma.js";
-
+import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 
 // create staff
@@ -95,7 +95,6 @@ const getAllStaff = async (req, res) => {
 
     const staff = await prisma.user.findMany({
       where: {
-        role: "STAFF",
         adminId: req.userId,
       },
       include: {
@@ -654,4 +653,36 @@ const bulkDeleteStaff = async (req, res, next) => {
   }
 };
 
-export { createStaff, getAllStaff, getStaffById, updateStaff, deleteStaff, bulkCreateStaff, bulkUpdateStaff, searchStaff, bulkDeleteStaff };
+const staffLogin = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { email: email }
+    });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.role !== 'STAFF') {
+      return res.status(403).json({ message: "Access denied. User is not an admin." });
+    }
+
+
+    if (user.password !== password) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' }); // Generate JWT token with user ID    
+
+    res.status(200).json({
+      message: "Login successfuly",
+      token,
+      data: user  // Send token in response
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+export { createStaff, getAllStaff, getStaffById, updateStaff, deleteStaff, bulkCreateStaff, bulkUpdateStaff, searchStaff, bulkDeleteStaff, staffLogin };
