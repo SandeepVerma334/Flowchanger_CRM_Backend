@@ -134,6 +134,7 @@ const getAllStaff = async (req, res) => {
             Department: true,
             Branch: true,
             AttendanceStaff: true,
+            StaffEducationQualification: true,
           },
         },
       },
