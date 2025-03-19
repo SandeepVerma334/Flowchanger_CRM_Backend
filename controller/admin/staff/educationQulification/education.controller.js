@@ -40,7 +40,8 @@ const createEducationForStaff = async (req, res, next) => {
       },
       include: {
         staffDetails: true,
-        AdminDetails: true
+        AdminDetails: true,
+        staffEducationQualification: true
       },
     });
 
