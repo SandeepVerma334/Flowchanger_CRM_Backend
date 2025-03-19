@@ -14,13 +14,20 @@ const adminSignup = async (req, res, next) => {
         const user = await prisma.user.findFirst({
             where: {
                 email: validatedData.email
+            },
+            include: {
+                adminDetails: true,
             }
         });
 
-        if (user) {
+        console.log(user);
+
+        if (user && user.adminDetails) {
             return res.status(400).json({ message: "User already exists" });
         }
-
+        if (user && !user.adminDetails) {
+            await prisma.user.delete({ where: { id: user.id } })
+        }
         // Hash the password using bcrypt
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(validatedData.password, saltRounds);
@@ -47,7 +54,8 @@ const adminSignup = async (req, res, next) => {
 
 const updateAdminProfile = async (req, res, next) => {
     try {
-        
+        // const admin = await checkAdmin(req, res, next);
+        // console.log(admin);
         const {
             email,
             mobile,
@@ -70,7 +78,10 @@ const updateAdminProfile = async (req, res, next) => {
 
 
         const user = await prisma.user.findFirst({
-            where: { email: email }
+            where: { email: email },
+            include: {
+                adminDetails: true
+            }
         });
 
         if (!user) {
@@ -84,27 +95,52 @@ const updateAdminProfile = async (req, res, next) => {
                 mobile,
                 password,
                 adminDetails: {
-                    create: {
-                        companyName,
-                        timeZone,
-                        address,
-                        city,
-                        state,
-                        zipCode,
-                        country,
-                        gender,
-                        designation,
-                        businessType,
-                        services,
-                        companySize,
-                        role,
-                        ...(packageId && {
-                            package: {
-                                connect: {
-                                    id: packageId
+                    upsert: {
+                        where: { userId: user.id },  // Use the adminDetailId to check existence
+                        update: {
+                            companyName,
+                            timeZone,
+                            address,
+                            city,
+                            state,
+                            zipCode,
+                            country,
+                            gender,
+                            designation,
+                            businessType,
+                            services,
+                            companySize,
+                            role,
+                            ...(packageId && {
+                                package: {
+                                    connect: {
+                                        id: packageId
+                                    }
                                 }
-                            }
-                        })
+                            })
+                        },
+                        create: {
+                            companyName,
+                            timeZone,
+                            address,
+                            city,
+                            state,
+                            zipCode,
+                            country,
+                            gender,
+                            designation,
+                            businessType,
+                            services,
+                            companySize,
+                            role,
+                            ...(packageId && {
+                                package: {
+                                    connect: {
+                                        id: packageId
+                                    }
+                                }
+                            })
+                        }
                     }
                 }
             },
@@ -113,9 +149,12 @@ const updateAdminProfile = async (req, res, next) => {
             }
         });
 
+
+        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' }); // Generate JWT token with user ID    
         res.status(200).json({
             message: "Admin profile updated successfully",
             data: updatedUser,
+            token: token,
         });
 
     } catch (error) {
@@ -162,9 +201,11 @@ const verifyOTP = async (req, res, next) => {
     try {
         const { otp, email } = req.body;
 
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findFirst({
             where: { email },
         });
+
+        console.log(user);
 
         if (!user) {
             return res.status(404).json({ message: "User not found." });
@@ -176,7 +217,7 @@ const verifyOTP = async (req, res, next) => {
 
         if (user.otp === parseInt(otp) && user.otpExpiresAt > now) {
             await prisma.user.update({
-                where: { email },
+                where: { id: user.id },
                 data: {
                     isVerified: true,
                     otp: null,               // Clear OTP after verification
@@ -302,7 +343,7 @@ const adminPasswordResetLink = async (req, res, next) => {
             return res.status(400).json({ message: "Email is required." });
         }
 
-        const adminDetails = await prisma.user.findUnique({
+        const adminDetails = await prisma.user.findFirst({
             where: { email },
         });
 
@@ -336,7 +377,7 @@ const adminResetPassword = async (req, res, next) => {
         if (!email || !password) {
             return res.status(400).json({ message: "Email and password are required." });
         }
-        const adminDetails = await prisma.user.findUnique({
+        const adminDetails = await prisma.user.findFirst({
             where: { email },
         });
 
@@ -360,4 +401,18 @@ const adminResetPassword = async (req, res, next) => {
     }
 }
 
-export { adminLogin, adminPasswordResetLink, adminResetPassword, adminSignup, deleteUserById, getAllUsers, getUserById, searchUsers, sendOTP, updateAdminProfile, verifyOTP }; 
+const countAdmin = async (req, res, next) => {
+    try {
+        const allAdminCount = await prisma.user.count({
+            where: {
+                role: 'ADMIN',
+            },
+        });
+        return res.json({ message: "Count Admin", count: allAdminCount });
+    }
+    catch (error) {
+        next(error);
+    }
+}
+
+export { adminLogin, adminPasswordResetLink, adminResetPassword, adminSignup, deleteUserById, getAllUsers, getUserById, searchUsers, sendOTP, updateAdminProfile, verifyOTP, countAdmin }; 

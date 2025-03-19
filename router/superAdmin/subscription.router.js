@@ -1,11 +1,12 @@
 import express from "express";
-import { createSubscription, deleteSubscription, getAllSubscription, getSubscriptionById, searchSubscription, updateSubscription } from "../../controller/SuperAdmin/subscription.controller.js";
+import { countSubscription, createSubscription, deleteSubscription, getAllSubscription, getSubscriptionById, searchSubscription, updateSubscription } from "../../controller/SuperAdmin/subscription.controller.js";
 import errorHandler from "../../middleware/errorhandler.js";
 
 const subscriptionRouter = express.Router();
 
 subscriptionRouter.post("/", createSubscription);
 subscriptionRouter.get("/search", searchSubscription);
+subscriptionRouter.get("/count", countSubscription);
 subscriptionRouter.get("/", getAllSubscription);
 subscriptionRouter.get("/:id", getSubscriptionById);
 subscriptionRouter.put("/:id", updateSubscription);

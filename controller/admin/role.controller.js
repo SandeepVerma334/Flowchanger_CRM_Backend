@@ -1,112 +1,67 @@
 import prisma from "../../prisma/prisma.js";
+import checkAdmin from "../../utils/adminChecks.js";
+import { pagination } from "../../utils/pagination.js";
 import { idSchema, newRoleSchema, updateRoleSchema } from "../../utils/validation.js";
 
-const fetchRole = async (req, res) => {
+const fetchRole = async (req, res, next) => {
     try {
         const { page = 1, limit = 10 } = req.query;
 
+        const admin = await checkAdmin(req.userId);
+        if (admin.error) {
+            return res.status(401).json(admin.message);
+        }
+
         // Convert query parameters to integers
-        const pageNum = parseInt(page, 10);
-        const limitNum = parseInt(limit, 10);
-
-        // Calculate the number of records to skip
-        const skip = (pageNum - 1) * limitNum;
-
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            },
-        });
-
-        if (!admin) {
-            return res.status(400).json({
-                message: "Admin not found!",
-            });
-        }
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({ message: "Only admin can get roles!" });
-        }
-
-        // Fetch total count of roles for pagination metadata
-        const totalRoles = await prisma.role.count({
-            where: { adminId: req.userId },
-        });
-
-        // Fetch roles with pagination
-        const allRoles = await prisma.role.findMany({
-            where: { adminId: req.userId },
-            include: {
-                permissions: {
-                    include: {
-                        clients_permissions: true,
-                        projects_permissions: true,
-                        report_permissions: true,
-                        staff_role_permissions: true,
-                        settings_permissions: true,
-                        staff_permissions: true,
-                        task_permissions: true,
-                        sub_task_permissions: true,
-                        chat_module_permissions: true,
-                        ai_permissions: true,
-                    },
+        const where = { adminId: req.userId };
+        const include = {
+            permissions: {
+                include: {
+                    clients_permissions: true,
+                    projects_permissions: true,
+                    report_permissions: true,
+                    staff_role_permissions: true,
+                    settings_permissions: true,
+                    staff_permissions: true,
+                    task_permissions: true,
+                    sub_task_permissions: true,
+                    chat_module_permissions: true,
+                    ai_permissions: true,
                 },
             },
-            skip,
-            take: limitNum,
-        });
+        }
 
-        res.status(200).json({
-            success: true,
-            message: "Fetched all roles successfully",
-            data: allRoles,
-            pagination: {
-                totalRoles,
-                currentPage: pageNum,
-                totalPages: Math.ceil(totalRoles / limitNum),
-                pageSize: limitNum,
-            },
-        });
+        const allRole = await pagination(prisma.role, {
+            where,
+            include,
+            page,
+            limit
+        })
+
+        return res.status(200).json({
+            message: "All role fetched successfully",
+            ...allRole
+        })
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            error: "Failed to fetch all roles",
-        });
+        next(error)
     }
 };
 
 // fetch role with specific id
-const fetchRoleWithId = async (req, res) => {
+const fetchRoleWithId = async (req, res, next) => {
     const { id } = req.params;
 
     try {
         // Validate the id parameter
-        const validateId = idSchema.safeParse(id);
-
-        if (!validateId.success) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid role ID format provided in params",
-            });
-        }
-
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            },
-        });
-
-        if (!admin) {
-            return res.status(400).json({
-                message: "Admin not found!",
-            });
-        }
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({ message: "Only admin can fetch role!" });
+        const validateId = idSchema.parse(id);
+        const admin = await checkAdmin(req.userId);
+        if (admin.error) {
+            return res.status(401).json(admin.message);
         }
 
         // Find role by id
         const findRole = await prisma.role.findFirst({
-            where: { id: id },
+            where: { id: validateId.id },
             include: {
                 permissions: {
                     include: {
@@ -140,11 +95,7 @@ const fetchRoleWithId = async (req, res) => {
             data: findRole,
         });
     } catch (error) {
-        // Handle any other errors
-        res.status(500).json({
-            success: false,
-            error: "Failed to fetch role: " + error.message,
-        });
+        next(error);
     }
 };
 
@@ -152,46 +103,14 @@ const fetchRoleWithId = async (req, res) => {
 async function addRole(req, res) {
     const { roleName, permissions } = req.body;
     try {
-        const validateNewRoleData = newRoleSchema.safeParse({
+        const validateNewRoleData = newRoleSchema.parse({
             roleName,
             permissions,
         });
-        if (!validateNewRoleData.success) {
-            return res.status(400).json({
-                success: false,
-                message: validateNewRoleData.error.issues[0].message,
-            });
-        }
-        // console.log(permissions);
-        // find Role with name if exist or not
-        // const findRoleWithName = await prisma.role.findFirst({
-        //   where: {
-        //     role_name: roleName,
-        //   },
-        // });
 
-        // // if find role with name then return false
-        // if (findRoleWithName) {
-        //   return res.json({
-        //     status: false,
-        //     message: "Role is already created with " + roleName + " name",
-        //   });
-        // }
-
-        // if role is not exist then create new role
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            },
-        });
-
-        if (!admin) {
-            return res.status(400).json({
-                message: "Admin not found!",
-            });
-        }
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({ message: "Only admin can create role!" });
+        const admin = await checkAdmin(req.userId);
+        if (admin.error) {
+            return res.status(401).json(admin.message)
         }
         const newRole = await prisma.role.create({
             data: {
@@ -316,24 +235,15 @@ async function addRole(req, res) {
 
 // updated Role for specific id
 const updateRole = async (req, res) => {
-    const { id } = req.params;
-    const admin = await prisma.user.findUnique({
-        where: {
-            id: req.userId,
-        },
-    });
-
-    if (!admin) {
-        return res.status(400).json({
-            message: "Admin not found!",
-        });
-    }
-    if (admin.role !== "ADMIN") {
-        return res.status(400).json({ message: "Only admin can update role!" });
-    }
-    const { roleName, permissions } = req.body;
-
     try {
+        const { id } = req.params;
+        const { roleName, permissions } = req.body;
+
+        const admin = await checkAdmin(req.userId)
+        if (admin.error) {
+            return res.status(401).json(admin.message);
+        }
+
         if (!id) {
             return res.status(400).json({
                 success: false,
@@ -341,16 +251,11 @@ const updateRole = async (req, res) => {
             });
         }
 
-        const validateUpdatedRoleData = updateRoleSchema.safeParse({
+        const validateUpdatedRoleData = updateRoleSchema.partial().parse({
             roleName,
             permissions,
         });
-        if (!validateUpdatedRoleData.success) {
-            return res.status(400).json({
-                success: false,
-                message: validateNewRoleData.error.issues[0].message,
-            });
-        }
+
 
         const findRole = await prisma.role.findUnique({
             where: { id },
@@ -372,7 +277,6 @@ const updateRole = async (req, res) => {
             },
         });
 
-        // If the role is not found, return 404
         if (!findRole) {
             return res.status(404).json({
                 success: false,
@@ -380,171 +284,95 @@ const updateRole = async (req, res) => {
             });
         }
 
-        // Update the role with the provided values or retain existing values if not provided
+        await prisma.permissions.delete({
+            where: {
+                id: findRole.permissions.id
+            }
+        })
         const updatedRole = await prisma.role.update({
             where: { id },
             data: {
                 role_name: roleName,
                 permissions: {
-                    update: {
+                    create: {
                         clients_permissions: {
-                            update: {
-                                where: { permissionsId: findRole.permissions.id },
-                                data: {
-                                    view_global:
-                                        permissions?.client_permissions?.view_global ??
-                                        findRole.permissions.clients_permissions.view_global,
-                                    create:
-                                        permissions?.client_permissions?.create ??
-                                        findRole.permissions.clients_permissions.create,
-                                    edit:
-                                        permissions?.client_permissions?.edit ??
-                                        findRole.permissions.clients_permissions.edit,
-                                    delete:
-                                        permissions?.client_permissions?.delete ??
-                                        findRole.permissions.clients_permissions.delete,
-                                },
+                            create: {
+                                view_global:
+                                    permissions.clients_permissions?.view_global ?? false,
+                                create: permissions.clients_permissions?.create ?? false,
+                                edit: permissions.clients_permissions?.edit ?? false,
+                                delete: permissions.clients_permissions?.delete ?? false,
                             },
                         },
                         projects_permissions: {
-                            update: {
-                                where: { permissionsId: findRole.permissions.id },
-                                data: {
-                                    view_global:
-                                        permissions?.projectsPermissions?.view_global ??
-                                        findRole.permissions.projects_permissions.view_global,
-                                    create:
-                                        permissions?.projectsPermissions?.create ??
-                                        findRole.permissions.projects_permissions.create,
-                                    edit:
-                                        permissions?.projectsPermissions?.edit ??
-                                        findRole.permissions.projects_permissions.edit,
-                                    delete:
-                                        permissions?.projectsPermissions?.delete ??
-                                        findRole.permissions.projects_permissions.delete,
-                                },
+                            create: {
+                                view_global:
+                                    permissions.projects_permissions?.view_global ?? false,
+                                create: permissions.projects_permissions?.create ?? false,
+                                edit: permissions.projects_permissions?.edit ?? false,
+                                delete: permissions.projects_permissions?.delete ?? false,
                             },
                         },
                         report_permissions: {
-                            update: {
-                                where: { permissionsId: findRole.permissions.id },
-                                data: {
-                                    view_global:
-                                        permissions?.reportPermissions?.view_global ??
-                                        findRole.permissions.report_permissions.view_global,
-                                    view_time_sheets:
-                                        permissions?.reportPermissions?.view_time_sheets ??
-                                        findRole.permissions.report_permissions.view_time_sheets,
-                                },
+                            create: {
+                                view_global:
+                                    permissions.report_permissions?.view_global ?? false,
+                                view_time_sheets:
+                                    permissions.report_permissions?.view_time_sheets ?? false,
                             },
                         },
                         staff_role_permissions: {
-                            update: {
-                                where: { permissionsId: findRole.permissions.id },
-                                data: {
-                                    view_global:
-                                        permissions?.staffRolePermissions?.view_global ??
-                                        findRole.permissions.staff_role_permissions.view_global,
-                                    create:
-                                        permissions?.staffRolePermissions?.create ??
-                                        findRole.permissions.staff_role_permissions.create,
-                                    edit:
-                                        permissions?.staffRolePermissions?.edit ??
-                                        findRole.permissions.staff_role_permissions.edit,
-                                    delete:
-                                        permissions?.staffRolePermissions?.delete ??
-                                        findRole.permissions.staff_role_permissions.delete,
-                                },
+                            create: {
+                                view_global:
+                                    permissions.staff_role_permissions?.view_global ?? false,
+                                create: permissions.staff_role_permissions?.create ?? false,
+                                edit: permissions.staff_role_permissions?.edit ?? false,
+                                delete: permissions.staff_role_permissions?.delete ?? false,
                             },
                         },
                         settings_permissions: {
-                            update: {
-                                where: { permissionsId: findRole.permissions.id },
-                                data: {
-                                    view_global:
-                                        permissions?.settingsPermissions?.view_global ??
-                                        findRole.permissions.settings_permissions.view_global,
-                                    view_time_sheets:
-                                        permissions?.settingsPermissions?.view_time_sheets ??
-                                        findRole.permissions.settings_permissions.view_time_sheets,
-                                },
+                            create: {
+                                view_global:
+                                    permissions.settings_permissions?.view_global ?? false,
+                                view_time_sheets:
+                                    permissions.settings_permissions?.view_time_sheets ?? false,
                             },
                         },
                         staff_permissions: {
-                            update: {
-                                where: { permissionsId: findRole.permissions.id },
-                                data: {
-                                    view_global:
-                                        permissions?.staffPermissions?.view_global ??
-                                        findRole.permissions.staff_permissions.view_global,
-                                    create:
-                                        permissions?.staffPermissions?.create ??
-                                        findRole.permissions.staff_permissions.create,
-                                    edit:
-                                        permissions?.staffPermissions?.edit ??
-                                        findRole.permissions.staff_permissions.edit,
-                                    delete:
-                                        permissions?.staffPermissions?.delete ??
-                                        findRole.permissions.staff_permissions.delete,
-                                },
+                            create: {
+                                view_global:
+                                    permissions.staff_permissions?.view_global ?? false,
+                                create: permissions.staff_permissions?.create ?? false,
+                                edit: permissions.staff_permissions?.edit ?? false,
+                                delete: permissions.staff_permissions?.delete ?? false,
                             },
                         },
                         task_permissions: {
-                            update: {
-                                where: { permissionsId: findRole.permissions.id },
-                                data: {
-                                    view_global:
-                                        permissions?.taskPermissions?.view_global ??
-                                        findRole.permissions.task_permissions.view_global,
-                                    create:
-                                        permissions?.taskPermissions?.create ??
-                                        findRole.permissions.task_permissions.create,
-                                    edit:
-                                        permissions?.taskPermissions?.edit ??
-                                        findRole.permissions.task_permissions.edit,
-                                    delete:
-                                        permissions?.taskPermissions?.delete ??
-                                        findRole.permissions.task_permissions.delete,
-                                },
+                            create: {
+                                view_global: permissions.task_permissions?.view_global ?? false,
+                                create: permissions.task_permissions?.create ?? false,
+                                edit: permissions.task_permissions?.edit ?? false,
+                                delete: permissions.task_permissions?.delete ?? false,
                             },
                         },
                         sub_task_permissions: {
-                            update: {
-                                where: { permissionsId: findRole.permissions.id },
-                                data: {
-                                    view_global:
-                                        permissions?.subTaskPermissions?.view_global ??
-                                        findRole.permissions.sub_task_permissions.view_global,
-                                    create:
-                                        permissions?.subTaskPermissions?.create ??
-                                        findRole.permissions.sub_task_permissions.create,
-                                    edit:
-                                        permissions?.subTaskPermissions?.edit ??
-                                        findRole.permissions.sub_task_permissions.edit,
-                                    delete:
-                                        permissions?.subTaskPermissions?.delete ??
-                                        findRole.permissions.sub_task_permissions.delete,
-                                },
+                            create: {
+                                view_global:
+                                    permissions.sub_task_permissions?.view_global ?? false,
+                                create: permissions.sub_task_permissions?.create ?? false,
+                                edit: permissions.sub_task_permissions?.edit ?? false,
+                                delete: permissions.sub_task_permissions?.delete ?? false,
                             },
                         },
                         chat_module_permissions: {
-                            update: {
-                                where: { permissionsId: findRole.permissions.id },
-                                data: {
-                                    grant_access:
-                                        permissions?.chatModulePermissions?.grant_access ??
-                                        findRole.permissions.chat_module_permissions.grant_access,
-                                },
+                            create: {
+                                grant_access:
+                                    permissions.chat_module_permissions?.grant_access ?? false,
                             },
                         },
                         ai_permissions: {
-                            update: {
-                                where: { permissionsId: findRole.permissions.id },
-                                data: {
-                                    grant_access:
-                                        permissions?.aiPermissions?.grantAccess ??
-                                        findRole.permissions.ai_permissions.grant_access,
-                                },
+                            create: {
+                                grant_access: permissions.ai_permissions?.grant_access ?? false,
                             },
                         },
                     },
@@ -595,23 +423,13 @@ const updateRole = async (req, res) => {
 //detete role in bulk
 const deleteRoleInBulk = async (req, res) => {
     try {
-        const { ids } = req.body; // Get IDs from the request body
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            },
-        });
+        const { ids } = req.body;
+        const admin = await checkAdmin(req.userId);
 
-        if (!admin) {
-            return res.status(400).json({
-                message: "Admin not found!",
-            });
+        if (admin.error) {
+            return res.status(401).json(admin.message);
         }
-        if (admin.role !== "ADMIN") {
-            return res
-                .status(400)
-                .json({ message: "Only admin can delete role in bulk!" });
-        }
+
         const deletedRoles = await prisma.role.deleteMany({
             where: {
                 id: {
@@ -640,11 +458,14 @@ const deleteRoleInBulk = async (req, res) => {
 };
 
 // delete specific roleId's role
-const deleteRole = async (req, res) => {
-    const { id } = req.params; // Accepting roleId from params
-
+const deleteRole = async (req, res, next) => {
     try {
-        // Validate the id
+        const { id } = req.params;
+        const admin = await checkAdmin(req.userId);
+
+        if (admin.error) {
+            return res.status(401).json(admin.message);
+        }
         if (!id) {
             return res.status(400).json({
                 success: false,
@@ -652,36 +473,13 @@ const deleteRole = async (req, res) => {
             });
         }
 
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            },
-        });
 
-        if (!admin) {
-            return res.status(400).json({
-                message: "Admin not found!",
-            });
-        }
-        if (admin.role !== "ADMIN") {
-            return res.status(400).json({ message: "Only admin can delete role!" });
-        }
-        // Validate the id parameter
-        const validateId = idSchema.safeParse(id);
+        const validateId = idSchema.parse(id);
 
-        if (!validateId.success) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid role ID format provided in params",
-            });
-        }
-
-        // Find the role by its ID
         const findRole = await prisma.role.findUnique({
             where: { id },
         });
 
-        // If role not found, return 404
         if (!findRole) {
             return res.status(404).json({
                 success: false,
@@ -689,7 +487,6 @@ const deleteRole = async (req, res) => {
             });
         }
 
-        // Delete the role by its ID
         await prisma.role.delete({ where: { id, adminId: req.userId } });
 
         res.status(200).json({
@@ -697,49 +494,72 @@ const deleteRole = async (req, res) => {
             message: "Role deleted successfully",
         });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            error: `Failed to delete role: ${error.message}`,
-        });
+        next(error);
     }
 };
 
-const searchRoleByName = async (req, res) => {
+const searchRoleByName = async (req, res, next) => {
     try {
-        const { role_name } = req.query;
-        const admin = await prisma.user.findUnique({
-            where: {
-                id: req.userId,
-            },
-        });
+        const { page, limit } = req.query;
+        const admin = await checkAdmin(req.userId);
 
-        if (!admin) {
-            return res.status(400).json({
-                message: "Admin not found!",
-            });
+        if (admin.error) {
+            return res.status(401).json(admin.message);
         }
-        if (admin.role !== "ADMIN") {
-            return res
-                .status(400)
-                .json({ message: "Only admin can find role by name!" });
+        const { search } = req.query;
+
+
+        const where = {
+            adminId: req.userId,
+            role_name: {
+                contains: search,
+                mode: "insensitive",
+            },
         }
-        const roleData = await prisma.role.findMany({
-            where: {
-                adminId: req.userId,
-                role_name: {
-                    contains: role_name,
-                    mode: "insensitive",
+        const include = {
+            permissions: {
+                include: {
+                    clients_permissions: true,
+                    projects_permissions: true,
+                    report_permissions: true,
+                    staff_role_permissions: true,
+                    settings_permissions: true,
+                    staff_permissions: true,
+                    task_permissions: true,
+                    sub_task_permissions: true,
+                    chat_module_permissions: true,
+                    ai_permissions: true,
                 },
             },
+        }
+        const allRole = await pagination(prisma.role, {
+            where,
+            include,
+            page,
+            limit,
+        })
+        res.status(200).json({
+            message: "Search role for value " + search + " successfully",
+            ...allRole
         });
-        res.status(200).json(roleData);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({
-            status: false,
-            message: "Failed to search role name" + error.message,
-        });
+        next(error);
     }
 };
 
-export { fetchRole, fetchRoleWithId, addRole, updateRole, deleteRoleInBulk, deleteRole, searchRoleByName };
+const countRoles = async (req, res, next) => {
+    try {
+        const admin = checkAdmin(req.userId);
+        if (admin.error) {
+            return res.status(401).json({ message: admin.message });
+        }
+        const count = await prisma.role.count({
+            where: { adminId: req.userId },
+        });
+
+        res.status(200).json({ message: "Role count fetched successfully", count });
+    } catch (error) {
+        next(error);
+    }
+};
+export { fetchRole, fetchRoleWithId, addRole, updateRole, deleteRoleInBulk, deleteRole, searchRoleByName, countRoles };

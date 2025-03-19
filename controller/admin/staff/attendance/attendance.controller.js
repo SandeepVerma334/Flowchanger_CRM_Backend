@@ -699,6 +699,4 @@ const getAllAttendanceByDate = async (req, res, next) => {
 };
 
 
-
-
 export { createAttendance, getAllAttendance, getAttendanceByStaffId, updateAttendanceEndTime, startAttendanceBreak, endAttendanceBreak, getAttendanceByMonth, halfDayAttendance, getAllAttendanceByDate };

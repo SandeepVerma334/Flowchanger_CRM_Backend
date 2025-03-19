@@ -1,30 +1,20 @@
 import { staffDetailSchema } from "../../../utils/validation.js";
 import checkAdmin from "../../../utils/adminChecks.js";
 import prisma from "../../../prisma/prisma.js";
-import { pagination } from "../../../utils/pagination.js";
-
+import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 
 // create staff
 const createStaff = async (req, res, next) => {
-  // console.log(req.body);
   try {
-    const admin = await checkAdmin(req.userId, "ADMIN");
-    console.log(admin);
-    if (admin.error) {
-      return res.status(400).json({
-        message: admin.message
-      });
+    const adminCheck = await checkAdmin(req.userId);
+    console.log(adminCheck)
+    if (adminCheck.error) {
+      return res.status(403).json({ message: adminCheck.message });
     }
-    const validation = staffDetailSchema.safeParse(req.body);
-    // console.log(req.file);
-    if (!validation.success) {
-      return res.status().json({
-        error: "Invalid data format",
-        issues: validation.error.issues.map((err) => err.message),
-      });
-    }
-    const { branchId, departmentId, roleId, officialMail } = validation.data;
+    const validation = staffDetailSchema.parse(req.body);
+   
+    const { branchId, departmentId, roleId, officialMail } = validation;
 
     // Check if branch, department, and role exist under the same admin
     const branchExists = await prisma.branch.findFirst({
@@ -60,6 +50,8 @@ console.log(roleExists);
       });
     }
 
+    const admin = await checkAdmin(req.userId);
+    console.log(admin)
 
     const uniqueEmployeeId = `FLOW#-${new Date().getTime()}-${uuidv4().replace(/-/g, "").substring(0, 5)}`;
     const staffData = await prisma.user.create({
@@ -133,7 +125,6 @@ const getAllStaff = async (req, res) => {
     const staff = await pagination(prisma.user, {
       page, limit,
       where: {
-        role: "STAFF",
         adminId: req.userId,
       },
       include: {
@@ -738,4 +729,36 @@ const bulkDeleteStaff = async (req, res, next) => {
   }
 };
 
-export { createStaff, getAllStaff, getStaffById, updateStaff, deleteStaff, bulkCreateStaff, bulkUpdateStaff, searchStaff, bulkDeleteStaff };
+const staffLogin = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await prisma.user.findFirst({
+      where: { email: email }
+    });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.role !== 'STAFF') {
+      return res.status(403).json({ message: "Access denied. User is not an admin." });
+    }
+
+
+    if (user.password !== password) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' }); // Generate JWT token with user ID    
+
+    res.status(200).json({
+      message: "Login successfuly",
+      token,
+      data: user  // Send token in response
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+export { createStaff, getAllStaff, getStaffById, updateStaff, deleteStaff, bulkCreateStaff, bulkUpdateStaff, searchStaff, bulkDeleteStaff, staffLogin };

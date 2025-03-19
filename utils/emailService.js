@@ -289,8 +289,10 @@ const sendOtpEmail = async (email) => {
     const otp = generateOtp();
     const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
+    const user = await prisma.user.findFirst({ where: { email } });
+
     await prisma.user.update({
-        where: { email },
+        where: { id: user.id },
         data: { otp, otpExpiresAt }
     });
 
