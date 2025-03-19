@@ -199,7 +199,7 @@ const updateStaff = async (req, res, next) => {
 
     const validation = staffDetailSchema.partial().parse(req.body);
     
-|    const existingStaff = await prisma.user.findUnique({
+    const existingStaff = await prisma.user.findUnique({
       where: { id: id, adminId: req.userId, },
       include: { StaffDetails: true },
     });
