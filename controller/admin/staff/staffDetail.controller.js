@@ -733,7 +733,7 @@ const staffLogin = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.user.findFirst({
       where: { email: email }
     });
     if (!user) {

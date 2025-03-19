@@ -13,7 +13,7 @@ const createClient = async (req, res, next) => {
         }
         const validatedData = clientSchema.parse(req.body);
         const { email, password, name, phoneNumber, ...restValidation } = validatedData;
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findFirst({
             where: {
                 email: email,
                 role: "CLIENT",

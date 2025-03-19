@@ -77,7 +77,7 @@ const updateAdminProfile = async (req, res, next) => {
         } = req.body;
 
 
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findFirst({
             where: { email: email },
             include: {
                 adminDetails: true
@@ -343,7 +343,7 @@ const adminPasswordResetLink = async (req, res, next) => {
             return res.status(400).json({ message: "Email is required." });
         }
 
-        const adminDetails = await prisma.user.findUnique({
+        const adminDetails = await prisma.user.findFirst({
             where: { email },
         });
 
@@ -377,7 +377,7 @@ const adminResetPassword = async (req, res, next) => {
         if (!email || !password) {
             return res.status(400).json({ message: "Email and password are required." });
         }
-        const adminDetails = await prisma.user.findUnique({
+        const adminDetails = await prisma.user.findFirst({
             where: { email },
         });
 
