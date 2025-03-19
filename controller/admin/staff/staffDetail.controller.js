@@ -222,6 +222,8 @@ const updateStaff = async (req, res, next) => {
 
         StaffDetails: {
           update: {
+          cityOfresidence: validation.cityOfresidence,
+            officialMail: validation.officialMail,
             jobTitle: validation.jobTitle,
             gender: validation.gender,
             dateOfJoining: new Date(),
