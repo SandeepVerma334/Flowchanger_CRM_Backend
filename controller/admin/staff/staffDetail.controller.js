@@ -1,5 +1,6 @@
 import { staffDetailSchema } from "../../../utils/validation.js";
 import checkAdmin from "../../../utils/adminChecks.js";
+import { pagination } from "../../../utils/pagination.js";
 import prisma from "../../../prisma/prisma.js";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
@@ -13,22 +14,22 @@ const createStaff = async (req, res, next) => {
       return res.status(403).json({ message: adminCheck.message });
     }
     const validation = staffDetailSchema.parse(req.body);
-   
+
     const { branchId, departmentId, roleId, officialMail } = validation;
 
     // Check if branch, department, and role exist under the same admin
     const branchExists = await prisma.branch.findFirst({
       where: { id: branchId, adminId: req.userId },
     });
-console.log(branchExists);
+    console.log(branchExists);
     const departmentExists = await prisma.department.findFirst({
       where: { id: departmentId, adminId: req.userId },
     });
-console.log(departmentExists);
+    console.log(departmentExists);
     const roleExists = await prisma.role.findFirst({
       where: { id: roleId, adminId: req.userId },
     });
-console.log(roleExists);
+    console.log(roleExists);
     if (!branchExists) {
       return res.status(400).json({ message: "Invalid branch ID for this admin" });
     }
@@ -40,7 +41,7 @@ console.log(roleExists);
     }
 
     const existingEmail = await prisma.user.findFirst({
-      where: { email: validation.data.officialMail, adminId: req.userId },
+      where: { email: officialMail, adminId: req.userId },
     })
 
     // console.log(existingEmail);
@@ -51,20 +52,19 @@ console.log(roleExists);
     }
 
     const admin = await checkAdmin(req.userId);
-    console.log(admin)
 
     const uniqueEmployeeId = `FLOW#-${new Date().getTime()}-${uuidv4().replace(/-/g, "").substring(0, 5)}`;
     const staffData = await prisma.user.create({
       data: {
-        firstName: validation.data.firstName,
-        lastName: validation.data.lastName,
-        password: validation.data.password,
-        mobile: validation.data.mobile,
-        mobile2: validation.data.mobile2,
-        profileImage: validation.data.porfileImage,
+        firstName: validation.firstName,
+        lastName: validation.lastName,
+        password: validation.password,
+        mobile: validation.mobile,
+        mobile2: validation.mobile2,
+        profileImage: validation.porfileImage,
         role: "STAFF",
-        email: validation.data.officialMail,
-        otp: validation.data.otp,
+        email: validation.officialMail,
+        otp: validation.otp,
         adminId: req.userId,
         StaffDetails: {
           create: {
@@ -73,30 +73,30 @@ console.log(roleExists);
                 id: admin.user.adminDetails.id,
               },
             },
-            jobTitle: validation.data.jobTitle,
-            gender: validation.data.gender,
-            dateOfJoining: new Date(validation.data.dateOfJoining),
-            dateOfBirth: validation.data.dateOfBirth,
-            address: validation.data.address,
-            maritalStatus: validation.data.maritalStatus,
-            // branchId:validation.data.branchId,
+            jobTitle: validation.jobTitle,
+            gender: validation.gender,
+            dateOfJoining: new Date(validation.dateOfJoining),
+            dateOfBirth: validation.dateOfBirth,
+            address: validation.address,
+            maritalStatus: validation.maritalStatus,
+            // branchId:validation.branchId,
             Branch: {
               connect: {
-                id: validation.data.branchId
+                id: validation.branchId
               },
             },
-            // departmentId:validation.data.departmentId,
+            // departmentId:validation.departmentId,
             Department: {
               connect: {
-                id: validation.data.departmentId
+                id: validation.departmentId
               },
             },
             Role: {
               connect: {
-                id: validation.data.roleId
+                id: validation.roleId
               },
             },
-            // roleId:validation.data.roleId,
+            // roleId:validation.roleId,
             employeeId: uniqueEmployeeId,
           }
         }
@@ -213,48 +213,48 @@ const updateStaff = async (req, res, next) => {
       return res.status(404).json({ message: "Staff not found!" });
     }
 
-    // console.log(validation.data)
+    // console.log(validation)
 
     // Update staff data
     const updatedStaff = await prisma.user.update({
       where: { id: id },
       data: {
-        firstName: validation.data.firstName,
-        lastName: validation.data.lastName,
-        password: validation.data.password,
-        mobile: validation.data.mobile,
-        mobile2: validation.data.mobile2,
+        firstName: validation.firstName,
+        lastName: validation.lastName,
+        password: validation.password,
+        mobile: validation.mobile,
+        mobile2: validation.mobile2,
         // profileImage: req.file.path,
-        email: validation.data.officialMail,
-        otp: validation.data.otp,
+        email: validation.officialMail,
+        otp: validation.otp,
 
         StaffDetails: {
           update: {
-            jobTitle: validation.data.jobTitle,
-            gender: validation.data.gender,
+            jobTitle: validation.jobTitle,
+            gender: validation.gender,
             dateOfJoining: new Date(),
-            dateOfBirth: validation.data.dateOfBirth,
-            address: validation.data.address,
-            maritalStatus: validation.data.maritalStatus,
-            ...(validation.data.branchId && {
+            dateOfBirth: validation.dateOfBirth,
+            address: validation.address,
+            maritalStatus: validation.maritalStatus,
+            ...(validation.branchId && {
               Branch: {
-                connect: { id: validation.data.branchId },
+                connect: { id: validation.branchId },
               },
             }),
-            ...(validation.data.departmentId && {
+            ...(validation.departmentId && {
               Department: {
-                connect: { id: validation.data.departmentId },
+                connect: { id: validation.departmentId },
               }
             }),
-            ...(validation.data.roleId && {
+            ...(validation.roleId && {
               Role: {
-                connect: { id: validation.data.roleId },
+                connect: { id: validation.roleId },
               },
             }),
-            offerLetter: validation.data.offerLetter,
-            birthCertificate: validation.data.birthCertificate,
-            guarantorForm: validation.data.guarantorForm,
-            degreeCertificate: validation.data.degreeCertificate,
+            offerLetter: validation.offerLetter,
+            birthCertificate: validation.birthCertificate,
+            guarantorForm: validation.guarantorForm,
+            degreeCertificate: validation.degreeCertificate,
           },
         },
       },
@@ -733,7 +733,7 @@ const staffLogin = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    const user = await prisma.user.findFirst({
+    const user = await prisma.user.findUnique({
       where: { email: email }
     });
     if (!user) {
