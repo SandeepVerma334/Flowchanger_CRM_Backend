@@ -196,24 +196,16 @@ const updateStaff = async (req, res, next) => {
     }
     const { id } = req.params; // Get staff ID from request parameters
     console.log(req.files);
+
     const validation = staffDetailSchema.partial().parse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({
-        error: "Invalid data format",
-        issues: validation.error.issues.map((err) => err.message),
-      });
-    }
-    // console.log(staffId);
-    // Check if the staff exists
-    const existingStaff = await prisma.user.findUnique({
+    
+|    const existingStaff = await prisma.user.findUnique({
       where: { id: id, adminId: req.userId, },
       include: { StaffDetails: true },
     });
     if (!existingStaff) {
       return res.status(404).json({ message: "Staff not found!" });
     }
-
-    // console.log(validation)
 
     // Update staff data
     const updatedStaff = await prisma.user.update({
