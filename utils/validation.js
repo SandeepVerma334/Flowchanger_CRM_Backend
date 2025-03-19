@@ -540,6 +540,7 @@ const SalarySchema = z.object({
 
 // attendance staff
 const AttendanceSchema = z.object({
+  attendanceId: z.string({ required_error: "AttendanceId is required!" }).uuid("Invalid Attendance ID format"),
   staffId: z.string({ required_error: "StaffId is required!" }).uuid("Invalid Admin ID format"),
   shift: z.string().optional(),
   date: z.string().optional(),
@@ -580,8 +581,8 @@ const bankDetailsSchema = z.object({
   accountStatus: z.nativeEnum(BankDetailsStatus, {
     invalid_type_error: "Account status must be either ACTIVE or INACTIVE",
   }),
-  staffId: z.string().uuid("Invalid staff ID format"), 
-  adminId: z.string().uuid("Invalid admin ID format"), 
+  staffId: z.string().uuid("Invalid staff ID format"),
+  adminId: z.string().uuid("Invalid admin ID format"),
 });
 
 export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, projectSchema, taskSchema, adminSignupSchema, updateRoleSchema, noteSchema, discussionSchema, reportSchema, StaffEducationQualificationSchema, StaffFinancialDetailsSchema, AttendanceSchema, AttendanceBreakRecordSchema, OverTimeSchema, FineSchema, bankDetailsSchema };

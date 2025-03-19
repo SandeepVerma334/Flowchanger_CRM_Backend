@@ -527,7 +527,7 @@ const halfDayAttendance = async (req, res, next) => {
             return res.status(400).json({ message: admin.message });
         }
 
-        console.log("Admin details:", admin.user.adminDetails.id);
+        console.log("Admin details:", admin);
 
         let validation;
         try {
@@ -538,22 +538,45 @@ const halfDayAttendance = async (req, res, next) => {
         const { adminId } = req.body;
 
         const { attendanceId, staffId, shift, date, startTime, endTime } = validation;
-
+console.log("attdnance Id " , attendanceId)
         if (!endTime) {
             return res.status(400).json({ message: "End time is required for half-day attendance." });
         }
-        const es = admin.user.adminDetails.userId;
+        // const es = admin.user.adminDetails.userId;
         const existingStaffId = await prisma.attendanceStaff.findFirst({
             where: {
-                // id: req.userId,
+                adminId: adminId,
                 staffId: staffId
             }
         })
-        console.log("Half-day attendance data:", req.userId);
-        console.log("Half-day attendance data:", existingStaffId.adminId);
-        if (adminId !== req.userId) {
+
+        // console.log("Half-day attendance data:", admin.user.adminDetails.id);
+        // console.log("Half-day attendance data:", existingStaffId.adminId);
+        if (existingStaffId && (existingStaffId.adminId !== adminId)) {
             return res.status(400).json({ message: "Invalid adminId" });
         }
+
+        const exisitingStaff = await prisma.staffDetails.findFirst({
+            where: {
+                id: staffId,
+                adminId: adminId
+            }
+        });
+
+        if (!exisitingStaff) {
+            return res.status(400).json({ message: "Invalid staffId or staff does not belong to this admin" });
+        }
+        const existingAttendance = await prisma.attendanceStaff.findFirst({
+            where: {
+                id: attendanceId,
+                adminId: adminId
+            }
+        });
+
+        if (!existingAttendance) {
+            return res.status(400).json({ message: "Invalid attendanceId or attendnace does not belong to this admin" });
+        }
+
         let attendance;
 
         if (attendanceId) {
