@@ -196,7 +196,7 @@ const updateStaff = async (req, res, next) => {
     }
     const { id } = req.params; // Get staff ID from request parameters
     console.log(req.files);
-    const validation = staffDetailSchema.safeParse(req.body);
+    const validation = staffDetailSchema.partial().parse(req.body);
     if (!validation.success) {
       return res.status(400).json({
         error: "Invalid data format",
