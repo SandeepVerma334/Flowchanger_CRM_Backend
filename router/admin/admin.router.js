@@ -9,14 +9,14 @@ adminRouter.get("/search", searchUsers);
 adminRouter.post("/forgot", adminPasswordResetLink)
 adminRouter.patch("/reset", adminResetPassword)
 adminRouter.get("/count", countAdmin)
-adminRouter.get("/:id", getUserById);
-adminRouter.delete("/:id", deleteUserById)
+adminRouter.put("/verify", verifyOTP);
 adminRouter.post("/signup", adminSignup);
+adminRouter.put("/send-otp", sendOTP);
 adminRouter.post("/login", adminLogin);
 adminRouter.put("/detail", updateAdminProfile);
-adminRouter.put("/verify", verifyOTP);
-adminRouter.put("/send-otp", sendOTP);
 adminRouter.get("/", getAllUsers);
+adminRouter.get("/:id", getUserById);
+adminRouter.delete("/:id", deleteUserById)
 
 adminRouter.use(errorHandler);
 

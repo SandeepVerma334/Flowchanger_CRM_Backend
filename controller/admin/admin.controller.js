@@ -201,9 +201,11 @@ const verifyOTP = async (req, res, next) => {
     try {
         const { otp, email } = req.body;
 
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findFirst({
             where: { email },
         });
+
+        console.log(user);
 
         if (!user) {
             return res.status(404).json({ message: "User not found." });
@@ -215,7 +217,7 @@ const verifyOTP = async (req, res, next) => {
 
         if (user.otp === parseInt(otp) && user.otpExpiresAt > now) {
             await prisma.user.update({
-                where: { email },
+                where: { id: user.id },
                 data: {
                     isVerified: true,
                     otp: null,               // Clear OTP after verification
