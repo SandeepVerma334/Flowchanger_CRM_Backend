@@ -19,6 +19,10 @@ import reportRouter from "./admin/report.router.js";
 import educationRouter from "./admin/staff/education.router.js"
 import financialRouter from "./admin/staff/financial.router.js"
 import attendanceRouter from "./admin/staff/attendance.router.js"
+import salaryDetailRouter from "./admin/staff/salaryDetail.router.js";
+import overtimeRouter from "./admin/staff/overtime.router.js"
+import fineRouter from "./admin/staff/fine.router.js"
+import bankDetailsRouter from "./admin/staff/bankDetails.router.js"
 
 rootRouter.use("/branch", branchRouter);
 rootRouter.use("/department", departmentRouter);
@@ -38,5 +42,9 @@ rootRouter.use("/project", projectRouter);
 rootRouter.use("/education", educationRouter);
 rootRouter.use("/financial", financialRouter);
 rootRouter.use("/attendance", attendanceRouter);
+rootRouter.use("/salary", salaryDetailRouter);
+rootRouter.use("/overtime", overtimeRouter);
+rootRouter.use("/fine", fineRouter);
+rootRouter.use("/bank-details", bankDetailsRouter);
 
 export default rootRouter;

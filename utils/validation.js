@@ -23,7 +23,7 @@ const BranchSchema = z.object({
 });
 
 const DepartmentSchema = z.object({
-  department_name: z.string().min(1, "Department Name is required"),
+  departmentName: z.string().min(1, "Department Name is required"),
 });
 
 const staffDetailSchema = z.object({
@@ -382,7 +382,6 @@ const OverTimeSchema = z.object({
     .number({ invalid_type_error: "Total Amount must be a number" })
     .default(0)
     .optional(),
-  shiftIds: z.string().nullable().optional(),
   staffId: z.string().nullable().optional(),
 });
 
@@ -487,6 +486,56 @@ const AttendanceStatus = Object.freeze({
   PAID_LEAVE: "PAID_LEAVE",
   OVERTIME: "OVERTIME",
   FINE: "FINE",
+  WEEK_OFF: "WEEK_OFF",
+});
+
+const AllowanceSchema = z.object({
+  name: z.string(),
+  calculation: z.enum(["fixed", "percentage"]),
+  amount: z.number(),
+});
+
+const DeductionSchema = z.object({
+  name: z.string(),
+  amount: z.number(),
+});
+
+const CompliancesSchema = z.object({
+  includeEmployerPF: z.boolean(),
+  employerPFAmount: z.number(),
+  employerPFType: z.enum(["fixed", "percentage"]),
+  includeEmployerESI: z.boolean(),
+  employeePFAmount: z.number(),
+  employeePFType: z.enum(["fixed", "percentage"]),
+  employerESIAmount: z.number(),
+  employerESIType: z.enum(["fixed", "percentage"]),
+  employeeESIAmount: z.number(),
+  employeeESIType: z.enum(["fixed", "percentage"]),
+  professionalTaxAmount: z.number(),
+  professionalTaxType: z.enum(["fixed", "percentage"]),
+  employerLWFAmount: z.number(),
+  includeEmployerLWF: z.boolean(),
+  employerLWFType: z.enum(["fixed", "percentage"]),
+  employeeLWFAmount: z.number(),
+  employeeLWFType: z.enum(["fixed", "percentage"]),
+  includePfEdliAdmin: z.boolean(),
+  pfEdliAdminAmount: z.number(),
+  pfEdliAdminType: z.enum(["fixed", "percentage"]),
+});
+
+const SalarySchema = z.object({
+  effectiveDate: z.string().datetime(),
+  salaryType: z.string().optional(),
+  salaryStructure: z.string(),
+  ctcAmount: z.number(),
+  staffId: z.string().uuid(),
+  earnings: z.object({
+    basicCalculation: z.enum(["fixed", "percentage"]),
+    basic: z.number(),
+    allowances: z.array(AllowanceSchema),
+  }),
+  deductions: z.array(DeductionSchema),
+  compliances: CompliancesSchema,
 });
 
 // attendance staff
@@ -497,7 +546,7 @@ const AttendanceSchema = z.object({
   startTime: z.string().optional(),
   endTime: z.string().optional(),
   status: z.nativeEnum(AttendanceStatus, {
-    invalid_type_error: "Status must be a valid report status (PERSENT, ABSENT, HALF_DAY, PAID_LEAVE, OVERTIME, FINE)",
+    invalid_type_error: "Status must be a valid report status (PERSENT, ABSENT, HALF_DAY, PAID_LEAVE, OVERTIME, FINE, WEEK_OFF)",
   }).default(AttendanceStatus.PERSENT),
 });
 
@@ -515,4 +564,24 @@ const AttendanceBreakRecordSchema = z.object({
   endBreakImage: z.string().optional(),
 });
 
-export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, projectSchema, taskSchema, adminSignupSchema, updateRoleSchema, noteSchema, discussionSchema, reportSchema, StaffEducationQualificationSchema, StaffFinancialDetailsSchema, AttendanceSchema, AttendanceBreakRecordSchema };
+const BankDetailsStatus = Object.freeze({
+  Avtive: "ACTIVE",
+  INACTIVE: "INACTIVE",
+});
+
+const bankDetailsSchema = z.object({
+  bankName: z.string().min(1, "Bank name is required").max(100, "Bank name should be less than 100 characters"),
+  accountNumber: z.string().min(1, "Account number is required").max(20, "Account number should be less than 20 characters"),
+  ifsc: z.string().min(1, "IFSC code is required").max(20, "IFSC code should be less than 20 characters"),
+  country: z.string().min(1, "Country is required").max(100, "Country name should be less than 100 characters"),
+  branch: z.string().min(1, "Branch is required").max(100, "Branch name should be less than 100 characters"),
+  accountHolderName: z.string().min(1, "Account holder name is required").max(100, "Account holder name should be less than 100 characters"),
+  // accountStatus: z.enum(["ACTIVE", "INACTIVE"], "Account status must be either ACTIVE or INACTIVE"), 
+  accountStatus: z.nativeEnum(BankDetailsStatus, {
+    invalid_type_error: "Account status must be either ACTIVE or INACTIVE",
+  }),
+  staffId: z.string().uuid("Invalid staff ID format"), 
+  adminId: z.string().uuid("Invalid admin ID format"), 
+});
+
+export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, projectSchema, taskSchema, adminSignupSchema, updateRoleSchema, noteSchema, discussionSchema, reportSchema, StaffEducationQualificationSchema, StaffFinancialDetailsSchema, AttendanceSchema, AttendanceBreakRecordSchema, OverTimeSchema, FineSchema, bankDetailsSchema };

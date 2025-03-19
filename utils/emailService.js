@@ -334,7 +334,7 @@ const sendGeneralMessage = async (email, subject, content) => {
     await sendEmail(email, subject, message);
 };
 
-const sendPasswordResetAndForgotEmail = async (email, name, resetToken, type) => {
+const sendPasswordResetAndForgotEmail = async (email, name, resetToken, type,) => {
     try {
         const resetLink = `${process.env.FRONTEND_URL}/restore-password?token=${resetToken}&email=${email}`;
 
@@ -414,7 +414,7 @@ const sendSelectedStaffCustomers = async (emails) => {
 
 const sendInviteToAdminMail = async (email) => {
     try {
-        const signupLink = process.env.FRONTEND_URL + "/signup";
+        const signupLink = process.env.FRONTEND_URL + "sign-up";
         const subject = "Welcome to Flow Changer Agency";
         const text = `Hello, ${email}\n\n you have been invited to join Flow Changer Agency. Please sign up using the provided link.\n\n${signupLink}`;
 

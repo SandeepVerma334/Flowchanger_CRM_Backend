@@ -7,14 +7,18 @@ import { sendEmailWithPdf } from "../../../utils/emailService.js";
 
 const createClient = async (req, res, next) => {
     try {
-        const admin = await checkAdmin(req.userId);
-        console.log(admin);
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({ message: admin.message });
+        }
+        // console.log(admin);
         const validatedData = clientSchema.parse(req.body);
         const { email, password, name, phoneNumber, ...restValidation } = validatedData;
         const user = await prisma.user.findUnique({
             where: {
                 email: email,
-                role: "CLIENT"
+                role: "CLIENT",
+                adminId: req.userId 
             }
         })
 
@@ -54,13 +58,16 @@ const createClient = async (req, res, next) => {
 
 const getClients = async (req, res, next) => {
     try {
-        const admin = await checkAdmin(req.userId);
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({ message: admin.message });
+        }
 
         const { page, limit } = req.query;
 
         const where = {
             role: "CLIENT",
-            adminId: admin.id
+            adminId: req.userId 
         };
 
         const include = {
@@ -83,12 +90,16 @@ const getClients = async (req, res, next) => {
 
 const updateClient = async (req, res, next) => {
     try {
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({ message: admin.message });
+        }
         const id = req.params.id;
-        const admin = await checkAdmin(req.userId);
+        // const admin = await checkAdmin(req.userId);
         const validatedData = clientSchema.optional().parse(req.body);
         const { email, password, name, phoneNumber, ...restValidation } = validatedData;
 
-        const client = await prisma.user.findUnique({ where: { id } });
+        const client = await prisma.user.findUnique({ where: { id, adminId: req.userId  } });
         if (!client) {
             return res.status(404).json({ message: "Client not found" });
         }
@@ -118,9 +129,12 @@ const updateClient = async (req, res, next) => {
 const getClientById = async (req, res, next) => {
     try {
         const id = req.params.id;
-        const admin = await checkAdmin(req.userId);
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({ message: admin.message });
+        }
         const client = await prisma.user.findUnique({
-            where: { id },
+            where: { id, adminId: req.userId  },
             include: {
                 ClientDetails: true
             },

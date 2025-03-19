@@ -11,7 +11,7 @@ const adminSignup = async (req, res, next) => {
         // Validate the request body using Zod schema
         const validatedData = adminSignupSchema.parse(req.body);
 
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findFirst({
             where: {
                 email: validatedData.email
             }
@@ -27,10 +27,10 @@ const adminSignup = async (req, res, next) => {
 
         // Create the admin user in the database
         const newUser = await prisma.user.create({
-            data: { 
-                ...validatedData, 
+            data: {
+                ...validatedData,
                 role: "ADMIN",
-                password: hashedPassword 
+                password: hashedPassword
             },
         });
 
@@ -47,8 +47,7 @@ const adminSignup = async (req, res, next) => {
 
 const updateAdminProfile = async (req, res, next) => {
     try {
-        const admin = await checkAdmin(req, res, next);
-        console.log(admin);
+        
         const {
             email,
             mobile,
@@ -70,7 +69,7 @@ const updateAdminProfile = async (req, res, next) => {
         } = req.body;
 
 
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findFirst({
             where: { email: email }
         });
 
@@ -80,7 +79,7 @@ const updateAdminProfile = async (req, res, next) => {
 
         // Update User fields
         const updatedUser = await prisma.user.update({
-            where: { email },
+            where: { id: user.id },
             data: {
                 mobile,
                 password,
@@ -98,7 +97,14 @@ const updateAdminProfile = async (req, res, next) => {
                         businessType,
                         services,
                         companySize,
-                        role
+                        role,
+                        ...(packageId && {
+                            package: {
+                                connect: {
+                                    id: packageId
+                                }
+                            }
+                        })
                     }
                 }
             },
@@ -122,7 +128,7 @@ const adminLogin = async (req, res, next) => {
     try {
         const { email, password } = req.body;
 
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findFirst({
             where: { email: email }
         });
         if (!user) {
@@ -143,7 +149,7 @@ const adminLogin = async (req, res, next) => {
 
         res.status(200).json({
             message: "Login successfuly",
-            token, 
+            token,
             data: user  // Send token in response
         });
 
@@ -167,7 +173,7 @@ const verifyOTP = async (req, res, next) => {
         // Check OTP and Expiry
         const now = new Date();
 
-        
+
         if (user.otp === parseInt(otp) && user.otpExpiresAt > now) {
             await prisma.user.update({
                 where: { email },
