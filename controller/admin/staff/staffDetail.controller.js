@@ -44,7 +44,7 @@ const createStaff = async (req, res, next) => {
     }
 
     const existingEmail = await prisma.user.findFirst({
-      where: { email: validation.data.officialMail, adminId: req.userId },
+      where: { email: validation.officialMail, adminId: req.userId },
     })
 
     // console.log(existingEmail);
@@ -225,11 +225,11 @@ const updateStaff = async (req, res, next) => {
     const updatedStaff = await prisma.user.update({
       where: { id: id },
       data: {
-        firstName: validation.firstName,
-        lastName: validation.lastName,
-        password: validation.password,
-        mobile: validation.mobile,
-        mobile2: validation.mobile2,
+        firstName: validation.data.firstName,
+        lastName: validation.data.lastName,
+        password: validation.data.password,
+        mobile: validation.data.mobile,
+        mobile2: validation.data.mobile2,
         // profileImage: req.file.path,
         email: validation.data.officialMail,
         otp: validation.data.otp,
