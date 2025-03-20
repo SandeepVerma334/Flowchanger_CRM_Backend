@@ -676,6 +676,105 @@ const getAllAttendanceByDate = async (req, res, next) => {
 };
 
 
+const createBulkAttendance = async (req, res, next) => {
+    try {
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({ message: admin.message });
+        }
+
+        const attendances = req.body;
+        const validAttendances = [];
+        const errors = [];
+        const createdRecords = [];
+
+        for (const att of attendances) {
+            const { staffId, date, shift, startTime, endTime, status } = att;
+
+            const staff = await prisma.staffDetails.findFirst({
+                where: { id: staffId, adminId: admin.user.adminDetails.id },
+                select: { dateOfJoining: true }
+            });
+
+            if (!staff) {
+                errors.push({ date, message: "Staff not found." });
+                continue;
+            }
+
+            const dateOfJoining = new Date(staff.dateOfJoining);
+            dateOfJoining.setHours(0, 0, 0, 0);
+
+            const attendanceDate = new Date(date);
+            attendanceDate.setHours(0, 0, 0, 0);
+
+            const currentDate = new Date();
+            currentDate.setHours(0, 0, 0, 0);
+
+            if (attendanceDate < dateOfJoining) {
+                errors.push({ date, message: "Attendance cannot be marked before the date of joining." });
+                continue;
+            }
+
+            if (attendanceDate > currentDate) {
+                errors.push({ date, message: "Attendance cannot be marked for a future date." });
+                continue;
+            }
+
+            const existingAttendance = await prisma.attendanceStaff.findFirst({
+                where: { staffId, date }
+            });
+
+            if (existingAttendance) {
+                errors.push({ date, message: "Attendance for this date has already been recorded." });
+                continue;
+            }
+
+            let effectiveStatus = status || "PERSENT";
+            if (attendanceDate.getDay() === 0) {
+                effectiveStatus = "WEEK_OFF";
+            }
+
+            // Create attendance record manually
+            const attendance = await prisma.attendanceStaff.create({
+                data: {
+                    shift,
+                    date,
+                    startTime,
+                    endTime,
+                    status: effectiveStatus,
+                    staffDetails: {
+                        connect: {
+                            id: staffId
+                        }
+                    },
+                    adminDetail: {
+                        connect: {
+                            id: admin.user.adminDetails.id
+                        }
+                    }
+                }
+            });
+
+            createdRecords.push(attendance);
+        }
+
+        if (createdRecords.length === 0) {
+            return res.status(400).json({ message: "No valid attendance records created.", errors });
+        }
+
+        res.status(200).json({
+            message: "Bulk attendance created successfully.",
+            createdRecords,
+            errors
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
 
 
-export { createAttendance, getAllAttendance, getAttendanceByStaffId, updateAttendanceEndTime, startAttendanceBreak, endAttendanceBreak, getAttendanceByMonth, halfDayAttendance, getAllAttendanceByDate };
+
+
+
+export { createAttendance, getAllAttendance, getAttendanceByStaffId, updateAttendanceEndTime, startAttendanceBreak, endAttendanceBreak, getAttendanceByMonth, halfDayAttendance, getAllAttendanceByDate, createBulkAttendance };

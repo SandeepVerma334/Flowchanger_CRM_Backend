@@ -23,6 +23,7 @@ import salaryDetailRouter from "./admin/staff/salaryDetail.router.js";
 import overtimeRouter from "./admin/staff/overtime.router.js"
 import fineRouter from "./admin/staff/fine.router.js"
 import bankDetailsRouter from "./admin/staff/bankDetails.router.js"
+import payrollRouter from "./admin/payroll.router.js";
 
 rootRouter.use("/branch", branchRouter);
 rootRouter.use("/department", departmentRouter);
@@ -46,5 +47,6 @@ rootRouter.use("/salary", salaryDetailRouter);
 rootRouter.use("/overtime", overtimeRouter);
 rootRouter.use("/fine", fineRouter);
 rootRouter.use("/bank-details", bankDetailsRouter);
+rootRouter.use("/payroll", payrollRouter);
 
 export default rootRouter;
