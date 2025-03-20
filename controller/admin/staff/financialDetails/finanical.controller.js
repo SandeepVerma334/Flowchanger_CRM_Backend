@@ -6,43 +6,59 @@ import { pagination } from "../../../../utils/pagination.js";
 // create financial details
 const createFinancialDetails = async (req, res, next) => {
     try {
-        const admin = checkAdmin(req.userId, "ADMIN", res);
+        // Ensure checkAdmin is awaited
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({ message: admin.message });
+        }
+
+        const { adminId } = req.body;
         const validationData = StaffFinancialDetailsSchema.parse(req.body);
 
-        // Check bank account number already exists
+        // Ensure adminId matches the logged-in admin
+        if (adminId !== admin.user.adminDetails.id) {
+            return res.status(403).json({ message: "Unauthorized to create financial details for another admin" });
+        }
+
+        // Check if bank account number already exists
         const checkBankAccountNumber = await prisma.financialDetails.findFirst({
-            where: {
-                accountNumber: validationData.accountNumber
-            }
+            where: { accountNumber: validationData.accountNumber }
         });
+
         if (checkBankAccountNumber) {
-            return res.status(400).json({ message: "Bank account number already exist" });
+            return res.status(400).json({ message: "Bank account number already exists" });
         }
 
-        // Check staffId already exists 
+        // Check if staffId already exists
         const checkStaffId = await prisma.financialDetails.findFirst({
-            where: {
-                staffId: validationData.staffId
-            }
+            where: { staffId: validationData.staffId }
         });
+
         if (checkStaffId) {
-            return res.status(400).json({ message: "staffId already exist" });
+            return res.status(400).json({ message: "Staff ID already exists" });
         }
 
+        // Create financial details
         const financialDetails = await prisma.financialDetails.create({
             data: {
                 ...validationData,
-                adminId: admin.id
+                adminId: admin.user.adminDetails.id // Ensure the correct admin ID is used
             },
             include: {
                 staffDetails: true
             }
         });
-        res.status(200).json({ message: "Financial details created successfully", data: financialDetails });
+
+        res.status(201).json({
+            message: "Financial details created successfully",
+            data: financialDetails
+        });
+
     } catch (error) {
+        // console.error("Error creating financial details:", error);
         next(error);
     }
-}
+};
 
 // get all Financial details
 
