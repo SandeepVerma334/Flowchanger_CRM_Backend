@@ -64,7 +64,7 @@ const createStaff = async (req, res, next) => {
         password: validation.password,
         mobile: validation.mobile,
         mobile2: validation.mobile2,
-        profileImage: req.file.path,
+        profileImage: req?.file?.path === undefined ? null : req.file.path,
         role: "STAFF",
         email: validation.officialMail,
         otp: validation.otp,
