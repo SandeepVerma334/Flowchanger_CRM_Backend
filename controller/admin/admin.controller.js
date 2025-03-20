@@ -84,6 +84,7 @@ const updateAdminProfile = async (req, res, next) => {
             }
         });
 
+
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
@@ -304,9 +305,10 @@ const deleteUserById = async (req, res, next) => {
         if (!existUserId) {
             return res.status(404).json({ message: "User not found" });
         }
+        console.log(existUserId);
         const user = await prisma.user.delete({
             where: {
-                id: id
+                id: existUserId.id
             }
         });
         res.status(200).json({ message: "User deleted successfully", data: user });

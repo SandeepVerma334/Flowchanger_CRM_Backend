@@ -102,7 +102,10 @@ const createStaff = async (req, res, next) => {
         }
       },
       include: {
-        StaffDetails: true
+        StaffDetails: true,
+        // Role: true,
+        // Department: true,
+        // Branch: true,
       }
     });
     return res.status(201).json({ status: 201, message: "Staff created successfully", data: staffData });
@@ -197,9 +200,15 @@ const updateStaff = async (req, res, next) => {
     }
     const { id } = req.params; // Get staff ID from request parameters
     console.log(req.files);
-
-    const validation = staffDetailSchema.partial().parse(req.body);
-    
+    const validation = staffDetailSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        error: "Invalid data format",
+        issues: validation.error.issues.map((err) => err.message),
+      });
+    }
+    // console.log(staffId);
+    // Check if the staff exists
     const existingStaff = await prisma.user.findUnique({
       where: { id: id, adminId: req.userId, },
       include: { StaffDetails: true },
@@ -223,10 +232,8 @@ const updateStaff = async (req, res, next) => {
 
         StaffDetails: {
           update: {
-          cityOfresidence: validation.cityOfresidence,
-            officialMail: validation.officialMail,
-            jobTitle: validation.jobTitle,
-            gender: validation.gender,
+            jobTitle: validation.data.jobTitle,
+            gender: validation.data.gender,
             dateOfJoining: new Date(),
             dateOfBirth: validation.dateOfBirth,
             address: validation.address,
@@ -273,6 +280,7 @@ const updateStaff = async (req, res, next) => {
     next(error);
   }
 };
+
 
 // Delete Staff by ID
 const deleteStaff = async (req, res) => {

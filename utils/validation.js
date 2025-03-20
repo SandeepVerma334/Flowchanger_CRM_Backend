@@ -37,7 +37,7 @@ const staffDetailSchema = z.object({
   mobile2: z.string().optional(),
   officialMail: z.string().email("Invalid email format").optional(),
   loginOtp: z.number().optional(),
-  jobTitle: z.string().min(1, "Job Title is required").optional().nullable(),
+  jobTitle: z.string().min(1, "Job Title is required").optional(),
   password: z.string().min(6, "Password must be at least 6 characters").optional(),
   employeeId: z.string().optional(),
   gender: z.string().optional(),
@@ -47,7 +47,7 @@ const staffDetailSchema = z.object({
     .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date format" })
     .optional(),
   dateOfBirth: z.string().optional(),
-  address: z.string().min(1, "Address is required").optional().nullable(),
+  address: z.string().optional(),
   branchId: z.string().uuid("Branch ID must be a valid UUID").optional(),
   departmentId: z.string().uuid("Department ID must be a valid UUID").optional(),
   roleId: z.string().uuid("Role ID must be a valid UUID").optional(),
@@ -578,4 +578,4 @@ const bankDetailsSchema = z.object({
   adminId: z.string().uuid("Invalid admin ID format"),
 });
 
-export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, projectSchema, taskSchema, adminSignupSchema, updateRoleSchema, noteSchema, discussionSchema, reportSchema, StaffEducationQualificationSchema, StaffFinancialDetailsSchema, AttendanceSchema, AttendanceBreakRecordSchema, OverTimeSchema, FineSchema, bankDetailsSchema , SalarySchema };
+export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, projectSchema, taskSchema, adminSignupSchema, updateRoleSchema, noteSchema, discussionSchema, reportSchema, StaffEducationQualificationSchema, StaffFinancialDetailsSchema, AttendanceSchema, AttendanceBreakRecordSchema, OverTimeSchema, FineSchema, bankDetailsSchema, SalarySchema };
