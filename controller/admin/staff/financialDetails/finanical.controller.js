@@ -27,9 +27,9 @@ const createFinancialDetails = async (req, res, next) => {
             where: { staffId: validationData.staffId }
         });
 
-        if (checkStaffId) {
-            return res.status(400).json({ message: "Staff ID already exists" });
-        }
+        // if (checkStaffId) {
+        //     return res.status(400).json({ message: "Staff ID already exists" });
+        // }
 
         // Create financial details
         const financialDetails = await prisma.financialDetails.create({
