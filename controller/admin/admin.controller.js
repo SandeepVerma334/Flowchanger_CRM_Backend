@@ -319,16 +319,28 @@ const deleteUserById = async (req, res, next) => {
 
 const searchUsers = async (req, res, next) => {
     try {
-        const { name } = req.query;
-        const users = await prisma.user.findMany({
+        const { name, page, limit } = req.query;
+        const users = await pagination(prisma.user, {
             where: {
-                name: {
-                    contains: name,
-                    mode: "insensitive"
-                }
-            }
+                OR: [
+                    {
+                        firstName: {
+                            contains: name,
+                            mode: "insensitive"
+                        }
+                    },
+                    {
+                        lastName: {
+                            contains: name,
+                            mode: "insensitive"
+                        }
+                    }
+                ]
+            },
+            page,
+            limit
         });
-        res.status(200).json({ message: "User search successful by name : " + name, data: users });
+        res.status(200).json({ message: "User search successful by name : " + name, ...users });
     } catch (error) {
         next(error);
     }

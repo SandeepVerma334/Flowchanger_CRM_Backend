@@ -57,13 +57,13 @@ const createAttendance = async (req, res, next) => {
     try {
         const admin = await checkAdmin(req.userId, "ADMIN", res);
         if (admin.error) {
-            return res.status(400).json({
-                message: admin.message
-            });
+            return res.status(400).json({ message: admin.message });
         }
+
         // Validate request body
         const validation = AttendanceSchema.parse(req.body);
-        console.log(validation)
+        console.log(validation);
+
         // Fetch staff details including dateOfJoining
         const staff = await prisma.staffDetails.findFirst({
             where: { id: validation.staffId, adminId: admin.user.adminDetails.id },
@@ -91,13 +91,33 @@ const createAttendance = async (req, res, next) => {
             return res.status(400).json({ message: "Attendance cannot be marked for a future date." });
         }
 
+        // ✅ Find the last attendance date for this staff
+        const lastAttendance = await prisma.attendanceStaff.findFirst({
+            where: { staffId: validation.staffId },
+            orderBy: { date: "desc" }, // Get the most recent attendance
+            select: { date: true, endTime: true }
+        });
+
+        if (lastAttendance) {
+            console.log("Last Attendance Date:", lastAttendance.date, "End Time:", lastAttendance.endTime);
+
+            // If last attendance exists but has no endTime, prevent new attendance
+            if (!lastAttendance.endTime) {
+                return res.status(400).json({
+                    message: `Complete the previous attendance first (Last attendance: ${lastAttendance.date}).`
+                });
+            }
+        }
+
         // Check if the date is a Sunday (0 = Sunday)
         let status = validation.status;
         if (attendanceDate.getDay() === 0) {
             status = "WEEK_OFF"; // Automatically mark as WEEK_OFF
         }
+
         console.log(status);
-        // Check if attendance already exists
+
+        // Check if attendance already exists for the given date
         const existingAttendance = await prisma.attendanceStaff.findFirst({
             where: {
                 staffId: validation.staffId,
@@ -110,12 +130,8 @@ const createAttendance = async (req, res, next) => {
         }
 
         const adminId = await prisma.user.findUnique({
-            where: {
-                id: req.userId
-            },
-            include: {
-                adminDetails: true
-            }
+            where: { id: req.userId },
+            include: { adminDetails: true }
         });
 
         // Create attendance record
@@ -127,21 +143,15 @@ const createAttendance = async (req, res, next) => {
                 endTime: validation.endTime,
                 status: status,
                 staffDetails: {
-                    connect: {
-                        id: validation.staffId
-                    },
+                    connect: { id: validation.staffId },
                 },
                 adminDetail: {
-                    connect: {
-                        id: adminId.adminDetails.id
-                    },
+                    connect: { id: adminId.adminDetails.id },
                 },
             },
             include: {
                 staffDetails: {
-                    include: {
-                        User: true
-                    },
+                    include: { User: true },
                 },
             },
         });
@@ -153,6 +163,8 @@ const createAttendance = async (req, res, next) => {
     }
 };
 
+
+
 // end attendance time
 const updateAttendanceEndTime = async (req, res, next) => {
     try {
@@ -160,10 +172,21 @@ const updateAttendanceEndTime = async (req, res, next) => {
         if (admin.error) {
             return res.status(400).json({ message: admin.message });
         }
-
+        console.log("admins ka data kya hai ", admin);
         const { id: attendanceId } = req.params;
-        const { endTime } = req.body;
+        const { endTime, date, adminId, staffId } = req.body;
 
+        // check admin id
+        const existingAdminId = await prisma.attendanceStaff.findUnique({
+            where: {
+                id: attendanceId,
+                adminId: admin.user.adminDetails.id,                
+            }
+        });
+        // console.log(" admin id ", existingAdminId);
+        if (!existingAdminId || (existingAdminId.adminId !== admin.user.adminDetails.id)) {
+            return res.status(400).json({ message: "Invalid adminId" });
+        }
         if (!endTime) {
             return res.status(400).json({ message: "End time is required to update attendance." });
         }
@@ -218,7 +241,7 @@ const updateAttendanceEndTime = async (req, res, next) => {
             where: { staffId: existingAttendance.staffId }
         });
 
-        // ✅ If salary details are found, calculate fine
+        // If salary details are found, calculate fine
         if (salaryDetailsData) {
             const ctcAmount = salaryDetailsData.ctcAmount;
             const currentDate = new Date();
@@ -290,6 +313,18 @@ const getAllAttendance = async (req, res, next) => {
             });
         }
         console.log(admin);
+
+        const existingAdminId = await prisma.attendanceStaff.findFirst({
+            where: {
+                // id: attendanceId,
+                adminId: admin.user.adminDetails.id,                
+            }
+        });
+console.log(existingAdminId);
+        if (!existingAdminId || (existingAdminId.adminId !== admin.user.adminDetails.id)) {
+            return res.status(400).json({ message: "Invalid adminId" });
+        }
+
         const { page, limit } = req.query;
         const attendance = await pagination(prisma.attendanceStaff, {
             page, limit,
@@ -538,7 +573,7 @@ const halfDayAttendance = async (req, res, next) => {
         const { adminId } = req.body;
 
         const { attendanceId, staffId, shift, date, startTime, endTime } = validation;
-console.log("attdnance Id " , attendanceId)
+        console.log("attdnance Id ", attendanceId)
         if (!endTime) {
             return res.status(400).json({ message: "End time is required for half-day attendance." });
         }
