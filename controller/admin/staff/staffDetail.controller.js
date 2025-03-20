@@ -16,6 +16,9 @@ const createStaff = async (req, res, next) => {
     const validation = staffDetailSchema.parse(req.body);
 
     const { branchId, departmentId, roleId, officialMail } = validation;
+    if (officialMail == null) {
+      return res.status(400).json({ message: "Email is required" });
+    }
 
     // Check if branch, department, and role exist under the same admin
     const branchExists = await prisma.branch.findFirst({
@@ -41,7 +44,7 @@ const createStaff = async (req, res, next) => {
     }
 
     const existingEmail = await prisma.user.findFirst({
-      where: { email: officialMail, adminId: req.userId },
+      where: { email: validation.data.officialMail, adminId: req.userId },
     })
 
     // console.log(existingEmail);
@@ -116,7 +119,7 @@ const createStaff = async (req, res, next) => {
 }
 
 // get all staff
-const getAllStaff = async (req, res) => {
+const getAllStaff = async (req, res, next) => {
   try {
     const admin = await checkAdmin(req.userId, "ADMIN", res);
     const { page, limit } = req.query;
@@ -144,8 +147,7 @@ const getAllStaff = async (req, res) => {
     });
     res.status(200).json({ message: "Staff fetched successfully", data: staff });
   } catch (error) {
-    console.error("Error fetching staff:", error);
-    res.status(500).json({ error: "Failed to fetch staff" });
+    next(error);
   }
 };
 
@@ -201,6 +203,7 @@ const updateStaff = async (req, res, next) => {
     const { id } = req.params; // Get staff ID from request parameters
     console.log(req.files);
     const validation = staffDetailSchema.safeParse(req.body);
+    console.log(validation);
     if (!validation.success) {
       return res.status(400).json({
         error: "Invalid data format",
@@ -211,8 +214,9 @@ const updateStaff = async (req, res, next) => {
     // Check if the staff exists
     const existingStaff = await prisma.user.findUnique({
       where: { id: id, adminId: req.userId, },
-      include: { StaffDetails: true },
+      // include: { StaffDetails: true },
     });
+    console.log("madarchod ", existingStaff);
     if (!existingStaff) {
       return res.status(404).json({ message: "Staff not found!" });
     }
@@ -227,11 +231,13 @@ const updateStaff = async (req, res, next) => {
         mobile: validation.mobile,
         mobile2: validation.mobile2,
         // profileImage: req.file.path,
-        email: validation.officialMail,
-        otp: validation.otp,
+        email: validation.data.officialMail,
+        otp: validation.data.otp,
 
         StaffDetails: {
           update: {
+            cityOfresidence: validation.data.cityOfresidence,
+            officialMail: validation.data.officialMail,
             jobTitle: validation.data.jobTitle,
             gender: validation.data.gender,
             dateOfJoining: new Date(),

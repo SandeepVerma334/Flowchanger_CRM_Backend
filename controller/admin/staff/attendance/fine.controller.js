@@ -47,6 +47,27 @@ const addFineData = async (req, res, next) => {
         return res.status(400).json({ message: "attendanceStaffId is required to record fine." });
     }
 
+    const exisitingStaff = await prisma.staffDetails.findFirst({
+        where: {
+            id: staffId,
+            adminId: req.userId
+        }
+    });
+
+    if (!exisitingStaff) {
+        return res.status(400).json({ message: "Invalid staffId or staff does not belong to this admin" });
+    }
+    const existingAttendance = await prisma.attendanceStaff.findFirst({
+        where: {
+            id: attendanceId,
+            adminId: req.userId
+        }
+    });
+
+    if (!existingAttendance) {
+        return res.status(400).json({ message: "Invalid attendanceId or attendnace does not belong to this admin" });
+    }
+
     try {
         // Check if the attendanceStaffId exists in the database
         const staffAttendance = await prisma.attendanceStaff.findUnique({
@@ -275,7 +296,7 @@ const updateFineById = async (req, res, next) => {
         }
         const { id } = req.params;
         const validation = FineSchema.parse(req.body);
-       
+
         const fine = await prisma.fine.update({
             where: { id },
             data: validation.data,

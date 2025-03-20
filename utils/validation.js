@@ -35,9 +35,9 @@ const staffDetailSchema = z.object({
     .min(10, "Mobile number must be at least 10 digits")
     .max(15, "Mobile number cannot exceed 15 digits").optional(),
   mobile2: z.string().optional(),
-  officialMail: z.string().email("Invalid email format").optional(),
+  officialMail: z.string().optional(),
   loginOtp: z.number().optional(),
-  jobTitle: z.string().min(1, "Job Title is required").optional(),
+  jobTitle: z.string().optional(),
   password: z.string().min(6, "Password must be at least 6 characters").optional(),
   employeeId: z.string().optional(),
   gender: z.string().optional(),
@@ -387,12 +387,13 @@ const OverTimeSchema = z.object({
 
 
 const projectSchema = z.object({
+  // adminId: z.string().uuid("Invalid admin ID"),
   id: z.string().optional(),
   projectName: z.string().optional(),
   progressBar: z.number().optional(),
   estimatedHours: z.number().optional(),
-  members: z.array(z.string()).min(1, "At least one staff ID is required"), // Required staff IDs
-  customer: z.array(z.string()).min(1, "At least one staff ID is required"),
+  members: z.array(z.string()).min(1, "At least one staff ID is required"),
+  customer: z.array(z.string()).optional(),
   startDate: z.coerce.date().optional(),
   deadline: z.coerce.date().optional(),
   description: z.string().optional(),
@@ -534,6 +535,8 @@ const SalarySchema = z.object({
 
 // attendance staff
 const AttendanceSchema = z.object({
+  attendanceId: z.string().optional(),
+  adminId:z.string().optional(),
   staffId: z.string({ required_error: "StaffId is required!" }).uuid("Invalid Admin ID format"),
   shift: z.string().optional(),
   date: z.string().optional(),

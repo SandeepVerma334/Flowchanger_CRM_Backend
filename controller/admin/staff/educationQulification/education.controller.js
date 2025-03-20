@@ -10,13 +10,14 @@ const createEducationForStaff = async (req, res, next) => {
     // check if admin is exists
     let adminDetails
     console.log(validation.adminId);
+
     if (validation.adminId && validation.adminId !== undefined) {
       adminDetails = await prisma.adminDetails.findUnique({
         where: { id: validation.adminId },
       });
     }
     console.log(adminDetails);
-
+    
     // Check if staff exists
     const existingStaff = await prisma.staffDetails.findUnique({
       where: { id: validation.staffId },

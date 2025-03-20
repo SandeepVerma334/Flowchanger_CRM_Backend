@@ -3,9 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  // directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -581,7 +581,7 @@ model Project {
   // Add relation to ProjectPermissions
   ProjectPermissions   ProjectPermissions[]
   task                 Task[]
-  adminId              String
+  adminId              String?
 }
 
 model Task {

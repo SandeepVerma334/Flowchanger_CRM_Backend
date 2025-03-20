@@ -17,12 +17,15 @@ const createProject = async (req, res, next) => {
             permissions
         } = req.body;
 
+
         // Validate request body using zod
         const validatedData = projectSchema.parse(req.body);
-        console.log(validatedData)
+        console.log(validatedData);
         // Validate staff members
+        console.log("Staff Members:", members);
+
         const staffMembers = await prisma.staffDetails.findMany({
-            where: { id: { in: members, adminId: req.userId } },
+            where: { id: { in: members }, adminId: req.userId },
         });
 
         if (staffMembers.length !== members.length) {
