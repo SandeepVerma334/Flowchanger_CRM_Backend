@@ -42,7 +42,7 @@ const createFinancialDetails = async (req, res, next) => {
         const financialDetails = await prisma.financialDetails.create({
             data: {
                 ...validationData,
-                adminId: admin.user.adminDetails.id // Ensure the correct admin ID is used
+                adminId:  req.userId // Ensure the correct admin ID is used
             },
             include: {
                 staffDetails: true
