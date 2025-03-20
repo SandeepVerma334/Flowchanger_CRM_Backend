@@ -11,14 +11,7 @@ const createFinancialDetails = async (req, res, next) => {
         if (admin.error) {
             return res.status(400).json({ message: admin.message });
         }
-
-        const { adminId } = req.body;
         const validationData = StaffFinancialDetailsSchema.parse(req.body);
-
-        // Ensure adminId matches the logged-in admin
-        if (adminId !== admin.user.adminDetails.id) {
-            return res.status(403).json({ message: "Unauthorized to create financial details for another admin" });
-        }
 
         // Check if bank account number already exists
         const checkBankAccountNumber = await prisma.financialDetails.findFirst({
