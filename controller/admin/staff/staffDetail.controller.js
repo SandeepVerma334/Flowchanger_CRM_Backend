@@ -64,7 +64,7 @@ const createStaff = async (req, res, next) => {
         password: validation.password,
         mobile: validation.mobile,
         mobile2: validation.mobile2,
-        profileImage: validation.porfileImage,
+        profileImage: req.file.path,
         role: "STAFF",
         email: validation.officialMail,
         otp: validation.otp,
