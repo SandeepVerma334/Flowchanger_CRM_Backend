@@ -133,6 +133,7 @@ const getAllStaff = async (req, res, next) => {
       page, limit,
       where: {
         adminId: req.userId,
+        role: "STAFF"
       },
       include: {
         StaffDetails: {
