@@ -38,7 +38,7 @@ const staffDetailSchema = z.object({
   officialMail: z.string().optional(),
   loginOtp: z.number().optional(),
   jobTitle: z.string().optional(),
-  password: z.string().min(6, "Password must be at least 6 characters").optional(),
+  password: z.string().optional(),
   employeeId: z.string().optional(),
   gender: z.string().optional(),
   maritalStatus: z.string().optional(),

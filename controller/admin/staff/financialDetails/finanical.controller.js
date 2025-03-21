@@ -122,8 +122,8 @@ const deleteFinancialDetailsById = async (req, res, next) => {
 
 // update financial details by id
 const updateFinancialDetailsById = async (req, res, next) => {
-    try {        
-        const admin = await checkAdmin(req.userId, "ADMIN");        
+    try {
+        const admin = await checkAdmin(req.userId, "ADMIN");
         const validationData = StaffFinancialDetailsSchema.parse(req.body);
         const { id } = req.params;
 

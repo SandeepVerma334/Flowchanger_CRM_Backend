@@ -17,7 +17,7 @@ const createEducationForStaff = async (req, res, next) => {
       });
     }
     console.log(adminDetails);
-    
+
     // Check if staff exists
     const existingStaff = await prisma.staffDetails.findUnique({
       where: { id: validation.staffId },
@@ -64,8 +64,8 @@ const getAllStaffEducation = async (req, res, next) => {
     const { page = 1, limit = 10 } = req.query;
     // Assuming pagination is a helper function
     const education = await pagination(prisma.staffEducationQualification, {
-        page,
-        limit,
+      page,
+      limit,
       include: {
         staffDetails: true,
         AdminDetails: true,
@@ -153,4 +153,38 @@ const searchStaffEducation = async (req, res, next) => {
   }
 }
 
-export { createEducationForStaff, getAllStaffEducation, getStaffEducationById, deleteStaffEducationById, searchStaffEducation };
+// update staff education by id
+const updateStaffEducationById = async (req, res, next) => {
+  try {
+    const admin = await checkAdmin(req.userId, "ADMIN", res);
+    if (admin.error) {
+      return res.status(400).json({ message: admin.message });
+    }
+
+    const { id } = req.params;
+    const validation = StaffEducationQualificationSchema.parse(req.body);
+
+    // Check if the education record exists and belongs to the same admin
+    const existingEducation = await prisma.staffEducationQualification.findFirst({
+      where: { id, staffDetails: { adminId: admin.user.adminDetails.id } }
+    });
+
+    if (!existingEducation) {
+      return res.status(404).json({ message: "Education record not found or unauthorized" });
+    }
+
+    // Update the education record
+    const education = await prisma.staffEducationQualification.update({
+      where: { id },
+      data: validation, // Corrected the data assignment
+    });
+
+    return res.status(200).json({ message: "Education record updated successfully", data: education });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+export { createEducationForStaff, getAllStaffEducation, getStaffEducationById, deleteStaffEducationById, searchStaffEducation, updateStaffEducationById };

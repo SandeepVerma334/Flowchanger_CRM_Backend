@@ -14,7 +14,7 @@ const createStaff = async (req, res, next) => {
       return res.status(403).json({ message: adminCheck.message });
     }
     const validation = staffDetailSchema.parse(req.body);
-
+    console.log(validation);
     const { branchId, departmentId, roleId, officialMail } = validation;
     if (officialMail == null) {
       return res.status(400).json({ message: "Email is required" });
@@ -111,6 +111,7 @@ const createStaff = async (req, res, next) => {
         // Branch: true,
       }
     });
+    console.log(req.file)
     return res.status(201).json({ status: 201, message: "Staff created successfully", data: staffData });
 
   } catch (error) {
@@ -259,10 +260,10 @@ const updateStaff = async (req, res, next) => {
                 connect: { id: validation.roleId },
               },
             }),
-           offerLetter: req.files.offerLetter[0].path,
-            birthCertificate: req.files.birthCertificate[0].path,
-            guarantorForm: req.files.guarantorForm[0].path,
-            degreeCertificate: req.files.degreeCertificate[0].path,
+            offerLetter: req.files.offerLetter[0].path ? req.files.offerLetter[0].path : null,
+            birthCertificate: req.files.birthCertificate[0].path ? req.files.birthCertificate[0].path : null,
+            guarantorForm: req.files.guarantorForm[0].path ? req.files.guarantorForm[0].path : null,
+            degreeCertificate: req.files.degreeCertificate[0].path ? req.files.degreeCertificate[0].path : null,
           },
         },
       },

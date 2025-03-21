@@ -5,6 +5,7 @@ import prisma from "../../../../prisma/prisma.js";
 import { pagination } from "../../../../utils/pagination.js";
 // import {}
 import cron from "node-cron";
+import { late } from "zod";
 // const cron = require('node-cron');
 
 // Schedule job to run at 10 AM daily
@@ -62,7 +63,6 @@ const createAttendance = async (req, res, next) => {
 
         // Validate request body
         const validation = AttendanceSchema.parse(req.body);
-        console.log(validation);
 
         // Fetch staff details including dateOfJoining
         const staff = await prisma.staffDetails.findFirst({
@@ -91,7 +91,7 @@ const createAttendance = async (req, res, next) => {
             return res.status(400).json({ message: "Attendance cannot be marked for a future date." });
         }
 
-        // ✅ Find the last attendance date for this staff
+        // Find the last attendance date for this staff
         const lastAttendance = await prisma.attendanceStaff.findFirst({
             where: { staffId: validation.staffId },
             orderBy: { date: "desc" }, // Get the most recent attendance
@@ -163,8 +163,6 @@ const createAttendance = async (req, res, next) => {
     }
 };
 
-
-
 // end attendance time
 const updateAttendanceEndTime = async (req, res, next) => {
     try {
@@ -172,21 +170,10 @@ const updateAttendanceEndTime = async (req, res, next) => {
         if (admin.error) {
             return res.status(400).json({ message: admin.message });
         }
-        console.log("admins ka data kya hai ", admin);
-        const { id: attendanceId } = req.params;
-        const { endTime, date, adminId, staffId } = req.body;
 
-        // check admin id
-        const existingAdminId = await prisma.attendanceStaff.findUnique({
-            where: {
-                id: attendanceId,
-                adminId: admin.user.adminDetails.id,                
-            }
-        });
-        // console.log(" admin id ", existingAdminId);
-        if (!existingAdminId || (existingAdminId.adminId !== admin.user.adminDetails.id)) {
-            return res.status(400).json({ message: "Invalid adminId" });
-        }
+        const { id: attendanceId } = req.params;
+        const { endTime } = req.body;
+
         if (!endTime) {
             return res.status(400).json({ message: "End time is required to update attendance." });
         }
@@ -199,6 +186,10 @@ const updateAttendanceEndTime = async (req, res, next) => {
             return res.status(404).json({ message: "Attendance record not found." });
         }
 
+        const officeWorkingHours = admin.user.adminDetails.officeWorkinghours;
+        const officeStartTime = admin.user.adminDetails.officeStartTime;
+        const officeEndime = admin.user.adminDetails.officeEndtime;
+        // console.log("office working hours ", officeWorkingHours, "office start time ", officeStartTime, "office end time ", officeEndime);
         function convertTo24HourFormat(timeString) {
             let [time, modifier] = timeString.split(/(AM|PM)/);
             let [hours, minutes] = time.split(':').map(num => parseInt(num, 10));
@@ -222,82 +213,109 @@ const updateAttendanceEndTime = async (req, res, next) => {
             return (endDate - startDate) / (1000 * 60 * 60);
         }
 
-        const workingHours = calculateWorkingHours(existingAttendance.startTime, endTime, existingAttendance.date);
-        console.log("Working Hours:", workingHours);
+        let workingHours = calculateWorkingHours(existingAttendance.startTime, endTime, existingAttendance.date);
 
-        let status = existingAttendance.status;
-        console.log("Status:", status);
-        let fineHours = 0;
-
-        if (workingHours === 4) {
-            status = "HALF_DAY";
-        } else if (workingHours < 8 && (workingHours > 4 || workingHours < 4)) {
-            status = "PERSENT";
-            fineHours = 8 - workingHours;
+        let requiredHours = officeWorkingHours;
+        if (officeStartTime && officeEndTime) {
+            requiredHours = calculateWorkingHours(officeStartTime, officeEndTime, existingAttendance.date);
         }
 
-        // Fetch salary details
+        let fineHours = 0;
+        let overtimeHours = 0;
+        let status = "PERSENT";
+        // console.log(overtimeHours);
+        // console.log(fineHours);
+        console.log("working hours ", workingHours);
+        const halfWorkingTime = requiredHours / workingHours
+        if (workingHours <= halfWorkingTime) {
+            status = "HALF_DAY";
+            fineHours = 0;
+        } else if ((workingHours > halfWorkingTime || workingHours < halfWorkingTime) && workingHours < requiredHours) {
+            fineHours = requiredHours - workingHours;
+            status = "PERSENT";
+        } else if (workingHours > requiredHours) {
+            overtimeHours = workingHours - requiredHours;
+            status = "PERSENT";
+        }
+        console.log(" overtime hours ", overtimeHours);
+
         const salaryDetailsData = await prisma.salaryDetail.findFirst({
             where: { staffId: existingAttendance.staffId }
         });
-
-        // If salary details are found, calculate fine
+        console.log(" salary details ", salaryDetailsData);
         if (salaryDetailsData) {
             const ctcAmount = salaryDetailsData.ctcAmount;
-            const currentDate = new Date();
-            const currentMonth = currentDate.getMonth();
-            const currentYear = currentDate.getFullYear();
-            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            console.log("ctc amount ", ctcAmount);
+            // const ctcAmount = "15000";
+            const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+            console.log("days in month ", daysInMonth);
             const dailyCtc = ctcAmount / daysInMonth;
-            const perHourFineAmount = dailyCtc / 8;
-            const fineAmount = fineHours * perHourFineAmount;
-
-            console.log("Fine Per Hour:", perHourFineAmount);
-            console.log("Total Fine Amount:", fineAmount);
+            console.log("daily ctc ", dailyCtc);
+            const perHourRate = dailyCtc / requiredHours;
+            console.log("per hour rate ", perHourRate);
+            const fineAmount = fineHours * perHourRate;
+            console.log("fine amount ", fineAmount);
+            const overtimeAmount = overtimeHours * perHourRate;
+            console.log("overtime amount ", overtimeAmount);
 
             const existingFine = await prisma.fine.findFirst({
-                where: {
-                    staffId: existingAttendance.staffId,
-                    createdAt: {
-                        gte: new Date(existingAttendance.date + "T00:00:00.000Z"),
-                        lt: new Date(existingAttendance.date + "T23:59:59.999Z")
-                    }
+                where: { attendanceStaffId: attendanceId }
+            });
+            if (fineHours > 0) {
+                if (existingFine) {
+                    console.log("Fine already exists for this attendance. Skipping fine creation.");
+                    // return res.status(400).json({ message: "Fine already exists for this attendance. Skipping fine creation." });
+                } else {
+                    await prisma.fine.create({
+                        data: {
+                            adminId: admin.user.adminDetails.id,
+                            AttendanceStaff: { connect: { id: attendanceId } },
+                            staff: { connect: { id: existingAttendance.staffId } },
+                            earlyOutFineHoursTime: fineHours.toFixed(2).toString(),
+                            earlyOutFineAmount: parseFloat(perHourRate.toFixed(2)),
+                            earlyOutAmount: parseFloat(fineAmount.toFixed(2)),
+                            totalAmount: parseFloat(fineAmount.toFixed(2)),
+                            SalaryDetail: { connect: { id: salaryDetailsData.id } },
+                            sendSMStoStaff: true
+                        }
+                    });
                 }
+            }
+
+            // Check if overtime already exists for the current attendance
+            const existingOvertime = await prisma.overtime.findFirst({
+                where: { attendanceStaffId: attendanceId }
             });
 
-            if (!existingFine && fineHours > 0 && status !== "HALF_DAY") {
-                await prisma.fine.create({
-                    data: {
-                        adminId: admin.user.adminDetails.id,
-                        AttendanceStaff: { connect: { id: attendanceId } },
-                        staff: { connect: { id: existingAttendance.staffId } },
-                        earlyOutFineHoursTime: fineHours.toString(),
-                        earlyOutFineAmount: parseFloat(perHourFineAmount.toFixed(2)),
-                        earlyOutAmount: parseFloat(fineAmount.toFixed(2)),
-                        totalAmount: parseFloat(fineAmount.toFixed(2)),
-                        SalaryDetail: { connect: { id: salaryDetailsData.id } }
-                    }
-                });
+            if (overtimeHours > 0) {
+                if (existingOvertime) {
+                    console.log("Overtime already exists for this attendance. Skipping overtime creation.");
+                } else {
+                    await prisma.overtime.create({
+                        data: {
+                            adminId: admin.user.adminDetails.id,
+                            staffId: existingAttendance.staffId,
+                            totalAmount: parseFloat(overtimeAmount.toFixed(2)),
+                            lateOutOvertimeHoursTime: overtimeHours.toFixed(2).toString(),
+                            lateOutOvertimeAmount: parseFloat(perHourRate.toFixed(2)),
+                            attendanceStaffId: attendanceId
+                        }
+                    });
+                }
             }
-        } else {
-            console.log("Salary details not found. Skipping fine creation.");
-        }
 
-        // ✅ Attendance update always runs
+        }
+        console.log(status);
         const updatedAttendance = await prisma.attendanceStaff.update({
             where: { id: attendanceId },
-            data: {
-                endTime,
-                status: status,
-                salaryDetailId: salaryDetailsData ? salaryDetailsData.id : null
-            },
+            data: { endTime, status }
         });
+
 
         res.status(200).json({
             message: "Attendance updated successfully",
             data: updatedAttendance
         });
-
     } catch (error) {
         next(error);
     }
@@ -317,10 +335,10 @@ const getAllAttendance = async (req, res, next) => {
         const existingAdminId = await prisma.attendanceStaff.findFirst({
             where: {
                 // id: attendanceId,
-                adminId: admin.user.adminDetails.id,                
+                adminId: admin.user.adminDetails.id,
             }
         });
-console.log(existingAdminId);
+        console.log(existingAdminId);
         if (!existingAdminId || (existingAdminId.adminId !== admin.user.adminDetails.id)) {
             return res.status(400).json({ message: "Invalid adminId" });
         }
@@ -733,6 +751,27 @@ const getAllAttendanceByDate = async (req, res, next) => {
     }
 };
 
+// get all start break record
+const getAllStartBreakRecord = async (req, res, next) => {
+    try {
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({
+                message: admin.message
+            });
+        }
+        const { page, limit } = req.query;
+        const breakRecord = await pagination(prisma.attendanceBreakRecord, {
+            page, limit,
+            where: {
+                adminId: admin.user.adminDetails.id
+            }
+        });
+        res.status(200).json({ message: "Break record fetched successfully", data: breakRecord });
+    } catch (error) {
+        next(error);
+    }
+};
 
 const createBulkAttendance = async (req, res, next) => {
     try {
@@ -826,7 +865,28 @@ const createBulkAttendance = async (req, res, next) => {
             createdRecords,
             errors
         });
+    } catch (error) {
+        next(error);
+    }
+}
 
+// get  all end break record
+const getAllEndBreakRecord = async (req, res, next) => {
+    try {
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({
+                message: admin.message
+            });
+        }
+        const { page, limit } = req.query;
+        const breakRecord = await pagination(prisma.attendanceBreakRecord, {
+            page, limit,
+            where: {
+                adminId: admin.user.adminDetails.id
+            }
+        });
+        res.status(200).json({ message: "Break record fetched successfully", data: breakRecord });
     } catch (error) {
         next(error);
     }
@@ -835,5 +895,17 @@ const createBulkAttendance = async (req, res, next) => {
 
 
 
-
-export { createAttendance, getAllAttendance, getAttendanceByStaffId, updateAttendanceEndTime, startAttendanceBreak, endAttendanceBreak, getAttendanceByMonth, halfDayAttendance, getAllAttendanceByDate, createBulkAttendance };
+export {
+    getAllAttendance,
+    createAttendance,
+    updateAttendanceEndTime,
+    getAttendanceByStaffId,
+    getAttendanceByMonth,
+    startAttendanceBreak,
+    endAttendanceBreak,
+    halfDayAttendance,
+    getAllAttendanceByDate,
+    getAllStartBreakRecord,
+    getAllEndBreakRecord,
+    createBulkAttendance,
+};
