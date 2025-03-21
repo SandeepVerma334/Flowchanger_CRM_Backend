@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  // directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -246,7 +246,7 @@ model PaymentHistory {
   date            DateTime      @default(now())
   amount          Float
   type            PaymentType   @default(SALARY)
-  status          PaymentStatus @default(SAVED)
+  status          PaymentStatus @default(PENDING)
   transactionId   String?
   utrNumber       String?
   note            String?
@@ -266,10 +266,11 @@ enum PaymentType {
 }
 
 enum PaymentStatus {
+  HOLD
+  PENDING
   PROCESSING
   SUCCESS
-  FAILED
-  SAVED
+  REJECTED
 }
 
 model StaffEducationQualification {
@@ -551,12 +552,21 @@ model ClientDetails {
   city             String
   state            String
   country          String
+  status           ClientStatus  @default(Process)
   addressLine      String?
   adminId          String?
   adminDetails     AdminDetails? @relation(fields: [adminId], references: [id], onDelete: Cascade)
   userId           String        @unique
   user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   Project          Project[]
+  createdAt        DateTime?     @default(now())
+  updatedAt        DateTime?     @updatedAt
+}
+
+enum ClientStatus {
+  Cancelled
+  Delivered
+  Process
 }
 
 model Project {

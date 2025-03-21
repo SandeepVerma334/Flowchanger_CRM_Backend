@@ -5,7 +5,10 @@ CREATE TYPE "AttendanceStatus" AS ENUM ('PERSENT', 'ABSENT', 'PAID_LEAVE', 'HALF
 CREATE TYPE "PaymentType" AS ENUM ('ADVANCE', 'SALARY');
 
 -- CreateEnum
-CREATE TYPE "PaymentStatus" AS ENUM ('PROCESSING', 'SUCCESS', 'FAILED', 'SAVED');
+CREATE TYPE "PaymentStatus" AS ENUM ('HOLD', 'PENDING', 'PROCESSING', 'SUCCESS', 'REJECTED');
+
+-- CreateEnum
+CREATE TYPE "ClientStatus" AS ENUM ('Cancelled', 'Delivered', 'Process');
 
 -- CreateEnum
 CREATE TYPE "ReportStatus" AS ENUM ('PENDING', 'REJECTED', 'RESOLVED', 'IN_PROGRESS', 'ESCALATED');
@@ -202,7 +205,7 @@ CREATE TABLE "PaymentHistory" (
     "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "amount" DOUBLE PRECISION NOT NULL,
     "type" "PaymentType" NOT NULL DEFAULT 'SALARY',
-    "status" "PaymentStatus" NOT NULL DEFAULT 'SAVED',
+    "status" "PaymentStatus" NOT NULL DEFAULT 'PENDING',
     "transactionId" TEXT,
     "utrNumber" TEXT,
     "note" TEXT,
@@ -504,9 +507,12 @@ CREATE TABLE "ClientDetails" (
     "city" TEXT NOT NULL,
     "state" TEXT NOT NULL,
     "country" TEXT NOT NULL,
+    "status" "ClientStatus" NOT NULL DEFAULT 'Process',
     "addressLine" TEXT,
     "adminId" TEXT,
     "userId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3),
 
     CONSTRAINT "ClientDetails_pkey" PRIMARY KEY ("id")
 );

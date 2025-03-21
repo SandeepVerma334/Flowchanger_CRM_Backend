@@ -74,6 +74,8 @@ const getClients = async (req, res, next) => {
 
         const result = await pagination(prisma.user, { page, limit, where, include });
 
+        console.log(result);
+
         if (result.data.length === 0) {
             return res.status(404).json({ message: "No clients found.", data: [] });
         }

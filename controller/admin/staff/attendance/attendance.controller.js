@@ -742,7 +742,7 @@ const createBulkAttendance = async (req, res, next) => {
         }
 
         const attendances = req.body;
-        const validAttendances = [];
+        const validAttendances = []
         const errors = [];
         const createdRecords = [];
 
@@ -791,6 +791,7 @@ const createBulkAttendance = async (req, res, next) => {
             if (attendanceDate.getDay() === 0) {
                 effectiveStatus = "WEEK_OFF";
             }
+
 
             // Create attendance record manually
             const attendance = await prisma.attendanceStaff.create({

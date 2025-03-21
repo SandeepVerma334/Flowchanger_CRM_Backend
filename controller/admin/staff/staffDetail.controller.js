@@ -44,7 +44,7 @@ const createStaff = async (req, res, next) => {
     }
 
     const existingEmail = await prisma.user.findFirst({
-      where: { email: validation.data.officialMail, adminId: req.userId },
+      where: { email: validation.officialMail, adminId: req.userId },
     })
 
     // console.log(existingEmail);
