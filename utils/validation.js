@@ -435,6 +435,7 @@ const discussionSchema = z.object({
 const noteSchema = z.object({
   title: z.string({ required_error: "Title is required" }).min(3, "At least 3 characters"),
   description: z.string({ required_error: "Description is required" }).min(3, "At least 3 characters required"),
+  color: z.string({ required_error: "Color is required" }).min(3, "At least 3 characters required"),
   userId: z.string({ required_error: "User ID is required" }).uuid("Invalid USER ID format"),
 });
 
