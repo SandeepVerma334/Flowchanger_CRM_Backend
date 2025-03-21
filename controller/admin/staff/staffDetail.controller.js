@@ -14,7 +14,7 @@ const createStaff = async (req, res, next) => {
       return res.status(403).json({ message: adminCheck.message });
     }
     const validation = staffDetailSchema.parse(req.body);
-
+    console.log(validation);
     const { branchId, departmentId, roleId, officialMail } = validation;
     if (officialMail == null) {
       return res.status(400).json({ message: "Email is required" });
@@ -55,7 +55,7 @@ const createStaff = async (req, res, next) => {
     }
 
     const admin = await checkAdmin(req.userId);
-    console.log(admin)
+
 
     const uniqueEmployeeId = `FLOW#-${new Date().getTime()}-${uuidv4().replace(/-/g, "").substring(0, 5)}`;
     const staffData = await prisma.user.create({
@@ -65,7 +65,7 @@ const createStaff = async (req, res, next) => {
         password: validation.password,
         mobile: validation.mobile,
         mobile2: validation.mobile2,
-        profileImage: validation.porfileImage,
+        profileImage: req?.file?.path === undefined ? null : req.file.path,
         role: "STAFF",
         email: validation.officialMail,
         otp: validation.otp,
@@ -109,6 +109,7 @@ const createStaff = async (req, res, next) => {
         StaffDetails: true
       }
     });
+    console.log(req.file)
     return res.status(201).json({ status: 201, message: "Staff created successfully", data: staffData });
 
   } catch (error) {
@@ -258,10 +259,10 @@ const updateStaff = async (req, res, next) => {
                 connect: { id: validation.data.roleId },
               },
             }),
-            offerLetter: validation.data.offerLetter,
-            birthCertificate: validation.data.birthCertificate,
-            guarantorForm: validation.data.guarantorForm,
-            degreeCertificate: validation.data.degreeCertificate,
+            offerLetter: req.files.offerLetter[0].path,
+            birthCertificate: req.files.birthCertificate[0].path,
+            guarantorForm: req.files.guarantorForm[0].path,
+            degreeCertificate: req.files.degreeCertificate[0].path,
           },
         },
       },

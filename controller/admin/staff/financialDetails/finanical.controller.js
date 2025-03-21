@@ -6,43 +6,55 @@ import { pagination } from "../../../../utils/pagination.js";
 // create financial details
 const createFinancialDetails = async (req, res, next) => {
     try {
-        const admin = checkAdmin(req.userId, "ADMIN", res);
+        // Ensure checkAdmin is awaited
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        // console.log("llll " , admin)
+        if (admin.error) {
+            return res.status(400).json({ message: admin.message });
+        }
+
         const validationData = StaffFinancialDetailsSchema.parse(req.body);
 
-        // Check bank account number already exists
+        // Check if bank account number already exists
         const checkBankAccountNumber = await prisma.financialDetails.findFirst({
-            where: {
-                accountNumber: validationData.accountNumber
-            }
+            where: { accountNumber: validationData.accountNumber }
         });
+
         if (checkBankAccountNumber) {
-            return res.status(400).json({ message: "Bank account number already exist" });
+            return res.status(400).json({ message: "Bank account number already exists" });
         }
 
-        // Check staffId already exists 
+        // Check if staffId already exists
         const checkStaffId = await prisma.financialDetails.findFirst({
-            where: {
-                staffId: validationData.staffId
-            }
+            where: { staffId: validationData.staffId }
         });
-        if (checkStaffId) {
-            return res.status(400).json({ message: "staffId already exist" });
-        }
 
+        // if (checkStaffId) {
+        //     return res.status(400).json({ message: "Staff ID already exists" });
+        // }
+
+        // Create financial details
         const financialDetails = await prisma.financialDetails.create({
             data: {
                 ...validationData,
-                adminId: admin.id
+                adminId: req.userId
             },
             include: {
                 staffDetails: true
             }
         });
-        res.status(200).json({ message: "Financial details created successfully", data: financialDetails });
+
+        res.status(201).json({
+            message: "Financial details created successfully",
+            data: financialDetails
+        });
+
     } catch (error) {
+        // console.error("Error creating financial details:", error);
         next(error);
     }
-}
+};
+
 
 // get all Financial details
 
@@ -113,8 +125,8 @@ const deleteFinancialDetailsById = async (req, res, next) => {
 
 // update financial details by id
 const updateFinancialDetailsById = async (req, res, next) => {
-    try {        
-        const admin = await checkAdmin(req.userId, "ADMIN");        
+    try {
+        const admin = await checkAdmin(req.userId, "ADMIN");
         const validationData = StaffFinancialDetailsSchema.parse(req.body);
         const { id } = req.params;
 

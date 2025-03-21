@@ -3,7 +3,7 @@
 import { bankDetailsSchema } from "../../../utils/validation.js"
 import checkAdmin from "../../../utils/adminChecks.js";
 import prisma from "../../../prisma/prisma.js";
-// import { pagination } from "../../../../utils/pagination.js";
+import { pagination } from "../../../utils/pagination.js";
 
 // add half day attendance according to the attendance start and end time
 const addBankDetails = async (req, res, next) => {
@@ -295,5 +295,34 @@ const searchBankDetails = async (req, res, next) => {
     }
 };
 
+// get all bank details
+const getAllBankDetails = async (req, res, next) => {
+    try {
+        const {page, limit} = req.params;
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({
+                message: admin.message
+            });
+        }
+        const bankDetails = await pagination(prisma.bankDetails, {
+            page, limit,
+            where: {
+                adminId: admin.user.adminDetails.id
+            },
+            include: {
+                staffDetails: {
+                    include: {
+                        User: true
+                    },
+                },
+            },
+        });
+        res.status(200).json({ message: "Bank details fetched successfully", data: bankDetails });
+    } catch (error) {
+        next(error);
+    }
+}
 
-export { addBankDetails, getBankDetails, deleteBankDetailsById, getBankDetailsById, updateBankDetailsById, searchBankDetails };
+
+export { addBankDetails, getBankDetails, deleteBankDetailsById, getBankDetailsById, updateBankDetailsById, searchBankDetails, getAllBankDetails };
