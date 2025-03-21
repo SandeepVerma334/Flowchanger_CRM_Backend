@@ -68,12 +68,10 @@ const addOvertimeData = async (req, res, next) => {
         const currentMonth = currentDate.getMonth();
         const currentYear = currentDate.getFullYear();
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
         const dailyCtc = ctcAmount / daysInMonth;
         const workingHoursPerDay = 8;
         const perHourSalary = dailyCtc / workingHoursPerDay;
         const perMinuteSalary = perHourSalary / 60;
-
         // Convert early and late overtime hours to minutes
         const earlyCommingMinutes = parseInt(earlyCommingEntryHoursTime) || 0;
         const lateOutMinutes = parseInt(lateOutOvertimeHoursTime) || 0;
@@ -249,7 +247,7 @@ const updateOvertimeById = async (req, res, next) => {
         const { id } = req.params;
         const validation = OverTimeSchema.parse(req.body);
         const overtime = await prisma.overtime.update({
-            where: { id,adminId: req.userId },
+            where: { id, adminId: req.userId },
             data: validation.data,
         });
         res.status(200).json({ message: "Overtime updated successfully", overtime });
