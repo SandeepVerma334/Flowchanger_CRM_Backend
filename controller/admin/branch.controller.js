@@ -36,7 +36,7 @@ const getAllBranches = async (req, res, next) => {
         const branches = await pagination(prisma.branch, {
             page,
             limit,
-            where: { adminId: admin.id },
+            where: { adminId: req.userId },
         });
 
         res.status(200).json({ message: "Branches fetched successfully", ...branches });
@@ -57,7 +57,7 @@ const updateBranch = async (req, res, next) => {
         const branchResult = BranchSchema.partial().parse({ branchName });
 
         const updatedBranch = await prisma.branch.update({
-            where: { id, adminId: admin.id },
+            where: { id, adminId: req.userId },
             data: { ...branchResult },
         });
 
@@ -76,7 +76,7 @@ const deleteBranch = async (req, res, next) => {
             return res.status(401).json({ message: admin.message });
         }
         await prisma.branch.delete({
-            where: { id, adminId: admin.id },
+            where: { id, adminId: req.userId },
         });
 
         res.status(200).json({ message: "Branch deleted successfully" });
@@ -98,7 +98,7 @@ const searchBranch = async (req, res, next) => {
             page,
             limit,
             where: {
-                adminId: admin.id,
+                adminId: req.userId,
                 branchName: { contains: search, mode: "insensitive" },
             },
         });
@@ -113,7 +113,7 @@ const bulkDeleteBranches = async (req, res, next) => {
     try {
         const { ids } = req.body;
         const admin = await checkAdmin(req.userId);
-        
+
 
         if (admin.error) {
             return res.status(401).json({ message: admin.message });
@@ -124,7 +124,7 @@ const bulkDeleteBranches = async (req, res, next) => {
         }
 
         await prisma.branch.deleteMany({
-            where: { id: { in: ids }, adminId: admin.id },
+            where: { id: { in: ids }, adminId: req.userId },
         });
 
         res.status(200).json({ message: "Branches deleted successfully" });
@@ -140,7 +140,7 @@ const countBranches = async (req, res, next) => {
             return res.status(401).json({ message: admin.message });
         }
         const count = await prisma.branch.count({
-            where: { adminId: admin.id },
+            where: { adminId: req.userId },
         });
         res.status(200).json({ message: "Branch count fetched successfully", count });
     } catch (error) {

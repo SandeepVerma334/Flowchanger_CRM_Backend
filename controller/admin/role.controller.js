@@ -100,7 +100,7 @@ const fetchRoleWithId = async (req, res, next) => {
 };
 
 // add new Role
-async function addRole(req, res) {
+async function addRole(req, res, next) {
     const { roleName, permissions } = req.body;
     try {
         const validateNewRoleData = newRoleSchema.parse({
@@ -225,16 +225,12 @@ async function addRole(req, res) {
             data: newRole,
         });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({
-            success: false,
-            error: "Failed to add role" + error.message,
-        });
+        next(error);
     }
 }
 
 // updated Role for specific id
-const updateRole = async (req, res) => {
+const updateRole = async (req, res, next) => {
     try {
         const { id } = req.params;
         const { roleName, permissions } = req.body;
@@ -403,25 +399,12 @@ const updateRole = async (req, res) => {
             data: updatedRole,
         });
     } catch (error) {
-        // Handle any errors
-        if (error.code === "P2002") {
-            // Unique constraint violation
-            res.status(409).json({
-                success: false,
-                error: roleName + " role already exists.",
-            });
-        } else {
-            // Handle any other errors
-            res.status(500).json({
-                success: false,
-                error: "Failed to update role: " + error.message,
-            });
-        }
+        next(error);
     }
 };
 
 //detete role in bulk
-const deleteRoleInBulk = async (req, res) => {
+const deleteRoleInBulk = async (req, res, next) => {
     try {
         const { ids } = req.body;
         const admin = await checkAdmin(req.userId);
@@ -449,11 +432,7 @@ const deleteRoleInBulk = async (req, res) => {
             data: deletedRoles,
         });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            error: "Failed to delete roles: " + error.message,
-            details: error,
-        });
+        next(error);
     }
 };
 

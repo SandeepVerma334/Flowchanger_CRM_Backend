@@ -98,6 +98,9 @@ const adminSignupSchema = z.object({
   services: z.array(z.string()).optional(),
   companySize: z.string().optional(),
   role: z.string().optional(),
+  officeStartTime: z.string().optional(),
+  officeEndtime: z.string().optional(),
+  officeWorkinghours: z.string().optional(),
   packageId: z.string().optional(),
 });
 
@@ -536,7 +539,7 @@ const SalarySchema = z.object({
 // attendance staff
 const AttendanceSchema = z.object({
   attendanceId: z.string().optional(),
-  adminId:z.string().optional(),
+  adminId: z.string().optional(),
   staffId: z.string({ required_error: "StaffId is required!" }).uuid("Invalid Admin ID format"),
   shift: z.string().optional(),
   date: z.string().optional(),

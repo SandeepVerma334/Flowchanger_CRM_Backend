@@ -54,8 +54,7 @@ const adminSignup = async (req, res, next) => {
 
 const updateAdminProfile = async (req, res, next) => {
     try {
-        // const admin = await checkAdmin(req, res, next);
-        // console.log(admin);
+
         const {
             email,
             mobile,
@@ -73,9 +72,14 @@ const updateAdminProfile = async (req, res, next) => {
             services,
             companySize,
             role,
-            packageId
+            packageId,
+            officeStartTime,
+            officeEndtime,
+            officeWorkinghours,
         } = req.body;
 
+
+        const validationData = adminSignupSchema.partial().parse(req.body);
 
         const user = await prisma.user.findFirst({
             where: { email: email },
@@ -99,6 +103,9 @@ const updateAdminProfile = async (req, res, next) => {
                     upsert: {
                         where: { userId: user.id },  // Use the adminDetailId to check existence
                         update: {
+                            officeStartTime,
+                            officeEndtime,
+                            officeWorkinghours,
                             companyName,
                             timeZone,
                             address,
@@ -121,6 +128,9 @@ const updateAdminProfile = async (req, res, next) => {
                             })
                         },
                         create: {
+                            officeStartTime,
+                            officeEndtime,
+                            officeWorkinghours,
                             companyName,
                             timeZone,
                             address,

@@ -36,7 +36,7 @@ const getAllDepartments = async (req, res, next) => {
         const departments = await pagination(prisma.department, {
             page,
             limit,
-            where: { adminId: admin.id },
+            where: { adminId: req.userId },
         });
 
         res.status(200).json({ message: "Departments fetched successfully", ...departments });
@@ -58,7 +58,7 @@ const updateDepartment = async (req, res, next) => {
         const validationData = DepartmentSchema.partial().parse({ departmentName });
 
         const updatedDepartment = await prisma.department.update({
-            where: { id, adminId: admin.id },
+            where: { id, adminId: req.userId },
             data: validationData,
         });
 
@@ -78,7 +78,7 @@ const deleteDepartment = async (req, res, next) => {
         }
 
         await prisma.department.delete({
-            where: { id, adminId: admin.id },
+            where: { id, adminId: req.userId },
         });
 
         res.status(200).json({ message: "Department deleted successfully" });
@@ -101,7 +101,7 @@ const bulkDeleteDepartments = async (req, res, next) => {
         }
 
         await prisma.department.deleteMany({
-            where: { id: { in: ids }, adminId: admin.id },
+            where: { id: { in: ids }, adminId: req.userId },
         });
 
         res.status(200).json({ message: "Departments deleted successfully" });
@@ -120,7 +120,7 @@ const searchDepartment = async (req, res, next) => {
         }
 
         const departments = await pagination(prisma.department, {
-            where: { adminId: admin.id, departmentName: { contains: search, mode: "insensitive" } },
+            where: { adminId: req.userId, departmentName: { contains: search, mode: "insensitive" } },
             page,
             limit,
         });
@@ -131,6 +131,23 @@ const searchDepartment = async (req, res, next) => {
     }
 };
 
+/*************  ✨ Codeium Command ⭐  *************/
+/**
+ * Counts the number of departments associated with the authenticated admin user.
+ * 
+ * This function first verifies the admin status of the requesting user. If the
+ * user is not an admin, a 401 Unauthorized response is returned. Upon successful
+ * verification, it queries the database to count the number of departments linked
+ * to the admin's user ID. The count is then sent in the response with a success
+ * message. If any error occurs during the process, it is passed to the next
+ * middleware for error handling.
+ * 
+ * @param {Object} req - The request object containing user details.
+ * @param {Object} res - The response object used to send the count data.
+ * @param {Function} next - The next middleware function in the stack.
+ */
+
+/******  a72bd44d-6424-419c-9da5-165ddc12e4af  *******/
 const countDepartments = async (req, res, next) => {
     try {
         const admin = checkAdmin(req.userId);
