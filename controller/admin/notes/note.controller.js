@@ -45,7 +45,7 @@ const createNote = async (req, res, next) => {
             data: {
                 title: validationData.title,
                 description: validationData.description,
-                color: validationData.description,
+                color: validationData.color,
                 user: {
                     connect: { id: validationData.userId }
                 },
