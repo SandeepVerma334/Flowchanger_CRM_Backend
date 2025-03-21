@@ -99,6 +99,7 @@ const createProject = async (req, res, next) => {
             include: {
                 members: true,
                 ProjectPermissions: true,
+                customer: true
             }
         });
 
