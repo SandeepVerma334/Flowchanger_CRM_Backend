@@ -9,48 +9,48 @@ import { late } from "zod";
 // const cron = require('node-cron');
 
 // Schedule job to run at 10 AM daily
-cron.schedule('0 10 * * *', async () => {
-    try {
-        // Get all staff members for the admin
-        const staffList = await prisma.staffDetails.findMany({
-            where: { adminId: admin.user.adminDetails.id },
-            select: { id: true }
-        });
+// cron.schedule('0 10 * * *', async () => {
+//     try {
+//         // Get all staff members for the admin
+//         const staffList = await prisma.staffDetails.findMany({
+//             where: { adminId: admin.user.adminDetails.id },
+//             select: { id: true }
+//         });
 
-        // Get today's date
-        const today = new Date().toISOString().split('T')[0]; // Get the current date in 'YYYY-MM-DD' format
+//         // Get today's date
+//         const today = new Date().toISOString().split('T')[0]; // Get the current date in 'YYYY-MM-DD' format
 
-        for (let staff of staffList) {
-            // Check if attendance already exists for today
-            const existingAttendance = await prisma.attendanceStaff.findFirst({
-                where: {
-                    staffId: staff.id,
-                    date: today
-                }
-            });
+//         for (let staff of staffList) {
+//             // Check if attendance already exists for today
+//             const existingAttendance = await prisma.attendanceStaff.findFirst({
+//                 where: {
+//                     staffId: staff.id,
+//                     date: today
+//                 }
+//             });
 
-            // If no attendance exists for the day, create it with status 'ABSENT'
-            if (!existingAttendance) {
-                await prisma.attendanceStaff.create({
-                    data: {
-                        shift: "Morning", // Default shift (or adjust based on your needs)
-                        date: today,
-                        status: "ABSENT",
-                        staffDetails: {
-                            connect: { id: staff.id }
-                        },
-                        adminDetail: {
-                            connect: { id: admin.user.adminDetails.id } // Use dynamic admin ID
-                        }
-                    }
-                });
-                console.log(`Attendance marked as ABSENT for staff ${staff.id} on ${today}`);
-            }
-        }
-    } catch (error) {
-        console.error('Error creating automatic attendance:', error);
-    }
-});
+//             // If no attendance exists for the day, create it with status 'ABSENT'
+//             if (!existingAttendance) {
+//                 await prisma.attendanceStaff.create({
+//                     data: {
+//                         shift: "Morning", // Default shift (or adjust based on your needs)
+//                         date: today,
+//                         status: "ABSENT",
+//                         staffDetails: {
+//                             connect: { id: staff.id }
+//                         },
+//                         adminDetail: {
+//                             connect: { id: admin.user.adminDetails.id } // Use dynamic admin ID
+//                         }
+//                     }
+//                 });
+//                 console.log(`Attendance marked as ABSENT for staff ${staff.id} on ${today}`);
+//             }
+//         }
+//     } catch (error) {
+//         console.error('Error creating automatic attendance:', error);
+//     }
+// });
 
 
 // create attendance for staff true  false
@@ -62,11 +62,16 @@ const createAttendance = async (req, res, next) => {
         }
 
         // Validate request body
-        const validation = AttendanceSchema.parse(req.body);
+        const validation = AttendanceSchema.safeParse(req.body);
+        if (!validation.success) {
+            return res.status(400).json({ message: validation.error.issues[0].message });
+        }
+
+        const { staffId, date, shift, startTime, endTime } = req.body;
 
         // Fetch staff details including dateOfJoining
         const staff = await prisma.staffDetails.findFirst({
-            where: { id: validation.staffId, adminId: admin.user.adminDetails.id },
+            where: { id: staffId, adminId: admin.user.adminDetails.id },
             select: { dateOfJoining: true }
         });
 
@@ -76,7 +81,7 @@ const createAttendance = async (req, res, next) => {
 
         // Convert date strings to Date objects for comparison
         const dateOfJoining = new Date(staff.dateOfJoining);
-        const attendanceDate = new Date(validation.date);
+        const attendanceDate = new Date(date);
         const currentDate = new Date();
 
         dateOfJoining.setHours(0, 0, 0, 0);
@@ -93,75 +98,71 @@ const createAttendance = async (req, res, next) => {
 
         // Find the last attendance date for this staff
         const lastAttendance = await prisma.attendanceStaff.findFirst({
-            where: { staffId: validation.staffId },
-            orderBy: { date: "desc" }, // Get the most recent attendance
+            where: { staffId },
+            orderBy: { date: "desc" },
             select: { date: true, endTime: true }
         });
 
-        if (lastAttendance) {
-            console.log("Last Attendance Date:", lastAttendance.date, "End Time:", lastAttendance.endTime);
-
-            // If last attendance exists but has no endTime, prevent new attendance
-            if (!lastAttendance.endTime) {
-                return res.status(400).json({
-                    message: `Complete the previous attendance first (Last attendance: ${lastAttendance.date}).`
-                });
-            }
-        }
+        // if (lastAttendance && !lastAttendance.endTime) {
+        //     return res.status(400).json({
+        //         message: `Complete the previous attendance first (Last attendance: ${lastAttendance.date}).`
+        //     });
+        // }
 
         // Check if the date is a Sunday (0 = Sunday)
-        let status = validation.status;
+        let status = req.body.status;
         if (attendanceDate.getDay() === 0) {
             status = "WEEK_OFF"; // Automatically mark as WEEK_OFF
         }
 
-        console.log(status);
-
-        // Check if attendance already exists for the given date
+        // Check if an attendance record already exists for the given date
         const existingAttendance = await prisma.attendanceStaff.findFirst({
-            where: {
-                staffId: validation.staffId,
-                date: validation.date
-            }
+            where: { staffId, date }
         });
 
         if (existingAttendance) {
-            return res.status(400).json({ message: "Attendance for this date has already been recorded." });
+            // Update existing attendance
+            const updatedAttendance = await prisma.attendanceStaff.update({
+                where: { id: existingAttendance.id },
+                data: {
+                    shift,
+                    startTime,
+                    endTime,
+                    status,
+                    staffDetails: { connect: { id: staffId } },
+                    adminDetail: { connect: { id: admin.user.adminDetails.id } },
+                },
+                include: {
+                    staffDetails: { include: { User: true } },
+                },
+            });
+
+            return res.status(200).json({ message: "Attendance updated successfully", data: updatedAttendance });
         }
 
-        const adminId = await prisma.user.findUnique({
-            where: { id: req.userId },
-            include: { adminDetails: true }
-        });
-
-        // Create attendance record
-        const attendance = await prisma.attendanceStaff.create({
+        // Create new attendance record
+        const newAttendance = await prisma.attendanceStaff.create({
             data: {
-                shift: validation.shift,
-                date: validation.date,
-                startTime: validation.startTime,
-                endTime: validation.endTime,
-                status: status,
-                staffDetails: {
-                    connect: { id: validation.staffId },
-                },
-                adminDetail: {
-                    connect: { id: adminId.adminDetails.id },
-                },
+                shift,
+                date,
+                startTime,
+                endTime,
+                status,
+                staffDetails: { connect: { id: staffId } },
+                adminDetail: { connect: { id: admin.user.adminDetails.id } },
             },
             include: {
-                staffDetails: {
-                    include: { User: true },
-                },
+                staffDetails: { include: { User: true } },
             },
         });
 
-        res.status(200).json({ message: "Attendance created successfully", data: attendance });
+        res.status(201).json({ message: "Attendance created successfully", data: newAttendance });
 
     } catch (error) {
         next(error);
     }
 };
+
 
 // end attendance time
 const updateAttendanceEndTime = async (req, res, next) => {
@@ -170,7 +171,7 @@ const updateAttendanceEndTime = async (req, res, next) => {
         if (admin.error) {
             return res.status(400).json({ message: admin.message });
         }
-
+console.log(admin);
         const { id: attendanceId } = req.params;
         const { endTime } = req.body;
 
@@ -185,11 +186,20 @@ const updateAttendanceEndTime = async (req, res, next) => {
         if (!existingAttendance) {
             return res.status(404).json({ message: "Attendance record not found." });
         }
-
+        const existingAdminNotFoundForThisAttendance = await prisma.attendanceStaff.findFirst({
+            where: {
+                id: attendanceId,
+                adminId: admin.user.adminDetails.id
+            }
+        })
+        if (!existingAdminNotFoundForThisAttendance) {
+            return res.status(400).json({ message: "Attendance Id not found for this admin Detials!" });
+        }
+        console.log(admin);
         const officeWorkingHours = admin.user.adminDetails.officeWorkinghours;
         const officeStartTime = admin.user.adminDetails.officeStartTime;
-        const officeEndime = admin.user.adminDetails.officeEndtime;
-        // console.log("office working hours ", officeWorkingHours, "office start time ", officeStartTime, "office end time ", officeEndime);
+        const officeEndtime = admin.user.adminDetails.officeEndtime;
+        console.log("office working hours ", officeWorkingHours, "office start time ", officeStartTime, "office end time ", officeEndtime);
         function convertTo24HourFormat(timeString) {
             let [time, modifier] = timeString.split(/(AM|PM)/);
             let [hours, minutes] = time.split(':').map(num => parseInt(num, 10));
@@ -216,8 +226,8 @@ const updateAttendanceEndTime = async (req, res, next) => {
         let workingHours = calculateWorkingHours(existingAttendance.startTime, endTime, existingAttendance.date);
 
         let requiredHours = officeWorkingHours;
-        if (officeStartTime && officeEndTime) {
-            requiredHours = calculateWorkingHours(officeStartTime, officeEndTime, existingAttendance.date);
+        if (officeStartTime && officeEndtime) {
+            requiredHours = calculateWorkingHours(officeStartTime, officeEndtime, existingAttendance.date);
         }
 
         let fineHours = 0;
@@ -773,6 +783,27 @@ const getAllStartBreakRecord = async (req, res, next) => {
     }
 };
 
+// get  all end break record
+const getAllEndBreakRecord = async (req, res, next) => {
+    try {
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({
+                message: admin.message
+            });
+        }
+        const { page, limit } = req.query;
+        const breakRecord = await pagination(prisma.attendanceBreakRecord, {
+            page, limit,
+            where: {
+                adminId: admin.user.adminDetails.id
+            }
+        });
+        res.status(200).json({ message: "Break record fetched successfully", data: breakRecord });
+    } catch (error) {
+        next(error);
+    }
+};
 const createBulkAttendance = async (req, res, next) => {
     try {
         const admin = await checkAdmin(req.userId, "ADMIN", res);
@@ -781,7 +812,7 @@ const createBulkAttendance = async (req, res, next) => {
         }
 
         const attendances = req.body;
-        const validAttendances = []
+        const validAttendances = [];
         const errors = [];
         const createdRecords = [];
 
@@ -831,7 +862,6 @@ const createBulkAttendance = async (req, res, next) => {
                 effectiveStatus = "WEEK_OFF";
             }
 
-
             // Create attendance record manually
             const attendance = await prisma.attendanceStaff.create({
                 data: {
@@ -865,47 +895,14 @@ const createBulkAttendance = async (req, res, next) => {
             createdRecords,
             errors
         });
-    } catch (error) {
-        next(error);
-    }
-}
 
-// get  all end break record
-const getAllEndBreakRecord = async (req, res, next) => {
-    try {
-        const admin = await checkAdmin(req.userId, "ADMIN", res);
-        if (admin.error) {
-            return res.status(400).json({
-                message: admin.message
-            });
-        }
-        const { page, limit } = req.query;
-        const breakRecord = await pagination(prisma.attendanceBreakRecord, {
-            page, limit,
-            where: {
-                adminId: admin.user.adminDetails.id
-            }
-        });
-        res.status(200).json({ message: "Break record fetched successfully", data: breakRecord });
     } catch (error) {
         next(error);
     }
 };
-
-
 
 
 export {
-    getAllAttendance,
-    createAttendance,
-    updateAttendanceEndTime,
-    getAttendanceByStaffId,
-    getAttendanceByMonth,
-    startAttendanceBreak,
-    endAttendanceBreak,
-    halfDayAttendance,
-    getAllAttendanceByDate,
-    getAllStartBreakRecord,
-    getAllEndBreakRecord,
-    createBulkAttendance,
-};
+    createAttendance, getAllAttendance, getAttendanceByStaffId, updateAttendanceEndTime, startAttendanceBreak,
+    endAttendanceBreak, getAttendanceByMonth, halfDayAttendance, getAllAttendanceByDate, getAllStartBreakRecord, getAllEndBreakRecord
+}
