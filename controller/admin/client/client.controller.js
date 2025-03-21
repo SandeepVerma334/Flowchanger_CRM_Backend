@@ -95,7 +95,7 @@ const updateClient = async (req, res, next) => {
             return res.status(400).json({ message: admin.message });
         }
         const id = req.params.id;
-        const validatedData = clientSchema.optional().parse(req.body);
+        const validatedData = clientSchema.partial().parse(req.body);
         const { email, password, name, phoneNumber, ...restValidation } = validatedData;
 
         const client = await prisma.user.findUnique({ where: { id, adminId: req.userId } });

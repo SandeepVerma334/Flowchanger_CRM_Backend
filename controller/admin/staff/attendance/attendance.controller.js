@@ -818,7 +818,7 @@ const createBulkAttendance = async (req, res, next) => {
             }
 
             const existingAttendance = await prisma.attendanceStaff.findFirst({
-                where: { staffId, date }
+                where: { staffId, date  }
             });
 
             if (existingAttendance) {
