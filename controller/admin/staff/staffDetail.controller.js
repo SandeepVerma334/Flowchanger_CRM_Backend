@@ -295,7 +295,7 @@ const degreeCertificate = req.files?.degreeCertificate?.[0]?.path || null;
 
 
 // Delete Staff by ID
-const deleteStaff = async (req, res) => {
+const deleteStaff = async (req, res, next) => {
   const { id } = req.params; // 'id' represents the user's id
   try {
     const admin = await checkAdmin(req.userId, "ADMIN", res);
@@ -327,16 +327,7 @@ const deleteStaff = async (req, res) => {
 
     res.status(200).json({ message: "Staff member deleted successfully" });
   } catch (error) {
-    console.error("Error deleting staff:", error);
-
-    if (error.code === "P2025") {
-      return res.status(404).json({ error: "Staff not found" });
-    }
-
-    res.status(500).json({
-      error: "Failed to delete staff member",
-      details: error.message,
-    });
+    next(error);
   }
 };
 
