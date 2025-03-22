@@ -223,6 +223,10 @@ const updateStaff = async (req, res, next) => {
       return res.status(404).json({ message: "Staff not found!" });
     }
 
+const offerLetter = req.files?.offerLetter?.[0]?.path || null;
+const birthCertificate = req.files?.birthCertificate?.[0]?.path || null;
+const guarantorForm = req.files?.guarantorForm?.[0]?.path || null;
+const degreeCertificate = req.files?.degreeCertificate?.[0]?.path || null;
     // Update staff data
     const updatedStaff = await prisma.user.update({
       where: { id: id },
@@ -261,10 +265,10 @@ const updateStaff = async (req, res, next) => {
                 connect: { id: validation.roleId },
               },
             }),
-            offerLetter: req.files.offerLetter[0].path ? req.files.offerLetter[0].path : null,
-            birthCertificate: req.files.birthCertificate[0].path ? req.files.birthCertificate[0].path : null,
-            guarantorForm: req.files.guarantorForm[0].path ? req.files.guarantorForm[0].path : null,
-            degreeCertificate: req.files.degreeCertificate[0].path ? req.files.degreeCertificate[0].path : null,
+            offerLetter: offerLetter,
+            birthCertificate: birthCertificate,
+            guarantorForm: guarantorForm,
+            degreeCertificate: degreeCertificate,
           },
         },
       },
