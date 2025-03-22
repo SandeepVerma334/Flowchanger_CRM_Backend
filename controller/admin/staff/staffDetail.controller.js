@@ -340,8 +340,9 @@ const deleteStaff = async (req, res) => {
   }
 };
 
-const searchStaff = async (req, res) => {
-  const { search } = req.query;
+const searchStaff = async (req, res, next) => {
+
+  const { search, page, limit } = req.query;
 
   try {
     const admin = await checkAdmin(req.userId, "ADMIN", res);
@@ -350,34 +351,39 @@ const searchStaff = async (req, res) => {
         message: admin.message
       });
     }
-    const staff = await prisma.user.findMany({
-      where: {
-        role: "STAFF",
-        adminId: req.userId,
-        OR: [
-          { firstName: { contains: search, mode: "insensitive" } },
-          { email: { contains: search, mode: "insensitive" } },
-          { mobile: { contains: search, mode: "insensitive" } },
-        ],
-      },
-      include: {
-        StaffDetails: {
-          include: {
-            Role: true,
-            Department: true,
-            Branch: true,
-          },
+    const where = {
+      role: "STAFF",
+      adminId: req.userId,
+      OR: [
+        { firstName: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { mobile: { contains: search, mode: "insensitive" } },
+      ],
+    };
+    const include = {
+      StaffDetails: {
+        include: {
+          Role: true,
+          Department: true,
+          Branch: true,
         },
       },
-    });
+    };
 
-    res.status(200).json(staff);
+    const allStaff = await pagination(prisma.user, {
+      page,
+      limit,
+      where,
+      include,
+    })
+    res.status(200).json({
+      message: "Staff search successfully",
+      ...allStaff,
+    });
   } catch (error) {
-    console.error("Error searching staff:", error);
-    res.status(500).json({ error: "Failed to search staff" });
+    next(error)
   }
 };
-
 const bulkCreateStaff = async (req, res, next) => {
   try {
     const admin = await checkAdmin(req.userId, "ADMIN", res);
