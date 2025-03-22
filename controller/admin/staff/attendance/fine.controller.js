@@ -3,7 +3,7 @@ import { FineSchema } from "../../../../utils/validation.js";
 import checkAdmin from "../../../../utils/adminChecks.js";
 import prisma from "../../../../prisma/prisma.js";
 import { pagination } from "../../../../utils/pagination.js";
-import { sendFineToStaff,sendFineUpdateToStaff } from "../../../../utils/emailService.js";
+import { sendFineToStaff, sendFineUpdateToStaff } from "../../../../utils/emailService.js";
 
 const addFineData = async (req, res, next) => {
     try {
@@ -24,7 +24,8 @@ const addFineData = async (req, res, next) => {
             earlyOutFineHoursTime,
             earlyOutFineAmount,
             earlyOutAmount,
-            totalAmount
+            totalAmount,
+            applyFine
         } = req.body;
 
         // Validate input data using Zod schema
@@ -48,8 +49,8 @@ const addFineData = async (req, res, next) => {
         }
 
         const existingStaff = await prisma.staffDetails.findFirst({
-            where: { 
-                id: staffId, 
+            where: {
+                id: staffId,
                 adminId: admin.user.adminDetails.id,
             },
             include: {
@@ -155,6 +156,7 @@ const addFineData = async (req, res, next) => {
             const fine = await prisma.fine.update({
                 where: { id: existingFine.id },
                 data: {
+                    staffId: existingAttendance.staffId,
                     lateEntryFineHoursTime: formattedLateEntry,
                     lateEntryFineAmount,
                     lateEntryAmount,
@@ -167,12 +169,13 @@ const addFineData = async (req, res, next) => {
                     totalAmount: calculatedTotalFine,
                     salaryDetailId: salaryDetailsData.id,
                     adminId: admin.user.adminDetails.id,
+                    applyFine: applyFine
                 },
             });
             const checkSendSMStoStaffisTrue = await prisma.fine.findFirst({
-                where: { 
-                    attendanceStaffId: req.body.attendanceStaffId, 
-                    adminId: admin.user.adminDetails.id,           
+                where: {
+                    attendanceStaffId: req.body.attendanceStaffId,
+                    adminId: admin.user.adminDetails.id,
                 },
                 select: { sendSMStoStaff: true }
             });
@@ -200,13 +203,14 @@ const addFineData = async (req, res, next) => {
                 totalAmount: calculatedTotalFine,
                 salaryDetailId: salaryDetailsData.id,
                 adminId: admin.user.adminDetails.id,
+                applyFine: applyFine
             },
         });
-        
+
         const checkSendSMStoStaffisTrue = await prisma.fine.findFirst({
-            where: { 
-                attendanceStaffId: req.body.attendanceStaffId, 
-                adminId: admin.user.adminDetails.id,           
+            where: {
+                attendanceStaffId: req.body.attendanceStaffId,
+                adminId: admin.user.adminDetails.id,
             },
             select: { sendSMStoStaff: true }
         });

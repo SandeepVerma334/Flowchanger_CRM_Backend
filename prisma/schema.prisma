@@ -496,7 +496,7 @@ model AdminDetails {
   timeZone                    String?
   dateFormat                  String?
   weekFormat                  String?
-  user                        User                          @relation(fields: [userId], references: [id])
+  user                        User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
   Subscription                Subscription[]
   packageId                   String? // Reference to Package model
   package                     Package?                      @relation(fields: [packageId], references: [id], onDelete: SetNull)
@@ -518,9 +518,11 @@ model AdminDetails {
   StaffEducationQualification StaffEducationQualification[]
   AttendanceStaff             AttendanceStaff[]
 
-  officeWorkinghours String  @default("8")
+  officeWorkinghours String    @default("0")
   officeStartTime    String?
   officeEndtime      String?
+  createdAt          DateTime? @default(now())
+  updatedAt          DateTime? @updatedAt
 }
 
 model BankDetails {
@@ -848,6 +850,8 @@ model Fine {
   SalaryDetail             SalaryDetail?    @relation(fields: [salaryDetailId], references: [id])
   salaryDetailId           String?
   adminId                  String
+  date                     String?
+  applyFine                Boolean?         @default(false)
 
   @@unique([staffId, createdAt]) // Ensure one fine per staff per day
 }
@@ -868,8 +872,9 @@ model Overtime {
   SalaryDetail               SalaryDetail?    @relation(fields: [salaryDetailId], references: [id])
   salaryDetailId             String?
   adminId                    String
-
-  createdAt DateTime @default(now())
+  date                       String?
+  createdAt                  DateTime         @default(now())
+  applyFine                  Boolean?         @default(false)
 
   @@unique([staffId, createdAt]) // Ensure one fine per staff per day
 }

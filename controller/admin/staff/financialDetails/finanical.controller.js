@@ -8,11 +8,9 @@ const createFinancialDetails = async (req, res, next) => {
     try {
         // Ensure checkAdmin is awaited
         const admin = await checkAdmin(req.userId, "ADMIN", res);
-        // console.log("llll " , admin)
         if (admin.error) {
             return res.status(400).json({ message: admin.message });
         }
-
         const validationData = StaffFinancialDetailsSchema.parse(req.body);
 
         // Check if bank account number already exists
@@ -37,7 +35,7 @@ const createFinancialDetails = async (req, res, next) => {
         const financialDetails = await prisma.financialDetails.create({
             data: {
                 ...validationData,
-                adminId: req.userId
+                adminId:  req.userId // Ensure the correct admin ID is used
             },
             include: {
                 staffDetails: true
@@ -54,7 +52,6 @@ const createFinancialDetails = async (req, res, next) => {
         next(error);
     }
 };
-
 
 // get all Financial details
 

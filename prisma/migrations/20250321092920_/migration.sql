@@ -81,12 +81,13 @@ CREATE TABLE "AttendanceStaff" (
     "date" TEXT,
     "startTime" TEXT,
     "endTime" TEXT,
-    "status" "AttendanceStatus" NOT NULL DEFAULT 'ABSENT',
+    "status" "AttendanceStatus" NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "staffId" TEXT,
     "adminId" TEXT,
     "salaryDetailId" TEXT,
+    "officeWorkingHours" TEXT,
 
     CONSTRAINT "AttendanceStaff_pkey" PRIMARY KEY ("id")
 );
@@ -464,6 +465,11 @@ CREATE TABLE "AdminDetails" (
     "services" TEXT[],
     "companySize" TEXT,
     "role" TEXT,
+    "officeWorkinghours" TEXT NOT NULL DEFAULT '8',
+    "officeStartTime" TEXT,
+    "officeEndtime" TEXT,
+    "createdAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3),
 
     CONSTRAINT "AdminDetails_pkey" PRIMARY KEY ("id")
 );
@@ -523,7 +529,7 @@ CREATE TABLE "Project" (
     "updatedAt" TIMESTAMP(3),
     "contactNotifications" TEXT[],
     "visibleTabs" TEXT[],
-    "adminId" TEXT NOT NULL,
+    "adminId" TEXT,
 
     CONSTRAINT "Project_pkey" PRIMARY KEY ("id")
 );
@@ -749,6 +755,7 @@ CREATE TABLE "Fine" (
     "attendanceStaffId" TEXT,
     "salaryDetailId" TEXT,
     "adminId" TEXT NOT NULL,
+    "date" TEXT,
 
     CONSTRAINT "Fine_pkey" PRIMARY KEY ("id")
 );
@@ -767,6 +774,7 @@ CREATE TABLE "Overtime" (
     "attendanceStaffId" TEXT,
     "salaryDetailId" TEXT,
     "adminId" TEXT NOT NULL,
+    "date" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Overtime_pkey" PRIMARY KEY ("id")
@@ -1031,7 +1039,7 @@ ALTER TABLE "AIPermissions" ADD CONSTRAINT "AIPermissions_permissionsId_fkey" FO
 ALTER TABLE "SuperAdminDetails" ADD CONSTRAINT "SuperAdminDetails_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "AdminDetails" ADD CONSTRAINT "AdminDetails_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "AdminDetails" ADD CONSTRAINT "AdminDetails_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "AdminDetails" ADD CONSTRAINT "AdminDetails_packageId_fkey" FOREIGN KEY ("packageId") REFERENCES "Package"("id") ON DELETE SET NULL ON UPDATE CASCADE;

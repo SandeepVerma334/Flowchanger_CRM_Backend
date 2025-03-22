@@ -1,13 +1,14 @@
 import express from "express";
 import { authorizationMiddleware } from "../../../middleware/auth.js";
-import { createAttendance, startAttendanceBreak, endAttendanceBreak, getAllAttendance, getAttendanceByStaffId, updateAttendanceEndTime, getAttendanceByMonth, halfDayAttendance, getAllAttendanceByDate, getAllEndBreakRecord, getAllStartBreakRecord } from "../../../controller/admin/staff/attendance/attendance.controller.js";
+import {  startAttendanceBreak, endAttendanceBreak, getAllAttendance, getAttendanceByStaffId, createAttendance, getAttendanceByMonth, halfDayAttendance, getAllAttendanceByDate, getAllEndBreakRecord, getAllStartBreakRecord } from "../../../controller/admin/staff/attendance/attendance.controller.js";
+// import { createAttendance, startAttendanceBreak, endAttendanceBreak, getAllAttendance, getAttendanceByStaffId, updateAttendanceEndTime, getAttendanceByMonth, halfDayAttendance, getAllAttendanceByDate, createBulkAttendance } from "../../../controller/admin/staff/attendance/attendance.controller.js";
 import { uploadSingle } from "../../../middleware/multer.middleware.js";
 const attendanceRouter = express.Router();
 
 attendanceRouter.post("/create", authorizationMiddleware, createAttendance);
+attendanceRouter.get("/single-attendance/:staffId", authorizationMiddleware, getAttendanceByStaffId);
 attendanceRouter.get("/all-attendance", authorizationMiddleware, getAllAttendance);
-attendanceRouter.get("/single-attendance/:staffId",authorizationMiddleware, getAttendanceByStaffId);
-attendanceRouter.put("/end-attendance-time/:id", authorizationMiddleware, updateAttendanceEndTime);
+// attendanceRouter.put("/end-attendance-time", authorizationMiddleware, updateAttendanceEndTime);
 attendanceRouter.get("/attendance-getBy-month/:staffId", authorizationMiddleware, getAttendanceByMonth);
 attendanceRouter.get("/all-attendance-by-date", authorizationMiddleware, getAllAttendanceByDate);
 // attendanceRouter.post('/attendance-create-bulk/:staffId', authorizationMiddleware, createBulkAttendance);

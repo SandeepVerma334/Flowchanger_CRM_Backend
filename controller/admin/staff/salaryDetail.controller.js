@@ -461,5 +461,115 @@ const bulkSalaryCreateOrUpdate = async (req, res, next) => {
     }
 };
 
+const createORUpdateSalary = async (req, res, next) => {
+    try {
+        const admin = await checkAdmin(req.userId, "ADMIN");
+        if (admin.error) return res.status(403).json({ error: admin.message });
+        const {
+            effectiveDate,
+            salaryType,
+            ctcAmount,
+            staffId,
+            employerPf,
+            employerEsi,
+            employerLwf,
+            employeePf,
+            employeeEsi,
+            professionalTax,
+            employeeLwf,
+            payrollFinalized,
+            finalizedDate,
+            finalSalary,
+            tds,
+            earnings = [],
+            deductions = [],
+            employerContributions = [],
+            employeeContributions = []
+        } = req.body;
 
-export { createSalary, updateSalary, deleteSalary, getSalaryForAdmin, getSalaryForStaff, getSalaryForSingleStaff, bulkSalaryCreateOrUpdate }
+        // Validate request body
+        const validationData = SalarySchema.partial().parse(req.body);
+
+        // Check if staff exists
+        const findStaff = await prisma.staffDetails.findUnique({
+            where: { id: staffId, adminId: admin.user.adminDetails.id },
+            include: { SalaryDetails: true }
+        });
+
+
+        if (!findStaff) return res.status(404).json({ message: "Staff not found" });
+
+        let salary;
+        let id = null;
+
+        // Find existing salary by effectiveDate
+        const findSalary = await prisma.salaryDetail.findFirst({
+            where: { staffId: staffId, effectiveDate }
+        });
+
+        if (findSalary) {
+            id = findSalary.id;
+
+            salary = await prisma.$transaction(async (prisma) => {
+                // Delete old salary details before updating
+                await prisma.earnings.deleteMany({ where: { salaryDetailsId: id } });
+                await prisma.deductions.deleteMany({ where: { salaryDetailsId: id } });
+                await prisma.employerContribution.deleteMany({ where: { salaryDetailsId: id } });
+                await prisma.employeeContribution.deleteMany({ where: { salaryDetailsId: id } });
+
+                return await prisma.salaryDetail.update({
+                    where: { id },
+                    data: {
+                        effectiveDate: new Date(new Date(effectiveDate).setDate(15)),
+                        salaryType,
+                        ctcAmount,
+                        employerPf,
+                        employerEsi,
+                        employerLwf,
+                        employeePf,
+                        employeeEsi,
+                        professionalTax,
+                        employeeLwf,
+                        earnings: { create: earnings.map(e => ({ ...e, staffId })) },
+                        deductions: deductions.length > 0 ? { create: deductions.map(d => ({ ...d, staffId })) } : undefined,
+                        employerContribution: employerContributions.length > 0 ? { create: employerContributions.map(ec => ({ ...ec, staffId })) } : undefined,
+                        employeeContribution: employeeContributions.length > 0 ? { create: employeeContributions.map(ec => ({ ...ec, staffId })) } : undefined
+                    },
+                    include: { earnings: true, deductions: true, employerContribution: true, employeeContribution: true }
+                });
+            });
+        } else {
+            // Creating new salary
+            salary = await prisma.$transaction(async (prisma) => {
+                return await prisma.salaryDetail.create({
+                    data: {
+                        effectiveDate: new Date(new Date(effectiveDate).setDate(15)),
+                        salaryType,
+                        ctcAmount,
+                        employerPf,
+                        employerEsi,
+                        employerLwf,
+                        employeePf,
+                        employeeEsi,
+                        professionalTax,
+                        employeeLwf,
+                        adminId: req.userId,
+                        Staff: { connect: { id: staffId } },
+                        earnings: { create: earnings.map(e => ({ ...e, staffId })) },
+                        deductions: deductions.length > 0 ? { create: deductions.map(d => ({ ...d, staffId })) } : undefined,
+                        employerContribution: employerContributions.length > 0 ? { create: employerContributions.map(ec => ({ ...ec, staffId })) } : undefined,
+                        employeeContribution: employeeContributions.length > 0 ? { create: employeeContributions.map(ec => ({ ...ec, staffId })) } : undefined
+                    },
+                    include: { earnings: true, deductions: true, employerContribution: true, employeeContribution: true }
+                });
+            });
+        }
+
+        res.status(200).json({ message: id ? "Salary updated successfully" : "Salary created successfully", data: salary });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+export { createSalary,createORUpdateSalary, updateSalary, deleteSalary, getSalaryForAdmin, getSalaryForStaff, getSalaryForSingleStaff, bulkSalaryCreateOrUpdate }

@@ -1,8 +1,8 @@
 import { staffDetailSchema } from "../../../utils/validation.js";
 import checkAdmin from "../../../utils/adminChecks.js";
+import { pagination } from "../../../utils/pagination.js";
 import prisma from "../../../prisma/prisma.js";
 import jwt from "jsonwebtoken";
-import { pagination } from "../../../utils/pagination.js";
 import { v4 as uuidv4 } from "uuid";
 
 // create staff
@@ -24,6 +24,7 @@ const createStaff = async (req, res, next) => {
     const branchExists = await prisma.branch.findFirst({
       where: { id: branchId, adminId: req.userId },
     });
+    console.log("jsdlkflkfd ", req.userId);
     console.log(branchExists);
     const departmentExists = await prisma.department.findFirst({
       where: { id: departmentId, adminId: req.userId },
@@ -55,7 +56,6 @@ const createStaff = async (req, res, next) => {
     }
 
     const admin = await checkAdmin(req.userId);
-
 
     const uniqueEmployeeId = `FLOW#-${new Date().getTime()}-${uuidv4().replace(/-/g, "").substring(0, 5)}`;
     const staffData = await prisma.user.create({
@@ -106,7 +106,10 @@ const createStaff = async (req, res, next) => {
         }
       },
       include: {
-        StaffDetails: true
+        StaffDetails: true,
+        // Role: true,
+        // Department: true,
+        // Branch: true,
       }
     });
     console.log(req.file)
@@ -131,6 +134,7 @@ const getAllStaff = async (req, res, next) => {
       page, limit,
       where: {
         adminId: req.userId,
+        role: "STAFF"
       },
       include: {
         StaffDetails: {
@@ -219,10 +223,12 @@ const updateStaff = async (req, res, next) => {
     if (!existingStaff) {
       return res.status(404).json({ message: "Staff not found!" });
     }
-
-    // console.log(validation.data)
-
+    console.log(req.files)
     // Update staff data
+    const offerLetter = req.files?.offerLetter?.[0]?.path || null;
+    const birthCertificate = req.files?.birthCertificate?.[0]?.path || null;
+    const guarantorForm = req.files?.guarantorForm?.[0]?.path || null;
+    const degreeCertificate = req.files?.degreeCertificate?.[0]?.path || null;
     const updatedStaff = await prisma.user.update({
       where: { id: id },
       data: {
@@ -234,6 +240,7 @@ const updateStaff = async (req, res, next) => {
         // profileImage: req.file.path,
         email: validation.data.officialMail,
         otp: validation.data.otp,
+
         StaffDetails: {
           update: {
             cityOfresidence: validation.data.cityOfresidence,
@@ -241,28 +248,32 @@ const updateStaff = async (req, res, next) => {
             jobTitle: validation.data.jobTitle,
             gender: validation.data.gender,
             dateOfJoining: new Date(),
-            dateOfBirth: validation.data.dateOfBirth,
-            address: validation.data.address,
-            maritalStatus: validation.data.maritalStatus,
-            ...(validation.data.branchId && {
+            dateOfBirth: validation.dateOfBirth,
+            address: validation.address,
+            maritalStatus: validation.maritalStatus,
+            ...(validation.branchId && {
               Branch: {
-                connect: { id: validation.data.branchId },
+                connect: { id: validation.branchId },
               },
             }),
-            ...(validation.data.departmentId && {
+            ...(validation.departmentId && {
               Department: {
-                connect: { id: validation.data.departmentId },
+                connect: { id: validation.departmentId },
               }
             }),
-            ...(validation.data.roleId && {
+            ...(validation.roleId && {
               Role: {
-                connect: { id: validation.data.roleId },
+                connect: { id: validation.roleId },
               },
             }),
-            offerLetter: req.files.offerLetter[0].path,
-            birthCertificate: req.files.birthCertificate[0].path,
-            guarantorForm: req.files.guarantorForm[0].path,
-            degreeCertificate: req.files.degreeCertificate[0].path,
+            // offerLetter: req.files.offerLetter[0].path ? req.files.offerLetter[0].path : null,
+            // birthCertificate: req.files.birthCertificate[0].path ? req.files.birthCertificate[0].path : null,
+            // guarantorForm: req.files.guarantorForm[0].path ? req.files.guarantorForm[0].path : null,
+            // degreeCertificate: req.files.degreeCertificate[0].path ? req.files.degreeCertificate[0].path : null,
+            offerLetter: offerLetter,
+            birthCertificate: birthCertificate,
+            guarantorForm: guarantorForm,
+            degreeCertificate: degreeCertificate,
           },
         },
       },
@@ -286,6 +297,7 @@ const updateStaff = async (req, res, next) => {
     next(error);
   }
 };
+
 
 // Delete Staff by ID
 const deleteStaff = async (req, res) => {
@@ -741,7 +753,7 @@ const staffLogin = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    const user = await prisma.user.findFirst({
+    const user = await prisma.user.findUnique({
       where: { email: email }
     });
     if (!user) {

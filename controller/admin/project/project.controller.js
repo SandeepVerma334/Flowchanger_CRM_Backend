@@ -15,11 +15,27 @@ const createProject = async (req, res, next) => {
         const { members, customer, permissions = [] } = req.body; // Default permissions to empty array
         const validatedData = projectSchema.parse(req.body);
 
+
         // Validate staff members
         const staffMembers = await prisma.staffDetails.findMany({
             where: { id: { in: members }, adminId: admin.user.adminDetails.id },
         });
-
+        if (staffMembers.length === 0) {
+            return res.status(400).json({
+                status: false,
+                message: "Staff Id are not valid for this admin id",
+            });
+        }
+        // Validate customer members
+        const customerMembers = await prisma.clientDetails.findMany({
+            where: { id: { in: customer }, adminId: admin.user.adminDetails.id },
+        });
+        //     if(customerMembers.length === 0) {
+        //         return res.status(400).json({    
+        //             status: false,
+        //             message: "Client Id are not valid for this admin id",
+        //     })
+        // }
         // Validate staff members emails
         const staffMembersEmails = await prisma.staffDetails.findMany({
             where: { id: { in: members }, adminId: admin.user.adminDetails.id },
@@ -29,7 +45,16 @@ const createProject = async (req, res, next) => {
                 }
             }
         });
-
+        // clientDetailsEmail get 
+        const clientDetailsEmail = await prisma.clientDetails.findMany({
+            where: { id: { in: customer }, adminId: admin.user.adminDetails.id },
+            include: {
+                user: {
+                    select: { email: true }
+                }
+            }
+        });
+        // console.log("clientDetailsEmail " , clientDetailsEmail);
         const invalidMembers = staffMembers.filter(staff => staff.adminId !== admin.user.adminDetails.id);
         if (invalidMembers.length > 0) {
             return res.status(400).json({
@@ -39,23 +64,19 @@ const createProject = async (req, res, next) => {
             });
         }
 
+        // Extract emails from staffMembersEmails
+        const staffEmails = staffMembersEmails.map(staff => staff.User?.email).filter(email => email);
+        const clientEmails = clientDetailsEmail.map(client => client.user?.email).filter(email => email);
+        const allEmails = [...staffEmails, ...clientEmails];
+        const uniqueEmails = [...new Set(allEmails)];
+
         let customerClients = [];
         let customerEmails = [];
         if (customer && Array.isArray(customer) && customer.length > 0) {
             customerClients = await prisma.clientDetails.findMany({
                 where: { id: { in: customer }, adminId: req.userId },
             });
-
-            // Fetch emails of customers
-            customerEmails = customerClients.map(client => client.email).filter(email => email);
         }
-
-        // Combine staff emails and customer emails
-        const allEmails = [
-            ...staffMembersEmails.map(staff => staff.User?.email).filter(email => email),
-            ...customerEmails
-        ];
-
         // Prepare project permissions
         const projectPermissions = Array.isArray(permissions) ? permissions.map(permission => ({
             allowCustomerToViewTasks: permission.allowCustomerToViewTasks ?? false,
@@ -92,6 +113,7 @@ const createProject = async (req, res, next) => {
                 visibleTabs: validatedData.visibleTabs,
                 members: { connect: members.map(id => ({ id })) },
                 ...(customer && customer.length > 0 ? { customer: { connect: customer.map(id => ({ id })) } } : {}),
+                // customer: { connect: customer.map(id => ({ id })) },
                 ProjectPermissions: {
                     create: projectPermissions
                 }
@@ -99,6 +121,7 @@ const createProject = async (req, res, next) => {
             include: {
                 members: true,
                 ProjectPermissions: true,
+                customer: true
             }
         });
 
@@ -110,13 +133,8 @@ const createProject = async (req, res, next) => {
 
         // If sendMail is true, send the email to all combined email addresses
         if (checkSendMailIsTrue?.sendMail) {
-            for (const email of allEmails) {
-                console.log(allEmails);
-                if (email) { // Make sure the email is valid
-                    await sendSelectedStaffCustomers(email);
-                    console.log(`Sent email to: ${email}`);
-                }
-            }
+            await sendSelectedStaffCustomers(uniqueEmails);
+            console.log(`Sent email to: ${uniqueEmails}`);
         }
 
         res.status(201).json({
@@ -143,10 +161,8 @@ const getAllProjects = async (req, res, next) => {
             });
         }
         const { page, limit } = req.query;
-
-        // Define where filter based on your use case (filter projects by id, status, etc.)
         const where = {
-            id: id, // Assuming you're filtering by project ID
+            id: id,
         };
 
         const projects = await prisma.project.findMany({
@@ -416,9 +432,7 @@ const updateProjectById = async (req, res, next) => {
                 }
             }
         });
-
         const staffEmails = users.map(user => user.User?.email).filter(email => email);
-
         // Fetch customer emails if provided
         let customerEmails = [];
         if (Array.isArray(customer) && customer.length > 0) {
@@ -554,6 +568,5 @@ const bulkDeleteProjectById = async (req, res, next) => {
         next(error);
     }
 };
-
 
 export { createProject, getAllProjects, getProjectById, deleteProjectById, searchProjectByName, updateProjectById, bulkDeleteProjectById };

@@ -73,7 +73,10 @@ const updateAdminProfile = async (req, res, next) => {
             services,
             companySize,
             role,
-            packageId
+            packageId,
+            officeStartTime,
+            officeEndtime,
+            officeWorkinghours
         } = req.body;
 
 
@@ -83,6 +86,7 @@ const updateAdminProfile = async (req, res, next) => {
                 adminDetails: true
             }
         });
+
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
@@ -98,6 +102,9 @@ const updateAdminProfile = async (req, res, next) => {
                     upsert: {
                         where: { userId: user.id },  // Use the adminDetailId to check existence
                         update: {
+                            officeStartTime,
+                            officeEndtime,
+                            officeWorkinghours,
                             companyName,
                             timeZone,
                             address,
@@ -120,6 +127,9 @@ const updateAdminProfile = async (req, res, next) => {
                             })
                         },
                         create: {
+                            officeStartTime,
+                            officeEndtime,
+                            officeWorkinghours,
                             companyName,
                             timeZone,
                             address,
@@ -304,9 +314,10 @@ const deleteUserById = async (req, res, next) => {
         if (!existUserId) {
             return res.status(404).json({ message: "User not found" });
         }
+        console.log(existUserId);
         const user = await prisma.user.delete({
             where: {
-                id: id
+                id: existUserId.id
             }
         });
         res.status(200).json({ message: "User deleted successfully", data: user });
@@ -345,7 +356,6 @@ const searchUsers = async (req, res, next) => {
         next(error);
     }
 };
-
 const adminPasswordResetLink = async (req, res, next) => {
     const { email, } = req.body;
 

@@ -41,8 +41,7 @@ const createEducationForStaff = async (req, res, next) => {
       },
       include: {
         staffDetails: true,
-        AdminDetails: true
-        // StaffEducationQualification: true
+        AdminDetails: true,
       },
     });
 
@@ -189,3 +188,4 @@ const updateStaffEducationById = async (req, res, next) => {
 
 
 export { createEducationForStaff, getAllStaffEducation, getStaffEducationById, deleteStaffEducationById, searchStaffEducation, updateStaffEducationById };
+// export { createEducationForStaff, getAllStaffEducation, getStaffEducationById, deleteStaffEducationById, searchStaffEducation };
