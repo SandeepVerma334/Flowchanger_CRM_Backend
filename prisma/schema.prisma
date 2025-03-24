@@ -126,6 +126,7 @@ model AttendanceBreakRecord {
   startBreakImage String?
   endBreakImage   String?
   adminId         String
+  applyBreak      Boolean?         @default(false)
   attendanceStaff AttendanceStaff? @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
   staffId         String?
   staffDetails    StaffDetails?    @relation(fields: [staffId], references: [id], onDelete: Cascade)
@@ -860,6 +861,8 @@ model Fine {
   SalaryDetail             SalaryDetail?    @relation(fields: [salaryDetailId], references: [id])
   salaryDetailId           String?
   adminId                  String
+  date                     String?
+  applyFine                Boolean?         @default(false)
 
   @@unique([staffId, createdAt]) // Ensure one fine per staff per day
 }
@@ -880,8 +883,8 @@ model Overtime {
   SalaryDetail               SalaryDetail?    @relation(fields: [salaryDetailId], references: [id])
   salaryDetailId             String?
   adminId                    String
-
-  createdAt DateTime @default(now())
-
+  date                       String?
+  applyOvertime              Boolean?         @default(false)
+  createdAt                  DateTime         @default(now())
   @@unique([staffId, createdAt]) // Ensure one fine per staff per day
 }

@@ -107,8 +107,11 @@ const getSpecificStaffPayroll = async (req, res, next) => {
         let totalWeekOff = 0;
         let totalFine = 0;
         let totalOverTime = 0;
+        let totalApplyFine = 0;
+        let totalApplyOverTime = 0;
         let totalBreakTime = 0;
         let totalBreakAmount = 0;
+        let totalApplyBreakAmount = 0;
 
         attendance = attendance.map(record => {
 
@@ -127,15 +130,21 @@ const getSpecificStaffPayroll = async (req, res, next) => {
 
             if (record.attendanceBreakRecord.length > 0) {
                 breakDuration = calculateBreakDuration(record.attendanceBreakRecord);
+                console.log(breakDuration)
                 totalBreakTime += breakDuration;
                 totalBreakAmount += breakDuration * (dailySalary / totalWorkingHours);
+                totalApplyBreakAmount += calculateBreakDuration(record.attendanceBreakRecord.filter((breakRecord) => breakRecord.applyBreak === true)) * (dailySalary / totalWorkingHours);
             }
+
+
 
             if (record.fine.length > 0) {
                 totalFine += record.fine.reduce((acc, fine) => acc + fine.totalAmount, 0);
+                totalApplyFine += record.fine.filter((overtime) => overtime.applyFine === true).reduce((acc, fine) => acc + fine.totalAmount, 0);
             }
             if (record.overTime.length > 0) {
                 totalOverTime += record.overTime.reduce((acc, overTime) => acc + overTime.totalAmount, 0);
+                totalApplyOverTime += record.overTime.filter((overtime) => overtime.applyOvertime === true).reduce((acc, overTime) => acc + overTime.totalAmount, 0);
             }
 
             return {
@@ -203,7 +212,7 @@ const getSpecificStaffPayroll = async (req, res, next) => {
             totalPresent,
             totalHalfDay,
             totalPaidLeave,
-            totalAbsent ,
+            totalAbsent,
             totalWeekOff,
             totalSalary,
             totalBreakTime,
@@ -211,11 +220,14 @@ const getSpecificStaffPayroll = async (req, res, next) => {
             totalPaidLeaveAmount: parseFloat(totalPaidLeaveAmount.toFixed(2)),
             totalHalfDayAmount: parseFloat(totalHalfDayAmount.toFixed(2)),
             totalBreakAmount: parseFloat(totalBreakAmount.toFixed(2)),
+            totalApplyBreakAmount: parseFloat(totalApplyBreakAmount.toFixed(2)),
             totalFine: parseFloat(totalFine.toFixed(2)),
+            totalApplyFine: parseFloat(totalApplyFine.toFixed(2)),
             totalOverTime: parseFloat(totalOverTime.toFixed(2)),
+            totalApplyOverTime: parseFloat(totalApplyOverTime.toFixed(2)), 
             perHourSalary: parseFloat((dailySalary / totalWorkingHours).toFixed(2)),
             dailySalary: parseFloat(dailySalary.toFixed(2)),
-            payableSalary: parseFloat((payableSalary - totalBreakAmount).toFixed(2)),
+            payableSalary: parseFloat((payableSalary - totalApplyFine + totalApplyOverTime - totalApplyBreakAmount).toFixed(2)),
         });
     } catch (error) {
         next(error);
@@ -303,7 +315,8 @@ const getMultipleStaffPayroll = async (req, res, next) => {
 
             if (staffJoiningYear > year || (staffJoiningYear == year && staffJoiningMonth > month)) {
                 return {
-                    staffId, name: User?.firstName + " " + User?.lastName || "N/A",
+                    name: User?.firstName + " " + User?.lastName || "N/A",
+                    staffId, 
                     bankName: BankDetails[0]?.bankName || "N/A",
                     employeeId,
                     message: "Staff joined after the selected month"
@@ -334,6 +347,7 @@ const getMultipleStaffPayroll = async (req, res, next) => {
                     name: User?.firstName + " " + User?.lastName || "N/A",
                     bankName: BankDetails[0]?.bankName || "N/A",
                     employeeId,
+                    staffId,
                     message: "Salary details not found"
                 };
             }
@@ -347,8 +361,11 @@ const getMultipleStaffPayroll = async (req, res, next) => {
             let totalWeekOff = 0;
             let totalFine = 0;
             let totalOverTime = 0;
+            let totalApplyFine = 0;
+            let totalApplyOverTime = 0;
             let totalBreakTime = 0;
             let totalBreakAmount = 0;
+            let totalApplyBreakAmount = 0;
 
             attendance = attendance.map(record => {
                 const startTime = new Date(`${record.date} ${record.startTime}`);
@@ -364,19 +381,24 @@ const getMultipleStaffPayroll = async (req, res, next) => {
                 if (record.status === "HALF_DAY") totalHalfDay += 1;
                 if (record.status === "PAIDLEAVE") totalPaidLeave += 1;
 
+
                 if (record.attendanceBreakRecord.length > 0) {
                     breakDuration = calculateBreakDuration(record.attendanceBreakRecord);
+                    console.log(breakDuration)
                     totalBreakTime += breakDuration;
                     totalBreakAmount += breakDuration * (dailySalary / totalWorkingHours);
+                    totalApplyBreakAmount += calculateBreakDuration(record.attendanceBreakRecord.filter((breakRecord) => breakRecord.applyBreak === true)) * (dailySalary / totalWorkingHours);
                 }
 
 
 
                 if (record.fine.length > 0) {
                     totalFine += record.fine.reduce((acc, fine) => acc + fine.totalAmount, 0);
+                    totalApplyFine += record.fine.filter((overtime) => overtime.applyFine === true).reduce((acc, fine) => acc + fine.totalAmount, 0);
                 }
                 if (record.overTime.length > 0) {
                     totalOverTime += record.overTime.reduce((acc, overTime) => acc + overTime.totalAmount, 0);
+                    totalApplyOverTime += record.overTime.filter((overtime) => overtime.applyOvertime === true).reduce((acc, overTime) => acc + overTime.totalAmount, 0);
                 }
 
                 return {
@@ -464,11 +486,14 @@ const getMultipleStaffPayroll = async (req, res, next) => {
                 totalPaidLeaveAmount: parseFloat(totalPaidLeaveAmount.toFixed(2)),
                 totalHalfDay: parseFloat(totalHalfDay.toFixed(2)),
                 totalBreakAmount: parseFloat(totalBreakAmount.toFixed(2)),
+                totalApplyBreakAmount: parseFloat(totalApplyBreakAmount.toFixed(2)),
                 totalFine: parseFloat(totalFine.toFixed(2)),
+                totalApplyFine: parseFloat(totalApplyFine.toFixed(2)),
                 totalOverTime: parseFloat(totalOverTime.toFixed(2)),
+                totalApplyOverTime: parseFloat(totalApplyOverTime.toFixed(2)),
                 perHourSalary: parseFloat((dailySalary / totalWorkingHours).toFixed(2)),
                 dailySalary: parseFloat(dailySalary.toFixed(2)),
-                payableSalary: parseFloat((payableSalary).toFixed(2)),
+                payableSalary: parseFloat((payableSalary - totalApplyFine + totalApplyOverTime - totalApplyBreakAmount).toFixed(2)),
             };
         }));
 

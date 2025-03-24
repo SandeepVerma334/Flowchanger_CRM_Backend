@@ -133,6 +133,7 @@ const getAllStaff = async (req, res, next) => {
       page, limit,
       where: {
         adminId: req.userId,
+        role: "STAFF"
       },
       include: {
         StaffDetails: {
@@ -222,6 +223,10 @@ const updateStaff = async (req, res, next) => {
       return res.status(404).json({ message: "Staff not found!" });
     }
 
+    const offerLetter = req.files?.offerLetter?.[0]?.path || null;
+    const birthCertificate = req.files?.birthCertificate?.[0]?.path || null;
+    const guarantorForm = req.files?.guarantorForm?.[0]?.path || null;
+    const degreeCertificate = req.files?.degreeCertificate?.[0]?.path || null;
     // Update staff data
     const updatedStaff = await prisma.user.update({
       where: { id: id },
@@ -260,10 +265,10 @@ const updateStaff = async (req, res, next) => {
                 connect: { id: validation.roleId },
               },
             }),
-            offerLetter: req.files.offerLetter[0].path ? req.files.offerLetter[0].path : null,
-            birthCertificate: req.files.birthCertificate[0].path ? req.files.birthCertificate[0].path : null,
-            guarantorForm: req.files.guarantorForm[0].path ? req.files.guarantorForm[0].path : null,
-            degreeCertificate: req.files.degreeCertificate[0].path ? req.files.degreeCertificate[0].path : null,
+            offerLetter: offerLetter,
+            birthCertificate: birthCertificate,
+            guarantorForm: guarantorForm,
+            degreeCertificate: degreeCertificate,
           },
         },
       },
@@ -290,7 +295,7 @@ const updateStaff = async (req, res, next) => {
 
 
 // Delete Staff by ID
-const deleteStaff = async (req, res) => {
+const deleteStaff = async (req, res, next) => {
   const { id } = req.params; // 'id' represents the user's id
   try {
     const admin = await checkAdmin(req.userId, "ADMIN", res);
@@ -322,21 +327,13 @@ const deleteStaff = async (req, res) => {
 
     res.status(200).json({ message: "Staff member deleted successfully" });
   } catch (error) {
-    console.error("Error deleting staff:", error);
-
-    if (error.code === "P2025") {
-      return res.status(404).json({ error: "Staff not found" });
-    }
-
-    res.status(500).json({
-      error: "Failed to delete staff member",
-      details: error.message,
-    });
+    next(error);
   }
 };
 
-const searchStaff = async (req, res) => {
-  const { search } = req.query;
+const searchStaff = async (req, res, next) => {
+
+  const { search, page, limit } = req.query;
 
   try {
     const admin = await checkAdmin(req.userId, "ADMIN", res);
@@ -345,34 +342,39 @@ const searchStaff = async (req, res) => {
         message: admin.message
       });
     }
-    const staff = await prisma.user.findMany({
-      where: {
-        role: "STAFF",
-        adminId: req.userId,
-        OR: [
-          { firstName: { contains: search, mode: "insensitive" } },
-          { email: { contains: search, mode: "insensitive" } },
-          { mobile: { contains: search, mode: "insensitive" } },
-        ],
-      },
-      include: {
-        StaffDetails: {
-          include: {
-            Role: true,
-            Department: true,
-            Branch: true,
-          },
+    const where = {
+      role: "STAFF",
+      adminId: req.userId,
+      OR: [
+        { firstName: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { mobile: { contains: search, mode: "insensitive" } },
+      ],
+    };
+    const include = {
+      StaffDetails: {
+        include: {
+          Role: true,
+          Department: true,
+          Branch: true,
         },
       },
-    });
+    };
 
-    res.status(200).json(staff);
+    const allStaff = await pagination(prisma.user, {
+      page,
+      limit,
+      where,
+      include,
+    })
+    res.status(200).json({
+      message: "Staff search successfully",
+      ...allStaff,
+    });
   } catch (error) {
-    console.error("Error searching staff:", error);
-    res.status(500).json({ error: "Failed to search staff" });
+    next(error)
   }
 };
-
 const bulkCreateStaff = async (req, res, next) => {
   try {
     const admin = await checkAdmin(req.userId, "ADMIN", res);
