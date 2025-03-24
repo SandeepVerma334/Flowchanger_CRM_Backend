@@ -367,7 +367,7 @@ const adminPasswordResetLink = async (req, res, next) => {
         }
 
         const adminDetails = await prisma.user.findFirst({
-            where: { email },
+            where: { email, role: "ADMIN" },
         });
 
         if (!adminDetails) {
@@ -401,7 +401,7 @@ const adminResetPassword = async (req, res, next) => {
             return res.status(400).json({ message: "Email and password are required." });
         }
         const adminDetails = await prisma.user.findFirst({
-            where: { email },
+            where: { email, role: "ADMIN" },
         });
 
         if (!adminDetails) {
@@ -411,7 +411,7 @@ const adminResetPassword = async (req, res, next) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         await prisma.user.update({
-            where: { email },
+            where: { id: adminDetails.id },
             data: {
                 password: hashedPassword,
             },
