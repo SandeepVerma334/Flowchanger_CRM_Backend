@@ -304,11 +304,13 @@ const createAttendance = async (req, res, next) => {
                                     id: attendanceEntry.id
                                 }
                             },
-                            SalaryDetail: {
-                                connect: {
-                                    id: salaryDetails.id
+                            ...(salaryDetails && {
+                                SalaryDetail: {
+                                    connect: {
+                                        id: salaryDetails.id
+                                    }
                                 }
-                            },
+                            }),
                             adminId: admin.user.adminDetails.id,
                             lateOutOvertimeHoursTime: formatHoursToTime(overtimeHours),
                             date: date,
@@ -732,26 +734,41 @@ const getAllAttendanceByDate = async (req, res, next) => {
         // Convert date to 'YYYY-MM-DD' string format if 'date' field is stored as a string
         const formattedDate = parsedDate.toISOString().split('T')[0]; // '2024-12-15'
 
-        const attendance = await pagination(prisma.attendanceStaff, {
+        const attendance = await pagination(prisma.user, {
             page, limit,
             where: {
-                adminId: admin.user.adminDetails.id,
-                date: {
-                    equals: formattedDate, // Compare using the string format 'YYYY-MM-DD'
-                },
+                adminId: req.userId,
+                role: "STAFF",
             },
             include: {
-                staffDetails: {
+                StaffDetails: {
                     include: {
-                        User: true,
+                        AttendanceStaff: {
+                            include: {
+                                fine: true,
+                                overTime: true,
+
+                            }
+                        },
                     },
                 },
-                attendanceBreakRecord: true,
-                fine: true
+                // attendanceBreakRecord: true,
+                // fine: true
             },
         });
-
-        res.status(200).json({ message: "Attendance fetched successfully", ...attendance });
+        console.log(formattedDate);
+        res.status(200).json({
+            message: "Attendance fetched successfully", data: attendance.data.map((staff) => ({
+                ...staff,
+                StaffDetails: {
+                    ...staff.StaffDetails,
+                    AttendanceStaff: staff.StaffDetails.AttendanceStaff.filter(
+                        (attendance) => attendance.date === formattedDate
+                    ),
+                },
+            }))
+            , totalData: attendance.totalData, totalPages: attendance.totalPages, currentPages: attendance.currentPage
+        });
     } catch (error) {
         next(error);
     }
