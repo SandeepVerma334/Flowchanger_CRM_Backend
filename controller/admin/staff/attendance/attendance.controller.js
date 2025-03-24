@@ -66,15 +66,18 @@ const createAttendance = async (req, res, next) => {
             return res.status(400).json({ message: admin.message });
         }
 
-        const { staffId, shift, date, startTime, endTime, status } = req.body;
+        let { staffId, shift, date, startTime, endTime, status } = req.body;
 
         let officeWorkingHours = admin.user.adminDetails.officeWorkinghours;
         const officeStartTime = admin.user.adminDetails.officeStartTime;
         const officeEndtime = admin.user.adminDetails.officeEndtime;
-
         if (officeStartTime && officeEndtime) {
             officeWorkingHours = calculateWorkedHours(officeStartTime, officeEndtime);
         }
+
+        console.log("Office Working Hours jjj:", officeWorkingHours);
+        console.log("Office Start Time kk :", officeStartTime);
+        console.log("Office End Time kljl k:", officeEndtime);
 
         // Fetch staff details including dateOfJoining
         const staff = await prisma.staffDetails.findFirst({
@@ -85,13 +88,14 @@ const createAttendance = async (req, res, next) => {
         if (!staff) {
             return res.status(404).json({ message: "Staff not found" });
         }
-
+        console.log(date)
+        // Convert date strings to Date objects for comparison
         const dateOfJoining = new Date(staff.dateOfJoining);
         const attendanceDate = new Date(date);
         const currentDate = new Date();
 
         dateOfJoining.setHours(0, 0, 0, 0);
-        attendanceDate.setHours(0, 0, 0, 0);
+        // attendanceDate.setHours(0, 0, 0, 0);
         currentDate.setHours(0, 0, 0, 0);
 
         if (attendanceDate < dateOfJoining) {
@@ -103,27 +107,35 @@ const createAttendance = async (req, res, next) => {
         }
 
         let attendanceStatus = status.trim().toUpperCase();
+
         if (!["ABSENT", "HALF_DAY", "PAID_LEAVE", "PERSENT"].includes(attendanceStatus)) {
             return res.status(400).json({ message: "Invalid status provided." });
         }
 
-        // If no startTime is provided, mark as ABSENT
-        if (!startTime) {
-            attendanceStatus = "ABSENT";
+        console.log(attendanceDate.getDay())
+        if (attendanceDate.getDay() == 0) {
+            attendanceStatus = "WEEK_OFF";            
+        } else {
+            attendanceStatus = status.trim();
+            if (!["ABSENT", "HALF_DAY", "PAID_LEAVE", "PERSENT"].includes(status)) {
+                return res.status(400).json({ message: "Invalid status provided." });
+            }
         }
 
+        console.log(attendanceStatus)
         let existingAttendance = await prisma.attendanceStaff.findFirst({
             where: { staffId: staffId, date: date }
         });
-
         let attendanceEntry;
 
         if (existingAttendance) {
             attendanceEntry = await prisma.attendanceStaff.update({
                 where: { id: existingAttendance.id },
-                data: { status: attendanceStatus,shift, startTime, endTime }
+                data: { status: attendanceStatus, startTime, endTime }
             });
-        } else {
+        }
+        else {
+
             attendanceEntry = await prisma.attendanceStaff.create({
                 data: {
                     adminId: admin.user.adminDetails.id,
@@ -137,93 +149,180 @@ const createAttendance = async (req, res, next) => {
             });
         }
 
-        if (attendanceEntry && attendanceStatus !== "PERSENT") {
-            await prisma.overtime.deleteMany({ where: { staffId: staffId, date: date } });
-            await prisma.fine.deleteMany({ where: { staffId: staffId, date: date } });
+
+console.log(attendanceEntry)
+        if (attendanceEntry && status !== "PERSENT") {
+            const findOvertimeEntry = await prisma.overtime.findFirst({
+                where: { staffId: staffId, date: date }
+            })
+            if (findOvertimeEntry) {
+                await prisma.overtime.delete({
+                    where: { id: findOvertimeEntry.id }
+                });
+            }
+            const findFineEntry = await prisma.fine.findFirst({
+                where: { staffId: staffId, date: date }
+            });
+            if (findFineEntry) {
+                await prisma.fine.delete({
+                    where: { id: findFineEntry.id }
+                });
+            }
+
+            console.log("Updated Attendance Entry:", attendanceEntry);
+        } else {
+            console.log("New Attendance Entry:", attendanceEntry);
         }
+        if (attendanceEntry && status === "PERSENT") {
+            // Proceed with Fine Calculation after creating or updating the attendance entry
 
-        if (attendanceEntry && attendanceStatus === "PERSENT") {
-            const workedHours = calculateWorkedHours(startTime === "" ? startTime : "00:00", endTime === "" ? endTime : "00:00");
-
+            const workedHours = calculateWorkedHours(startTime === "" ? "00:00" : startTime, endTime ? endTime : "00:00", date);;
             const salaryDetails = await prisma.salaryDetail.findFirst({
                 where: { staffId: staffId }
+
             });
 
-            if (salaryDetails) {
-                const monthDays = new Date(attendanceDate.getFullYear(), attendanceDate.getMonth() + 1, 0).getDate();
-                const ctcAmount = salaryDetails.ctcAmount;
-                const perDaySalary = ctcAmount / monthDays;
-                const perHourSalary = perDaySalary / officeWorkingHours;
+            const monthDays = new Date(attendanceDate.getFullYear(), attendanceDate.getMonth() + 1, 0).getDate();
+            const ctcAmount = salaryDetails.ctcAmount;
+            const perDaySalary = ctcAmount / monthDays;
+            const perHourSalary = perDaySalary / officeWorkingHours;
+            if (workedHours < officeWorkingHours) {
 
-                if (workedHours < officeWorkingHours) {
+                console.log("sldjfldsjfklsd");
+                if (salaryDetails) {
                     const missingHours = officeWorkingHours - workedHours;
                     const fineAmount = missingHours * perHourSalary;
 
-                    await prisma.overtime.deleteMany({ where: { staffId: staffId, date: date } });
+                    const findOvertime = await prisma.overtime.findFirst({
+                        where: { staffId: staffId, date: date }
+                    })
 
-                    let existingFine = await prisma.fine.findFirst({ where: { staffId: staffId, date } });
+                    if (findOvertime) {
+                        await prisma.overtime.delete({
+                            where: { id: findOvertime.id },
+                        })
+                    }
+                    console.log("missing  hours:", missingHours);
+                    console.log("worked hours", workedHours);
+
+                    // Check if fine entry already exists
+                    let existingFine = await prisma.fine.findFirst({
+                        where: { staffId: staffId, date }
+                    });
 
                     if (existingFine) {
+                        // Update fine entry
                         await prisma.fine.update({
                             where: { id: existingFine.id },
                             data: {
                                 lateEntryFineHoursTime: formatHoursToTime(missingHours),
                                 lateEntryAmount: parseFloat(fineAmount.toFixed(2)),
+                                date: date,
                                 totalAmount: parseFloat(fineAmount.toFixed(2)),
                             }
                         });
+                        console.log("Fine updated");
                     } else {
+                        // Create fine entry
                         await prisma.fine.create({
                             data: {
-                                staff: { connect: { id: staffId } },
-                                AttendanceStaff: { connect: { id: attendanceEntry.id } },
-                                SalaryDetail: { connect: { id: salaryDetails.id } },
+                                // staffId: staffId,
+                                // attendanceId: attendanceEntry.id,
+                                staff: {
+                                    connect: {
+                                        id: staffId
+                                    }
+                                },
+                                AttendanceStaff: {
+                                    connect: {
+                                        id: attendanceEntry.id
+                                    }
+                                },
+                                SalaryDetail: {
+                                    connect: {
+                                        id: salaryDetails.id
+                                    }
+                                },
                                 adminId: admin.user.adminDetails.id,
+                                // salaryId: salaryDetails.id,
                                 lateEntryFineHoursTime: formatHoursToTime(missingHours),
                                 lateEntryAmount: parseFloat(fineAmount.toFixed(2)),
                                 date: date,
                                 totalAmount: parseFloat(fineAmount.toFixed(2)),
                             }
                         });
-                    }
-                } else if (workedHours > officeWorkingHours) {
-                    await prisma.fine.deleteMany({ where: { staffId: staffId, date: date } });
-
-                    const overtimeHours = workedHours - officeWorkingHours;
-                    const totalOvertimeAmount = Number(perHourSalary) * Number(overtimeHours);
-
-                    let existingOvertime = await prisma.overtime.findFirst({ where: { staffId: staffId, date: date } });
-
-                    if (existingOvertime) {
-                        await prisma.overtime.update({
-                            where: { id: existingOvertime.id },
-                            data: {
-                                lateOutOvertimeHoursTime: formatHoursToTime(overtimeHours),
-                                date: date,
-                                totalAmount: parseFloat(totalOvertimeAmount.toFixed(2))
-                            }
-                        });
-                    } else {
-                        await prisma.overtime.create({
-                            data: {
-                                staff: { connect: { id: staffId } },
-                                AttendanceStaff: { connect: { id: attendanceEntry.id } },
-                                SalaryDetail: { connect: { id: salaryDetails.id } },
-                                adminId: admin.user.adminDetails.id,
-                                lateOutOvertimeHoursTime: formatHoursToTime(overtimeHours),
-                                date: date,
-                                totalAmount: parseFloat(totalOvertimeAmount.toFixed(2))
-                            }
-                        });
+                        console.log("Fine created");
                     }
                 }
-            } // If salaryDetails is null, skip the salary-based steps
-        }
+            }
+            else if (workedHours > officeWorkingHours) {
+                console.log("Office Working Hours:", officeWorkingHours);
+                console.log("Worked Hours:", workedHours);
+                const findFine = await prisma.fine.findFirst({
+                    where: {
+                        staffId: staffId,
+                        date: date
+                    }
+                })
 
+                if (findFine) {
+                    await prisma.fine.delete({
+                        where: {
+                            id: findFine.id
+                        }
+                    })
+                }
+                const overtimeHours = workedHours - officeWorkingHours;
+                console.log("Overtime Hours:", overtimeHours);
+                console.log("Per Hour Salary:", perHourSalary);
+                const totalOvertimeAmount = Number(perHourSalary) * Number(overtimeHours);
+                console.log("Total Overtime Amount:", totalOvertimeAmount);
+                let existingOvertime = await prisma.overtime.findFirst({ where: { staffId: staffId, date: date } });
+                if (existingOvertime) {
+                    await prisma.overtime.update({
+                        where: { id: existingOvertime.id },
+                        data: {
+                            lateOutOvertimeHoursTime: formatHoursToTime(overtimeHours),
+                            date: date,
+                            totalAmount: parseFloat(totalOvertimeAmount.toFixed(2))
+                        }
+                    });
+                } else {
+                    await prisma.overtime.create({
+                        data: {
+                            staff: {
+                                connect: {
+                                    id: staffId
+                                }
+                            },
+                            AttendanceStaff: {
+                                connect: {
+                                    id: attendanceEntry.id
+                                }
+                            },
+                            SalaryDetail: {
+                                connect: {
+                                    id: salaryDetails.id
+                                }
+                            },
+                            adminId: admin.user.adminDetails.id,
+                            lateOutOvertimeHoursTime: formatHoursToTime(overtimeHours),
+                            date: date,
+                            totalAmount: parseFloat(totalOvertimeAmount.toFixed(2))
+                        }
+                    });
+                }
+
+
+            }
+
+
+        }
         res.status(200).json({
             message: existingAttendance ? "Attendance updated successfully" : "Attendance created successfully",
             data: attendanceEntry
         });
+
 
     } catch (error) {
         next(error);
