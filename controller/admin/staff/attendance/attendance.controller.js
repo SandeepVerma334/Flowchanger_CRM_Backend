@@ -107,6 +107,11 @@ const createAttendance = async (req, res, next) => {
             return res.status(400).json({ message: "Invalid status provided." });
         }
 
+        // If no startTime is provided, mark as ABSENT
+        if (!startTime) {
+            attendanceStatus = "ABSENT";
+        }
+
         let existingAttendance = await prisma.attendanceStaff.findFirst({
             where: { staffId: staffId, date: date }
         });
@@ -116,7 +121,7 @@ const createAttendance = async (req, res, next) => {
         if (existingAttendance) {
             attendanceEntry = await prisma.attendanceStaff.update({
                 where: { id: existingAttendance.id },
-                data: { status: attendanceStatus, startTime, endTime }
+                data: { status: attendanceStatus,shift, startTime, endTime }
             });
         } else {
             attendanceEntry = await prisma.attendanceStaff.create({
@@ -132,13 +137,13 @@ const createAttendance = async (req, res, next) => {
             });
         }
 
-        if (attendanceEntry && status !== "PERSENT") {
+        if (attendanceEntry && attendanceStatus !== "PERSENT") {
             await prisma.overtime.deleteMany({ where: { staffId: staffId, date: date } });
             await prisma.fine.deleteMany({ where: { staffId: staffId, date: date } });
         }
 
-        if (attendanceEntry && status === "PERSENT") {
-            const workedHours = calculateWorkedHours(startTime, endTime === "" ? endTime : "00:00");
+        if (attendanceEntry && attendanceStatus === "PERSENT") {
+            const workedHours = calculateWorkedHours(startTime === "" ? startTime : "00:00", endTime === "" ? endTime : "00:00");
 
             const salaryDetails = await prisma.salaryDetail.findFirst({
                 where: { staffId: staffId }
