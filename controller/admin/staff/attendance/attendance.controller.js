@@ -1,58 +1,30 @@
 import { AttendanceSchema, AttendanceBreakRecordSchema } from "../../../../utils/validation.js";
 import checkAdmin from "../../../../utils/adminChecks.js";
 import prisma from "../../../../prisma/prisma.js";
-// import { pagination } from "../../../../utils/pagination.js";
 import { pagination } from "../../../../utils/pagination.js";
-// import {}
-import cron from "node-cron";
 import { late } from "zod";
 import { stat } from "fs";
 import { create } from "domain";
-// const cron = require('node-cron');
 
-// Schedule job to run at 10 AM daily
-// cron.schedule('0 10 * * *', async () => {
-//     try {
-//         // Get all staff members for the admin
-//         const staffList = await prisma.staffDetails.findMany({
-//             where: { adminId: admin.user.adminDetails.id },
-//             select: { id: true }
-//         });
+function calculateMinutesDifference(startTime, endTime) {
+    const parseTime = (time) => {
+        let [hour, minute] = time.split(/[: ]/);
+        const period = time.slice(-2);
+        hour = parseInt(hour, 10);
+        minute = parseInt(minute, 10);
 
-//         // Get today's date
-//         const today = new Date().toISOString().split('T')[0]; // Get the current date in 'YYYY-MM-DD' format
+        // Convert to 24-hour format
+        if (period === "PM" && hour !== 12) hour += 12;
+        if (period === "AM" && hour === 12) hour = 0;
 
-//         for (let staff of staffList) {
-//             // Check if attendance already exists for today
-//             const existingAttendance = await prisma.attendanceStaff.findFirst({
-//                 where: {
-//                     staffId: staff.id,
-//                     date: today
-//                 }
-//             });
+        return hour * 60 + minute; // Convert to total minutes from midnight
+    };
 
-//             // If no attendance exists for the day, create it with status 'ABSENT'
-//             if (!existingAttendance) {
-//                 await prisma.attendanceStaff.create({
-//                     data: {
-//                         shift: "Morning", // Default shift (or adjust based on your needs)
-//                         date: today,
-//                         status: "ABSENT",
-//                         staffDetails: {
-//                             connect: { id: staff.id }
-//                         },
-//                         adminDetail: {
-//                             connect: { id: admin.user.adminDetails.id } // Use dynamic admin ID
-//                         }
-//                     }
-//                 });
-//                 console.log(`Attendance marked as ABSENT for staff ${staff.id} on ${today}`);
-//             }
-//         }
-//     } catch (error) {
-//         console.error('Error creating automatic attendance:', error);
-//     }
-// });
+    let startMinutes = parseTime(startTime);
+    let endMinutes = parseTime(endTime);
+
+    return endMinutes - startMinutes; // Return difference in minutes
+}
 
 function formatHoursToTime(decimalHours) {
     if (decimalHours < 0 || decimalHours >= 24) return "00:00"; // Handle edge cases
@@ -363,19 +335,15 @@ const getAllAttendance = async (req, res, next) => {
                 message: admin.message
             });
         }
-        console.log(admin);
-
         const existingAdminId = await prisma.attendanceStaff.findFirst({
             where: {
                 // id: attendanceId,
                 adminId: admin.user.adminDetails.id,
             }
         });
-        console.log(existingAdminId);
         if (!existingAdminId || (existingAdminId.adminId !== admin.user.adminDetails.id)) {
             return res.status(400).json({ message: "Invalid adminId" });
         }
-
         const { page, limit } = req.query;
         const attendance = await pagination(prisma.attendanceStaff, {
             page, limit,
@@ -604,7 +572,6 @@ const endAttendanceBreak = async (req, res, next) => {
 };
 
 // halfday Attendance 
-
 const halfDayAttendance = async (req, res, next) => {
     try {
         const admin = await checkAdmin(req.userId, "ADMIN", res);
@@ -922,7 +889,6 @@ const createBulkAttendance = async (req, res, next) => {
         next(error);
     }
 };
-
 
 export {
     createAttendance, getAllAttendance, getAttendanceByStaffId, startAttendanceBreak, createBulkAttendance,

@@ -522,7 +522,7 @@ model AdminDetails {
   createdAt                   DateTime?                     @default(now())
   updatedAt                   DateTime?                     @updatedAt
 
-  officeWorkinghours String  @default("8")
+  officeWorkinghours String    @default("0")
   officeStartTime    String?
   officeEndtime      String?
 }

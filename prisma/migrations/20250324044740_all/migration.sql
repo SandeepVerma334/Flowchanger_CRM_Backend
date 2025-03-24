@@ -107,6 +107,7 @@ CREATE TABLE "AttendanceBreakRecord" (
     "startBreakImage" TEXT,
     "endBreakImage" TEXT,
     "adminId" TEXT NOT NULL,
+    "applyBreak" BOOLEAN DEFAULT false,
     "staffId" TEXT,
 
     CONSTRAINT "AttendanceBreakRecord_pkey" PRIMARY KEY ("id")
@@ -470,7 +471,7 @@ CREATE TABLE "AdminDetails" (
     "role" TEXT,
     "createdAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3),
-    "officeWorkinghours" TEXT NOT NULL DEFAULT '8',
+    "officeWorkinghours" TEXT NOT NULL DEFAULT '0',
     "officeStartTime" TEXT,
     "officeEndtime" TEXT,
 
@@ -761,6 +762,8 @@ CREATE TABLE "Fine" (
     "attendanceStaffId" TEXT,
     "salaryDetailId" TEXT,
     "adminId" TEXT NOT NULL,
+    "date" TEXT,
+    "applyFine" BOOLEAN DEFAULT false,
 
     CONSTRAINT "Fine_pkey" PRIMARY KEY ("id")
 );
@@ -779,6 +782,8 @@ CREATE TABLE "Overtime" (
     "attendanceStaffId" TEXT,
     "salaryDetailId" TEXT,
     "adminId" TEXT NOT NULL,
+    "date" TEXT,
+    "applyOvertime" BOOLEAN DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Overtime_pkey" PRIMARY KEY ("id")

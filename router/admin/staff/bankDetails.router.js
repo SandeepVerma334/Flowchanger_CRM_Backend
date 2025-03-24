@@ -6,7 +6,7 @@ const bankDetailsRouter = express.Router();
 bankDetailsRouter.get("/all", authorizationMiddleware, getAllBankDetails);
 bankDetailsRouter.post("/create", authorizationMiddleware, addBankDetails);
 bankDetailsRouter.get("/all", authorizationMiddleware, getBankDetails);
-bankDetailsRouter.get("/single/:id", authorizationMiddleware, getBankDetailsById);
+bankDetailsRouter.get("/single/:staffId", authorizationMiddleware, getBankDetailsById);
 bankDetailsRouter.put("/update/:id", authorizationMiddleware, updateBankDetailsById);
 bankDetailsRouter.delete("/delete/:id", authorizationMiddleware, deleteBankDetailsById);
 bankDetailsRouter.get("/search", authorizationMiddleware, searchBankDetails);

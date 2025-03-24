@@ -188,3 +188,4 @@ const updateStaffEducationById = async (req, res, next) => {
 
 
 export { createEducationForStaff, getAllStaffEducation, getStaffEducationById, deleteStaffEducationById, searchStaffEducation, updateStaffEducationById };
+// export { createEducationForStaff, getAllStaffEducation, getStaffEducationById, deleteStaffEducationById, searchStaffEducation };

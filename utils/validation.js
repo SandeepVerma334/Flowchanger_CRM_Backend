@@ -582,7 +582,7 @@ const bankDetailsSchema = z.object({
     invalid_type_error: "Account status must be either ACTIVE or INACTIVE",
   }),
   staffId: z.string().uuid("Invalid staff ID format"),
-  adminId: z.string().uuid("Invalid admin ID format"),
+  // adminId: z.string().uuid("Invalid admin ID format"),
 });
 
 export { BranchSchema, DepartmentSchema, staffDetailSchema, subscriptionSchema, idSchema, superAdminDetailsSchema, transactionSchema, packageSchema, clientSchema, newRoleSchema, projectSchema, taskSchema, adminSignupSchema, updateRoleSchema, noteSchema, discussionSchema, reportSchema, StaffEducationQualificationSchema, StaffFinancialDetailsSchema, AttendanceSchema, AttendanceBreakRecordSchema, OverTimeSchema, FineSchema, bankDetailsSchema, SalarySchema };

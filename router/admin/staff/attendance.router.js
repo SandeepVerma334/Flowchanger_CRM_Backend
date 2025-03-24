@@ -1,7 +1,7 @@
 import express from "express";
 import { authorizationMiddleware } from "../../../middleware/auth.js";
 import { uploadSingle } from "../../../middleware/multer.middleware.js";
-import { createAttendance, endAttendanceBreak, getAllAttendance, getAllAttendanceByDate, getAllEndBreakRecord, getAllStartBreakRecord, getAttendanceByMonth, getAttendanceByStaffId, halfDayAttendance, startAttendanceBreak, updateAttendanceEndTime } from "../../../controller/admin/staff/attendance/attendance.controller.js";
+import { createAttendance, createBulkAttendance, endAttendanceBreak, getAllAttendance, getAllAttendanceByDate, getAllEndBreakRecord, getAllStartBreakRecord, getAttendanceByMonth, getAttendanceByStaffId, halfDayAttendance, startAttendanceBreak } from "../../../controller/admin/staff/attendance/attendance.controller.js";
 const attendanceRouter = express.Router();
 
 attendanceRouter.post("/create", authorizationMiddleware, createAttendance);

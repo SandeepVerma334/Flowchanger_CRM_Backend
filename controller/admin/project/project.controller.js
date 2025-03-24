@@ -161,10 +161,8 @@ const getAllProjects = async (req, res, next) => {
             });
         }
         const { page, limit } = req.query;
-
-        // Define where filter based on your use case (filter projects by id, status, etc.)
         const where = {
-            id: id, // Assuming you're filtering by project ID
+            id: id,
         };
 
         const projects = await prisma.project.findMany({
@@ -434,9 +432,7 @@ const updateProjectById = async (req, res, next) => {
                 }
             }
         });
-
         const staffEmails = users.map(user => user.User?.email).filter(email => email);
-
         // Fetch customer emails if provided
         let customerEmails = [];
         if (Array.isArray(customer) && customer.length > 0) {
@@ -572,6 +568,5 @@ const bulkDeleteProjectById = async (req, res, next) => {
         next(error);
     }
 };
-
 
 export { createProject, getAllProjects, getProjectById, deleteProjectById, searchProjectByName, updateProjectById, bulkDeleteProjectById };

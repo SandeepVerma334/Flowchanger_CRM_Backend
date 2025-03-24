@@ -10,28 +10,22 @@ const addBankDetails = async (req, res, next) => {
     try {
         const admin = await checkAdmin(req.userId, "ADMIN", res);
         if (admin.error) {
-            return res.status(400).json({
-                message: admin.message
-            });
+            return res.status(400).json({ message: admin.message });
         }
-        console.log(admin);
-        // Validate request body
-        console.log(admin.user.adminDetails.id);
+
         const validation = bankDetailsSchema.parse(req.body);
-        // const validationData = validation;
+
         const existingBankDetails = await prisma.bankDetails.findFirst({
             where: {
                 adminId: req.userId,
                 staffId: validation.staffId
             }
         });
+
         if (existingBankDetails) {
-            return res.status(400).json({ message: "Bank details already exists for this staff" });
+            return res.status(400).json({ message: "Bank details already exist for this staff" });
         }
-        const existingAdminId = validation.adminId;
-        if (existingAdminId !== admin.user.adminDetails.id) {
-            return res.status(400).json({ message: "Invalid adminId" });
-        }
+
         const existingStaff = await prisma.staffDetails.findFirst({
             where: {
                 id: validation.staffId,
@@ -43,30 +37,44 @@ const addBankDetails = async (req, res, next) => {
             return res.status(400).json({ message: "Invalid staffId or staff does not belong to this admin" });
         }
 
-        // check if already exist entry in bank details match staff id
         const existingBank = await prisma.bankDetails.findFirst({
             where: {
                 staffId: validation.staffId,
             }
         });
-        if (existingBank) {
-            return res.status(400).json({ message: "Bank details already exists for this staff" });
+
+        if (existingBank && existingBank.staffId === validation.staffId) {
+            const updateBankDetails = await prisma.bankDetails.update({
+                where: {
+                    id: existingBank.id,
+                },
+                data: {
+                    ...validation,
+                    adminId: admin.user.adminDetails.id,
+                },
+            });
+            return res.status(200).json({
+                message: "Bank details updated successfully",
+                data: updateBankDetails
+            });
+        } else {
+            const bankDetails = await prisma.bankDetails.create({
+                data: {
+                    ...validation,
+                    adminId: admin.user.adminDetails.id,
+                }
+            });
+            return res.status(201).json({
+                message: "Bank details added successfully",
+                data: bankDetails
+            });
         }
 
-        const bankDetails = await prisma.bankDetails.create({
-            data: {
-                ...validation,
-                adminId: admin.user.adminDetails.id,
-            }
-        });
-        return res.status(201).json({
-            message: "Bank details added successfully",
-            data: bankDetails
-        });
     } catch (error) {
-        next(error)
+        next(error);
     }
-}
+};
+
 
 // get all bank details
 const getBankDetails = async (req, res, next) => {
@@ -101,7 +109,14 @@ const getBankDetails = async (req, res, next) => {
         const bankDetails = await prisma.bankDetails.findMany({
             where: {
                 adminId: admin.user.adminDetails.id
-            }
+            },
+            include: {
+                staffDetails: {
+                    include: {
+                        User: true
+                    },
+                },
+            },
         });
         res.status(200).json({ message: "Bank details fetched successfully", data: bankDetails });
     } catch (error) {
@@ -125,7 +140,7 @@ const deleteBankDetailsById = async (req, res, next) => {
         const existingBank = await prisma.bankDetails.findFirst({
             where: {
                 id,
-                adminId: admin.user.adminDetails.id
+                adminId: req.userId
             }
         });
         if (!existingBank) {
@@ -163,39 +178,32 @@ const getBankDetailsById = async (req, res, next) => {
                 message: admin.message
             });
         }
-        const { id } = req.params;
-
-        // check existing entry in bank details match staff id
+        const { staffId } = req.params;
         const existingBank = await prisma.bankDetails.findFirst({
             where: {
-                id,
+                staffId: staffId,
                 adminId: admin.user.adminDetails.id
             }
         });
         if (!existingBank) {
-            return res.status(400).json({ message: "Bank details not found" });
+            return res.status(404).json({ message: "Bank details not found for this staff" });
         }
-        // check existing staff id match admin id
         const existingStaff = await prisma.staffDetails.findFirst({
             where: {
-                id: existingBank.staffId,
+                id: staffId,
                 adminId: admin.user.adminDetails.id
             }
         });
+
         if (!existingStaff) {
             return res.status(400).json({ message: "Invalid staffId or staff does not belong to this admin" });
         }
-        const bankDetails = await prisma.bankDetails.findFirst({
-            where: {
-                id,
-                adminId: admin.user.adminDetails.id
-            },
-        });
-        res.status(200).json({ message: "Bank details fetched successfully", data: bankDetails });
+        res.status(200).json({ message: "Bank details fetched successfully", data: existingBank });
     } catch (error) {
         next(error);
     }
-}
+};
+
 
 // update bank details by id
 
@@ -252,7 +260,7 @@ const searchBankDetails = async (req, res, next) => {
             return res.status(400).json({ message: admin.message });
         }
 
-        const { search, bankName, accountNumber, ifsc, country, branch, accountHolderName, accountStatus, staffId } = req.query;
+        const { search, bankName, accountNumber, ifsc, country, branch, accountHolderName, accountStatus, staffId, page, limit } = req.query;
         const adminId = admin.user.adminDetails.id;
 
         let orConditions = [];
@@ -284,7 +292,11 @@ const searchBankDetails = async (req, res, next) => {
             ...(orConditions.length > 0 ? { OR: orConditions } : {}),
         };
 
-        const bankDetails = await prisma.bankDetails.findMany({ where: whereCondition });
+        const bankDetails = await pagination(prisma.bankDetails,{
+             page, limit,
+            where: whereCondition
+             }
+            );
 
         res.status(200).json({
             message: "Bank details fetched successfully",
@@ -298,7 +310,7 @@ const searchBankDetails = async (req, res, next) => {
 // get all bank details
 const getAllBankDetails = async (req, res, next) => {
     try {
-        const {page, limit} = req.params;
+        const { page, limit } = req.params;
         const admin = await checkAdmin(req.userId, "ADMIN", res);
         if (admin.error) {
             return res.status(400).json({
