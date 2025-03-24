@@ -182,7 +182,7 @@ const searchClientByName = async (req, res, next) => {
                 }
 
             ],
-            adminId: admin.id
+            adminId: req.userId
         };
 
         const include = {

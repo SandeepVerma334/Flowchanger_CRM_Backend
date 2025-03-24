@@ -142,7 +142,7 @@ const addFineData = async (req, res, next) => {
 
         const currentDate = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
 
-        // Check if a fine record already exists for the same attendanceStaffId on the current date
+        // Check if  a fine record already exists for the same attendanceStaffId on the current date
         const existingFine = await prisma.fine.findFirst({
             where: {
                 attendanceStaffId,

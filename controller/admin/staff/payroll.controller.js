@@ -12,6 +12,11 @@ function calculateBreakDuration(attendanceBreakRecord) {
     }, 0);
 }
 
+function isLastDayOfMonth(date = new Date()) {
+    let tomorrow = new Date(date);
+    tomorrow.setDate(date.getDate() + 1);
+    return tomorrow.getDate() === 1;
+}
 
 const getSpecificStaffPayroll = async (req, res, next) => {
     try {
@@ -21,7 +26,6 @@ const getSpecificStaffPayroll = async (req, res, next) => {
             return res.status(401).json({ message: admin.message });
         }
         const totalWorkingHours = Number(admin.user.adminDetails.officeWorkinghours || "8");
-        console.log(totalWorkingHours);
 
         const { staffId, month, year } = req.params;
 
@@ -38,6 +42,30 @@ const getSpecificStaffPayroll = async (req, res, next) => {
         const formattedDay = endTime.getDate().toString().padStart(2, '0');
         const endDate = `${year}-${formattedMonth}-${formattedDay}`;
         const totalDays = parseInt(formattedDay); // Total days in the selected month
+
+
+        const staff = await prisma.staffDetails.findFirst({
+            where: {
+                id: staffId,
+                adminId: admin.user.adminDetails.id,
+            },
+        });
+
+
+        if (!staff) {
+            return res.status(404).json({ message: "Staff not found" });
+        }
+
+        const staffJoiningDate = new Date(staff.dateOfJoining);
+
+
+        const staffJoiningMonth = staffJoiningDate.getMonth() + 1;
+        const staffJoiningYear = staffJoiningDate.getFullYear();
+
+
+        if (staffJoiningYear > year || (staffJoiningYear == year && staffJoiningMonth > month)) {
+            return res.status(400).json({ message: "Staff joined after the selected month" });
+        }
 
         let attendance = await prisma.attendanceStaff.findMany({
             where: {
@@ -61,11 +89,12 @@ const getSpecificStaffPayroll = async (req, res, next) => {
             where: { staffId },
         });
 
+
+
+
         if (!salary) {
             return res.status(404).json({ message: "Salary details not found for this staff member" });
         }
-
-
 
 
         const totalSalary = salary.ctcAmount; // Monthly salary
@@ -78,8 +107,11 @@ const getSpecificStaffPayroll = async (req, res, next) => {
         let totalWeekOff = 0;
         let totalFine = 0;
         let totalOverTime = 0;
+        let totalApplyFine = 0;
+        let totalApplyOverTime = 0;
         let totalBreakTime = 0;
         let totalBreakAmount = 0;
+        let totalApplyBreakAmount = 0;
 
         attendance = attendance.map(record => {
 
@@ -87,9 +119,9 @@ const getSpecificStaffPayroll = async (req, res, next) => {
             const endTime = new Date(`${record.date} ${record.endTime}`);
             let breakDuration = 0;
             const dailyTotalHours = (endTime - startTime) / (1000 * 60 * 60);
-            totalHoursWorked += dailyTotalHours; // Convert milliseconds to hours
-
-
+            if (record.status !== "HALF_DAY" && record.status !== "ABSENT" && record.status !== "PAIDLEAVE" && record.status !== "WEEK_OFF") {
+                totalHoursWorked += dailyTotalHours; // Convert milliseconds to hours
+            }
 
             if (record.status === "WEEK_OFF") totalWeekOff += 1;
             if (record.status === "PERSENT") totalPresent += 1;
@@ -98,31 +130,38 @@ const getSpecificStaffPayroll = async (req, res, next) => {
 
             if (record.attendanceBreakRecord.length > 0) {
                 breakDuration = calculateBreakDuration(record.attendanceBreakRecord);
+                console.log(breakDuration)
                 totalBreakTime += breakDuration;
                 totalBreakAmount += breakDuration * (dailySalary / totalWorkingHours);
+                totalApplyBreakAmount += calculateBreakDuration(record.attendanceBreakRecord.filter((breakRecord) => breakRecord.applyBreak === true)) * (dailySalary / totalWorkingHours);
             }
+
 
 
             if (record.fine.length > 0) {
                 totalFine += record.fine.reduce((acc, fine) => acc + fine.totalAmount, 0);
+                totalApplyFine += record.fine.filter((overtime) => overtime.applyFine === true).reduce((acc, fine) => acc + fine.totalAmount, 0);
             }
             if (record.overTime.length > 0) {
                 totalOverTime += record.overTime.reduce((acc, overTime) => acc + overTime.totalAmount, 0);
+                totalApplyOverTime += record.overTime.filter((overtime) => overtime.applyOvertime === true).reduce((acc, overTime) => acc + overTime.totalAmount, 0);
             }
-
 
             return {
                 ...record,
                 totalHours: dailyTotalHours,
                 breakDuration,
                 breakAmount: breakDuration * (dailySalary / totalWorkingHours),
-                dailySalary: record.status === "WEEK_OFF" ? dailySalary : dailyTotalHours * (dailySalary / totalWorkingHours),
+                dailySalary: record.status === "WEEK_OFF" ? dailySalary : record.status === "HALF_DAY" ? dailySalary / 2 : dailyTotalHours * (dailySalary / totalWorkingHours),
             }
         });
 
         totalHoursWorked -= totalBreakTime;
-        const absent = totalDays - totalPresent - totalHalfDay - totalPaidLeave - totalWeekOff;
-        const payableSalary = totalSalary * (totalHoursWorked / (totalDays * totalWorkingHours));
+        const totalAbsent = totalDays - totalPresent - totalHalfDay - totalPaidLeave - totalWeekOff;
+        const totalPaidLeaveAmount = totalPaidLeave * dailySalary;
+        const totalHalfDayAmount = totalHalfDay * dailySalary;
+        const totalAbsentAmount = totalAbsent * dailySalary;
+        const payableSalary = dailySalary * (totalPresent + totalHalfDay + totalPaidLeave + totalWeekOff);
 
 
         const existingPayment = await prisma.paymentHistory.findFirst({
@@ -130,8 +169,8 @@ const getSpecificStaffPayroll = async (req, res, next) => {
                 staffId,
                 adminId: req.userId,
                 date: {
-                    gte: new Date(startDate), // After or equal to the start of the month
-                    lte: new Date(endDate),   // Before or equal to the end of the month
+                    gte: new Date(startDate),
+                    lte: new Date(endDate),
                 }
             }
         });
@@ -154,6 +193,18 @@ const getSpecificStaffPayroll = async (req, res, next) => {
         }
 
 
+        if (isLastDayOfMonth()) {
+            await prisma.salaryDetail.update({
+                where: { id: salary.id },
+                data: {
+                    payrollFinalized: true,
+                    finalizedDate: new Date(),
+                    finalSalary: parseFloat((payableSalary - totalBreakAmount).toFixed(2)),
+                }
+            })
+        }
+
+
         res.status(200).json({
             message: "Payrolls fetched successfully",
             attendance,
@@ -161,16 +212,22 @@ const getSpecificStaffPayroll = async (req, res, next) => {
             totalPresent,
             totalHalfDay,
             totalPaidLeave,
-            absent,
+            totalAbsent,
             totalWeekOff,
             totalSalary,
             totalBreakTime,
+            totalAbsentAmount: parseFloat(totalAbsentAmount.toFixed(2)),
+            totalPaidLeaveAmount: parseFloat(totalPaidLeaveAmount.toFixed(2)),
+            totalHalfDayAmount: parseFloat(totalHalfDayAmount.toFixed(2)),
             totalBreakAmount: parseFloat(totalBreakAmount.toFixed(2)),
+            totalApplyBreakAmount: parseFloat(totalApplyBreakAmount.toFixed(2)),
             totalFine: parseFloat(totalFine.toFixed(2)),
+            totalApplyFine: parseFloat(totalApplyFine.toFixed(2)),
             totalOverTime: parseFloat(totalOverTime.toFixed(2)),
+            totalApplyOverTime: parseFloat(totalApplyOverTime.toFixed(2)), 
             perHourSalary: parseFloat((dailySalary / totalWorkingHours).toFixed(2)),
             dailySalary: parseFloat(dailySalary.toFixed(2)),
-            payableSalary: parseFloat((payableSalary - totalBreakAmount).toFixed(2)),
+            payableSalary: parseFloat((payableSalary - totalApplyFine + totalApplyOverTime - totalApplyBreakAmount).toFixed(2)),
         });
     } catch (error) {
         next(error);
@@ -196,6 +253,7 @@ const getMultipleStaffPayroll = async (req, res, next) => {
             select: {
                 id: true,
                 employeeId: true,
+                dateOfJoining: true,
                 User: {
                     select: {
                         firstName: true,
@@ -224,7 +282,7 @@ const getMultipleStaffPayroll = async (req, res, next) => {
         }
 
         if (!Array.isArray(staffIds) || staffIds.length === 0) {
-            return res.status(400).json({ message: "No staff found" });
+            return res.status(404).json({ message: "No staff found" });
         }
 
         const formattedMonth = month.toString().padStart(2, '0');
@@ -234,7 +292,37 @@ const getMultipleStaffPayroll = async (req, res, next) => {
         const endDate = `${year}-${formattedMonth}-${formattedDay}`;
         const totalDays = parseInt(formattedDay);
 
-        const payrollData = await Promise.all(staffIds.map(async ({ id: staffId, User, employeeId, BankDetails }) => {
+        const payrollData = await Promise.all(staffIds.map(async ({ id: staffId, User, employeeId, BankDetails, dateOfJoining }) => {
+
+            const staff = await prisma.staffDetails.findFirst({
+                where: {
+                    id: staffId,
+                },
+                select: {
+                    id: true,
+                }
+            });
+
+
+            if (!staff) {
+                return res.status(404).json({ message: "Staff not found" });
+            }
+
+            const staffJoiningDate = new Date(dateOfJoining);
+
+            const staffJoiningMonth = staffJoiningDate.getMonth() + 1;
+            const staffJoiningYear = staffJoiningDate.getFullYear();
+
+            if (staffJoiningYear > year || (staffJoiningYear == year && staffJoiningMonth > month)) {
+                return {
+                    name: User?.firstName + " " + User?.lastName || "N/A",
+                    staffId, 
+                    bankName: BankDetails[0]?.bankName || "N/A",
+                    employeeId,
+                    message: "Staff joined after the selected month"
+                };
+            }
+
             let attendance = await prisma.attendanceStaff.findMany({
                 where: {
                     staffId,
@@ -255,7 +343,13 @@ const getMultipleStaffPayroll = async (req, res, next) => {
 
             const salary = await prisma.salaryDetail.findFirst({ where: { staffId } });
             if (!salary) {
-                return { staffId, message: "Salary details not found" };
+                return {
+                    name: User?.firstName + " " + User?.lastName || "N/A",
+                    bankName: BankDetails[0]?.bankName || "N/A",
+                    employeeId,
+                    staffId,
+                    message: "Salary details not found"
+                };
             }
 
             const totalSalary = salary.ctcAmount;
@@ -267,32 +361,44 @@ const getMultipleStaffPayroll = async (req, res, next) => {
             let totalWeekOff = 0;
             let totalFine = 0;
             let totalOverTime = 0;
+            let totalApplyFine = 0;
+            let totalApplyOverTime = 0;
             let totalBreakTime = 0;
             let totalBreakAmount = 0;
+            let totalApplyBreakAmount = 0;
 
             attendance = attendance.map(record => {
                 const startTime = new Date(`${record.date} ${record.startTime}`);
                 const endTime = new Date(`${record.date} ${record.endTime}`);
                 let breakDuration = 0;
                 const dailyTotalHours = (endTime - startTime) / (1000 * 60 * 60);
-                totalHoursWorked += dailyTotalHours;
+                if (record.status !== "HALF_DAY" && record.status !== "ABSENT" && record.status !== "PAIDLEAVE" && record.status !== "WEEK_OFF") {
+                    totalHoursWorked += dailyTotalHours; // Convert milliseconds to hours
+                }
 
                 if (record.status === "WEEK_OFF") totalWeekOff += 1;
                 if (record.status === "PERSENT") totalPresent += 1;
                 if (record.status === "HALF_DAY") totalHalfDay += 1;
                 if (record.status === "PAIDLEAVE") totalPaidLeave += 1;
 
+
                 if (record.attendanceBreakRecord.length > 0) {
                     breakDuration = calculateBreakDuration(record.attendanceBreakRecord);
+                    console.log(breakDuration)
                     totalBreakTime += breakDuration;
                     totalBreakAmount += breakDuration * (dailySalary / totalWorkingHours);
+                    totalApplyBreakAmount += calculateBreakDuration(record.attendanceBreakRecord.filter((breakRecord) => breakRecord.applyBreak === true)) * (dailySalary / totalWorkingHours);
                 }
+
+
 
                 if (record.fine.length > 0) {
                     totalFine += record.fine.reduce((acc, fine) => acc + fine.totalAmount, 0);
+                    totalApplyFine += record.fine.filter((overtime) => overtime.applyFine === true).reduce((acc, fine) => acc + fine.totalAmount, 0);
                 }
                 if (record.overTime.length > 0) {
                     totalOverTime += record.overTime.reduce((acc, overTime) => acc + overTime.totalAmount, 0);
+                    totalApplyOverTime += record.overTime.filter((overtime) => overtime.applyOvertime === true).reduce((acc, overTime) => acc + overTime.totalAmount, 0);
                 }
 
                 return {
@@ -304,9 +410,26 @@ const getMultipleStaffPayroll = async (req, res, next) => {
                 };
             });
 
+
+
             totalHoursWorked -= totalBreakTime;
-            const absent = totalDays - totalPresent - totalHalfDay - totalPaidLeave - totalWeekOff;
-            const payableSalary = totalSalary * (totalHoursWorked / (totalDays * totalWorkingHours));
+            const totalAbsent = totalDays - totalPresent - totalHalfDay - totalPaidLeave - totalWeekOff;
+            const payableSalary = (totalPresent + totalWeekOff) * dailySalary;
+            const totalPaidLeaveAmount = dailySalary * totalPaidLeave
+            const totalHalfDayAmount = dailySalary * totalHalfDay
+            const totalAbsentAmount = totalAbsent * dailySalary
+
+
+            if (isLastDayOfMonth()) {
+                await prisma.salaryDetail.update({
+                    where: { id: salary.id },
+                    data: {
+                        payrollFinalized: true,
+                        finalizedDate: new Date(),
+                        finalSalary: parseFloat((payableSalary - totalBreakAmount).toFixed(2)),
+                    }
+                })
+            }
 
             const existingPayment = await prisma.paymentHistory.findFirst({
                 where: {
@@ -319,7 +442,6 @@ const getMultipleStaffPayroll = async (req, res, next) => {
                 }
             });
 
-            console.log(existingPayment);
             if (existingPayment) {
                 await prisma.paymentHistory.update({
                     where: { id: existingPayment.id },
@@ -335,8 +457,20 @@ const getMultipleStaffPayroll = async (req, res, next) => {
                     }
                 });
             }
+
+            if (isLastDayOfMonth()) {
+                await prisma.salaryDetail.update({
+                    where: { id: salary.id },
+                    data: {
+                        payrollFinalized: true,
+                        finalizedDate: new Date(),
+                        finalSalary: parseFloat((payableSalary - totalBreakAmount).toFixed(2)),
+                    }
+                })
+            }
+
             return {
-                name: User?.firstName + " " + User?.lastName || "N/A",
+                name: ((User?.firstName || "") + " " + (User?.lastName || "")) || "N/A",
                 bankName: BankDetails[0]?.bankName || "N/A",
                 employeeId,
                 staffId,
@@ -344,16 +478,22 @@ const getMultipleStaffPayroll = async (req, res, next) => {
                 totalPresent,
                 totalHalfDay,
                 totalPaidLeave,
-                absent,
+                totalAbsent,
                 totalWeekOff,
                 totalSalary,
                 totalBreakTime,
+                totalAbsentAmount: parseFloat(totalAbsentAmount.toFixed(2)),
+                totalPaidLeaveAmount: parseFloat(totalPaidLeaveAmount.toFixed(2)),
+                totalHalfDay: parseFloat(totalHalfDay.toFixed(2)),
                 totalBreakAmount: parseFloat(totalBreakAmount.toFixed(2)),
+                totalApplyBreakAmount: parseFloat(totalApplyBreakAmount.toFixed(2)),
                 totalFine: parseFloat(totalFine.toFixed(2)),
+                totalApplyFine: parseFloat(totalApplyFine.toFixed(2)),
                 totalOverTime: parseFloat(totalOverTime.toFixed(2)),
+                totalApplyOverTime: parseFloat(totalApplyOverTime.toFixed(2)),
                 perHourSalary: parseFloat((dailySalary / totalWorkingHours).toFixed(2)),
                 dailySalary: parseFloat(dailySalary.toFixed(2)),
-                payableSalary: parseFloat((payableSalary  - totalBreakAmount).toFixed(2)),
+                payableSalary: parseFloat((payableSalary - totalApplyFine + totalApplyOverTime - totalApplyBreakAmount).toFixed(2)),
             };
         }));
 
@@ -363,7 +503,6 @@ const getMultipleStaffPayroll = async (req, res, next) => {
         next(error);
     }
 };
-
 
 const getPaymentHistory = async (req, res, next) => {
     try {
@@ -400,7 +539,5 @@ const getPaymentHistory = async (req, res, next) => {
         next(error);
     }
 }
-
-
 
 export { getSpecificStaffPayroll, getMultipleStaffPayroll, getPaymentHistory };
