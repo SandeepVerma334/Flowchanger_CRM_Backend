@@ -6,26 +6,6 @@ import { late } from "zod";
 import { stat } from "fs";
 import { create } from "domain";
 
-function calculateMinutesDifference(startTime, endTime) {
-    const parseTime = (time) => {
-        let [hour, minute] = time.split(/[: ]/);
-        const period = time.slice(-2);
-        hour = parseInt(hour, 10);
-        minute = parseInt(minute, 10);
-
-        // Convert to 24-hour format
-        if (period === "PM" && hour !== 12) hour += 12;
-        if (period === "AM" && hour === 12) hour = 0;
-
-        return hour * 60 + minute; // Convert to total minutes from midnight
-    };
-
-    let startMinutes = parseTime(startTime);
-    let endMinutes = parseTime(endTime);
-
-    return endMinutes - startMinutes; // Return difference in minutes
-}
-
 function formatHoursToTime(decimalHours) {
     if (decimalHours < 0 || decimalHours >= 24) return "00:00"; // Handle edge cases
 
@@ -43,13 +23,24 @@ function formatHoursToTime(decimalHours) {
 
 function calculateWorkedHours(startTime, endTime) {
     function parseTimeToMinutes(time) {
-        let [hour, minute, period] = time.match(/(\d+):(\d+) (AM|PM)/).slice(1);
+        let match = time.match(/(\d+):(\d+)\s?(AM|PM)?/i);
+
+        if (!match) {
+            return null; // Return null for invalid formats instead of throwing an error
+        }
+
+        let [hour, minute, period] = match.slice(1);
         hour = parseInt(hour, 10);
         minute = parseInt(minute, 10);
 
-        // Convert to 24-hour format
-        if (period === "PM" && hour !== 12) hour += 12;
-        if (period === "AM" && hour === 12) hour = 0;
+        if (period) {
+            // Convert AM/PM format to 24-hour format
+            if (period.toUpperCase() === "PM" && hour !== 12) hour += 12;
+            if (period.toUpperCase() === "AM" && hour === 12) hour = 0;
+        } else {
+            // Assume 24-hour format if AM/PM is missing
+            if (hour === 24) hour = 0; // Handle "24:00" as midnight
+        }
 
         return hour * 60 + minute; // Total minutes from midnight
     }
@@ -173,7 +164,7 @@ const createAttendance = async (req, res, next) => {
         if (attendanceEntry && status === "PERSENT") {
             // Proceed with Fine Calculation after creating or updating the attendance entry
 
-            const workedHours = calculateWorkedHours(startTime, endTime);
+            const workedHours = calculateWorkedHours(startTime, endTime === "" ? endTime : "00:00");
             const salaryDetails = await prisma.salaryDetail.findFirst({
                 where: { staffId: staffId }
 
