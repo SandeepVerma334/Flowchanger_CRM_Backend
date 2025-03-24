@@ -95,13 +95,14 @@ const createAttendance = async (req, res, next) => {
         const currentDate = new Date();
 
         dateOfJoining.setHours(0, 0, 0, 0);
+        // console.log(dateOfJoining)
         // attendanceDate.setHours(0, 0, 0, 0);
-        currentDate.setHours(0, 0, 0, 0);
-
+        // currentDate.setHours(0, 0, 0, 0);
+        console.log("current date", currentDate)
         if (attendanceDate < dateOfJoining) {
             return res.status(400).json({ message: "Attendance cannot be marked before the date of joining." });
         }
-
+        console.log(attendanceDate, currentDate)
         if (attendanceDate > currentDate) {
             return res.status(400).json({ message: "Attendance cannot be marked for a future date." });
         }
@@ -114,7 +115,7 @@ const createAttendance = async (req, res, next) => {
 
         console.log(attendanceDate.getDay())
         if (attendanceDate.getDay() == 0) {
-            attendanceStatus = "WEEK_OFF";            
+            attendanceStatus = "WEEK_OFF";
         } else {
             attendanceStatus = status.trim();
             if (!["ABSENT", "HALF_DAY", "PAID_LEAVE", "PERSENT"].includes(status)) {
@@ -150,7 +151,7 @@ const createAttendance = async (req, res, next) => {
         }
 
 
-console.log(attendanceEntry)
+        console.log(attendanceEntry)
         if (attendanceEntry && status !== "PERSENT") {
             const findOvertimeEntry = await prisma.overtime.findFirst({
                 where: { staffId: staffId, date: date }
@@ -183,7 +184,10 @@ console.log(attendanceEntry)
             });
 
             const monthDays = new Date(attendanceDate.getFullYear(), attendanceDate.getMonth() + 1, 0).getDate();
-            const ctcAmount = salaryDetails.ctcAmount;
+            let ctcAmount = 0;
+            if (salaryDetails) {
+                ctcAmount = salaryDetails.ctcAmount;
+            }
             const perDaySalary = ctcAmount / monthDays;
             const perHourSalary = perDaySalary / officeWorkingHours;
             if (workedHours < officeWorkingHours) {
