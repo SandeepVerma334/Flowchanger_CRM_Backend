@@ -465,7 +465,7 @@ CREATE TABLE "AdminDetails" (
     "services" TEXT[],
     "companySize" TEXT,
     "role" TEXT,
-    "officeWorkinghours" TEXT NOT NULL DEFAULT '8',
+    "officeWorkinghours" TEXT NOT NULL DEFAULT '0',
     "officeStartTime" TEXT,
     "officeEndtime" TEXT,
     "createdAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
@@ -756,6 +756,7 @@ CREATE TABLE "Fine" (
     "salaryDetailId" TEXT,
     "adminId" TEXT NOT NULL,
     "date" TEXT,
+    "applyFine" BOOLEAN DEFAULT false,
 
     CONSTRAINT "Fine_pkey" PRIMARY KEY ("id")
 );
@@ -776,6 +777,7 @@ CREATE TABLE "Overtime" (
     "adminId" TEXT NOT NULL,
     "date" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "applyFine" BOOLEAN DEFAULT false,
 
     CONSTRAINT "Overtime_pkey" PRIMARY KEY ("id")
 );

@@ -336,5 +336,4 @@ const getAllBankDetails = async (req, res, next) => {
     }
 }
 
-
 export { addBankDetails, getBankDetails, deleteBankDetailsById, getBankDetailsById, updateBankDetailsById, searchBankDetails, getAllBankDetails };

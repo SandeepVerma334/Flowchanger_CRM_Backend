@@ -397,7 +397,7 @@ const sendSelectedStaffCustomers = async (emails) => {
 
         const mailOptions = {
             from: process.env.EMAIL_USER,
-            to: emails, 
+            to: emails,
             subject,
             text,
             html: message,
@@ -413,8 +413,41 @@ const sendSelectedStaffCustomers = async (emails) => {
     }
 };
 
-// send email to staff for created fine
+// send email to staff for created tasks
+const sendTaskToStaff = async (email) => {
+    try {
+        const subject = "Task Created - Flow Changer Agency";
+        const text = `Hello,\n\nA new task has been created for you. Please check your dashboard for details.\n\nBest Regards,\nFlow Changer Agency`;
 
+        const message = `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <h3 style="color: #000000;">Dear Team Members,</h3>
+                <p>A new task has been assigned to you. Please log in to your dashboard to review the details.</p>
+                <p>Thank you for being a part of Flow Changer Agency.</p>
+                <br>
+                <p>Best Regards,<br>Flow Changer Agency</p>
+            </div>
+        `;
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject,
+            text,
+            html: message,
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log("Email sent successfully:");
+
+        return { success: true };
+    } catch (error) {
+        console.error("Error sending email:", error);
+        return { success: false, error: error.message };
+    }
+};
+
+// send email to staff for created fine
 const sendFineToStaff = async (email) => {
     try {
         const subject = "Fine Created - Flow Changer Agency";
@@ -533,7 +566,7 @@ export {
     sendGeneralMessage,
     sendPasswordResetAndForgotEmail,
     sendInviteToAdminMail,
-    // sendLoginCredentialsEmail,
+    sendTaskToStaff,
     sendEmailWithPdf,
     sendSelectedStaffCustomers,
     sendFineToStaff,
