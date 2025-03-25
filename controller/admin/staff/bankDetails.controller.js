@@ -53,7 +53,7 @@ const addBankDetails = async (req, res, next) => {
                     adminId: admin.user.adminDetails.id,
                 },
             });
-            return res.status(200).json({
+            return res.status(201).json({
                 message: "Bank details updated successfully",
                 data: updateBankDetails
             });
@@ -335,6 +335,5 @@ const getAllBankDetails = async (req, res, next) => {
         next(error);
     }
 }
-
 
 export { addBankDetails, getBankDetails, deleteBankDetailsById, getBankDetailsById, updateBankDetailsById, searchBankDetails, getAllBankDetails };
