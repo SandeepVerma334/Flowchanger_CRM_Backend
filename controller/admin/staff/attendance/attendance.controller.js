@@ -39,14 +39,9 @@ function calculateWorkedHours(startTime, endTime) {
         hour = parseInt(hour, 10);
         minute = parseInt(minute, 10);
 
-        if (period) {
-            // Convert AM/PM format to 24-hour format
-            if (period.toUpperCase() === "PM" && hour !== 12) hour += 12;
-            if (period.toUpperCase() === "AM" && hour === 12) hour = 0;
-        } else {
-            // Assume 24-hour format if AM/PM is missing
-            if (hour === 24) hour = 0; // Handle "24:00" as midnight
-        }
+        // Convert to 24-hour format
+        if (period === "PM" && hour !== 12) hour += 12;
+        if (period === "AM" && hour === 12) hour = 0;
 
         return hour * 60 + minute; // Total minutes from midnight
     }
@@ -1099,6 +1094,6 @@ const createBulkAttendance = async (req, res, next) => {
 };
 
 export {
-    createAttendance, getAllAttendance, getAttendanceByStaffId, startAttendanceBreak, createBulkAttendance,
+    createAttendance, getAllAttendance, getAttendanceByStaffId, startAttendanceBreak,
     endAttendanceBreak, getAttendanceByMonth, halfDayAttendance, getAllAttendanceByDate, getAllStartBreakRecord, getAllEndBreakRecord
 }
