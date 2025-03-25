@@ -23,20 +23,6 @@ function convertTo24HourFormat(time) {
 
     return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
 }
-function formatHoursToTime(decimalHours) {
-    if (decimalHours < 0 || decimalHours >= 24) return "00:00"; // Handle edge cases
-
-    let hours = Math.floor(decimalHours); // Extract whole hours
-    let minutes = Math.round((decimalHours - hours) * 60); // Convert fraction to minutes
-
-    if (minutes === 60) { // Handle rounding up to next hour
-        hours += 1;
-        minutes = 0;
-    }
-
-    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
-
-}
 
 function calculateWorkedHours(startTime, endTime) {
     function parseTimeToMinutes(time) {
@@ -110,8 +96,6 @@ async function deleteFine(prisma, staffId, date) {
     }
 }
 
-
-
 const createAttendance = async (req, res, next) => {
     try {
         const admin = await checkAdmin(req.userId, "ADMIN", res);
@@ -119,23 +103,15 @@ const createAttendance = async (req, res, next) => {
             return res.status(400).json({ message: admin.message });
         }
 
-        // console.log("Admin details:", admin);
         let { staffId, shift, date, startTime, endTime, status } = req.body;
         // console.log(shift);
         let officeWorkingHours = admin.user.adminDetails.officeWorkinghours;
         const officeStartTime = admin.user.adminDetails.officeStartTime;
         const officeEndtime = admin.user.adminDetails.officeEndtime;
 
-        // console.log("Office Working Hours:", officeWorkingHours);
-        // console.log("Office Start Time:", officeStartTime);
-        // console.log("Office End Time:", officeEndtime);
         if (officeStartTime && officeEndtime) {
             officeWorkingHours = calculateWorkedHours(officeStartTime, officeEndtime);
         }
-
-        // console.log("Office Working Hours jjj:", officeWorkingHours);
-        // console.log("Office Start Time kk :", officeStartTime);
-        // console.log("Office End Time kljl k:", officeEndtime);
 
         // Fetch staff details including dateOfJoining
         const staff = await prisma.staffDetails.findFirst({
@@ -153,10 +129,6 @@ const createAttendance = async (req, res, next) => {
         const currentDate = new Date();
 
         dateOfJoining.setHours(0, 0, 0, 0);
-        // console.log(dateOfJoining)
-        // attendanceDate.setHours(0, 0, 0, 0);
-        // currentDate.setHours(0, 0, 0, 0);
-        // console.log("current date", currentDate)
         if (attendanceDate < dateOfJoining) {
             return res.status(400).json({ message: "Attendance cannot be marked before the date of joining." });
         }
@@ -208,25 +180,8 @@ const createAttendance = async (req, res, next) => {
             });
         }
 
-
         // console.log(attendanceEntry)
         if (attendanceEntry && status !== "PRESENT") {
-            // const findOvertimeEntry = await prisma.overtime.findFirst({
-            //     where: { staffId: staffId, date: date }
-            // })
-            // if (findOvertimeEntry) {
-            //     await prisma.overtime.delete({
-            //         where: { id: findOvertimeEntry.id }
-            //     });
-            // }
-            // const findFineEntry = await prisma.fine.findFirst({
-            //     where: { staffId: staffId, date: date }
-            // });
-            // if (findFineEntry) {
-            //     await prisma.fine.delete({
-            //         where: { id: findFineEntry.id }
-            //     });
-            // }
 
             await deleteFine(prisma, staffId, date);
             await deleteOvertime(prisma, staffId, date)
@@ -554,44 +509,7 @@ const createAttendance = async (req, res, next) => {
 };
 
 // get all attendance
-// const getAllAttendance = async (req, res, next) => {
-//     try {
-//         const admin = await checkAdmin(req.userId, "ADMIN", res);
-//         if (admin.error) {
-//             return res.status(400).json({
-//                 message: admin.message
-//             });
-//         }
-//         const existingAdminId = await prisma.attendanceStaff.findFirst({
-//             where: {
-//                 // id: attendanceId,
-//                 adminId: admin.user.adminDetails.id,
-//             }
-//         });
-//         if (!existingAdminId || (existingAdminId.adminId !== admin.user.adminDetails.id)) {
-//             return res.status(400).json({ message: "Invalid adminId" });
-//         }
-//         const { page, limit } = req.query;
-//         const attendance = await pagination(prisma.attendanceStaff, {
-//             page, limit,
-//             where: {
-//                 adminId: admin.user.adminDetails.id,
-//             },
-//             include: {
-//                 staffDetails: {
-//                     include: {
-//                         User: true,
-//                     },
-//                 },
-//                 attendanceBreakRecord: true,
-//                 fine: true
-//             },
-//         });
-//         res.status(200).json({ message: "Attendance fetched successfully", ...attendance });
-//     } catch (error) {
-//         next(error);
-//     }
-// };
+
 const getAllAttendance = async (req, res, next) => {
     try {
         const admin = await checkAdmin(req.userId, "ADMIN", res);
