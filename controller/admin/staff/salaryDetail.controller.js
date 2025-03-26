@@ -435,57 +435,25 @@ const getSalaryForStaff = async (req, res, next) => {
 const getSalaryForSingleStaff = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { date, type } = req.query;
         const isAdmin = await checkAdmin(req.userId);
         if (isAdmin.error) {
             return res.status(401).json({ message: isAdmin.message });
         }
 
-        let startDate, endDate;
-
-        if (type === "monthly") {
-            startDate = new Date(date);
-            startDate.setUTCDate(1);
-            startDate.setUTCHours(0, 0, 0, 0);
-
-            endDate = new Date(date);
-            endDate.setUTCDate(15);
-            endDate.setUTCHours(23, 59, 59, 999);
-
-        } else if (type === "yearly") {
-            startDate = new Date(date);
-            startDate.setUTCMonth(0, 1);
-            startDate.setUTCHours(0, 0, 0, 0);
-
-            endDate = new Date(date);
-            endDate.setUTCMonth(11, 31);
-            endDate.setUTCHours(23, 59, 59, 999);
-        } else {
-            return res.status(400).json({ message: "Invalid salary type. Use 'monthly' or 'yearly'." });
-        }
-
-
-
-        const salary = await pagination(prisma.salaryDetail, {
+        const salary = await prisma.salaryDetail.findFirst({
             where: {
-                staffId: id,
-                adminId: req.userId,
-                effectiveDate: {
-                    gte: startDate,
-                    lte: endDate,
-                }
+                staffId: id
             }
-        });
+        })
 
         return res.status(200).json({
-            message: `Salary details retrieved successfully for specific staff for ${type} `,
-            ...salary
+            message: `Salary details retrieved successfully for specific staff `,
+            data: salary
         });
     } catch (error) {
         next(error);
     }
 };
-
 const bulkSalaryCreateOrUpdate = async (req, res, next) => {
     try {
         const admin = await checkAdmin(req.userId, "ADMIN");
