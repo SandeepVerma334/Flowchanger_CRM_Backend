@@ -197,10 +197,10 @@ const addFineData = async (req, res, next) => {
                 select: { sendSMStoStaff: true }
             });
 
-            return res.status(201).json({ message: "Fine updated successfully", fine });
+            return res.status(201).json({ message: "Fine updated successfully", data:fine, perMinuteSalary });
         }
 
-        // Create a new fine record if no existing fine for today
+        // Create a new fine record if no existing fine for today, perMinuteSalary
         const fine = await prisma.fine.create({
             data: {
                 staffId,
@@ -233,7 +233,7 @@ const addFineData = async (req, res, next) => {
         // send email to staff email
 
 
-        return res.status(201).json({ message: "Fine created successfully", fine, sendMail });
+        return res.status(201).json({ message: "Fine created successfully", data:fine, perMinuteSalary });
         console.log("fine created successfully");
     } catch (error) {
         next(error);
