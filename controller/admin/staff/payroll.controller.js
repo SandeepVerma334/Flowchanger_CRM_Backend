@@ -37,10 +37,10 @@ const getSpecificStaffPayroll = async (req, res, next) => {
         }
 
         const formattedMonth = month.toString().padStart(2, '0');
-        const startDate = ${year}-${formattedMonth}-01;
+        const startDate = `${year}-${formattedMonth}-01`;
         const endTime = new Date(year, month, 0, 23, 59, 59);
         const formattedDay = endTime.getDate().toString().padStart(2, '0');
-        const endDate = ${year}-${formattedMonth}-${formattedDay};
+        const endDate = `${year}-${formattedMonth}-${formattedDay}`;
         const totalDays = parseInt(formattedDay); // Total days in the selected month
 
 
@@ -119,8 +119,8 @@ const getSpecificStaffPayroll = async (req, res, next) => {
         let totalAbsent = 0;
 
         attendance = attendance.map(record => {
-            const startTime = new Date(${record.date} ${record.startTime});
-            const endTime = new Date(${record.date} ${record.endTime});
+            const startTime = new Date(`${record.date} ${record.startTime}`);
+            const endTime = new Date(`${record.date} ${record.endTime}`);
             let breakDuration = 0;
             const dailyTotalHours = (endTime - startTime) / (1000 * 60 * 60);
             if (record.status !== "HALF_DAY" && record.status !== "ABSENT" && record.status !== "PAIDLEAVE" && record.status !== "WEEK_OFF") {
@@ -185,7 +185,7 @@ const getSpecificStaffPayroll = async (req, res, next) => {
         } else {
             await prisma.paymentHistory.create({
                 data: {
-                    date: new Date(${year}-${formattedMonth}-${totalDays}),
+                    date: new Date(`${year}-${formattedMonth}-${totalDays}`),
                     SalaryDetails: { connect: { id: salary.id } },
                     staff: { connect: { id: staffId } },
                     admin: { connect: { id: req.userId } },
@@ -287,10 +287,10 @@ const getMultipleStaffPayroll = async (req, res, next) => {
         }
 
         const formattedMonth = month.toString().padStart(2, '0');
-        const startDate = ${year}-${formattedMonth}-01;
+        const startDate = `${year}-${formattedMonth}-01`;
         const endTime = new Date(year, month, 0, 23, 59, 59);
         const formattedDay = endTime.getDate().toString().padStart(2, '0');
-        const endDate = ${year}-${formattedMonth}-${formattedDay};
+        const endDate = `${year}-${formattedMonth}-${formattedDay}`;
         const totalDays = parseInt(formattedDay);
 
         const payrollData = await Promise.all(staffIds.map(async ({ id: staffId, User, employeeId, BankDetails, dateOfJoining }) => {
@@ -376,8 +376,8 @@ const getMultipleStaffPayroll = async (req, res, next) => {
             let totalAbsent = 0;
 
             attendance = attendance.map(record => {
-                const startTime = new Date(${record.date} ${record.startTime});
-                const endTime = new Date(${record.date} ${record.endTime});
+                const startTime = new Date(`${record.date} ${record.startTime}`);
+                const endTime = new Date(`${record.date} ${record.endTime}`);
                 let breakDuration = 0;
                 const dailyTotalHours = (endTime - startTime) / (1000 * 60 * 60);
                 if (record.status !== "HALF_DAY" && record.status !== "ABSENT" && record.status !== "PAIDLEAVE" && record.status !== "WEEK_OFF") {
