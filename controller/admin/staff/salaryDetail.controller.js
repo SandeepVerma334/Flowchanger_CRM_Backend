@@ -443,7 +443,13 @@ const getSalaryForSingleStaff = async (req, res, next) => {
         const salary = await prisma.salaryDetail.findFirst({
             where: {
                 staffId: id
-            }
+            },
+    include: {
+                            earnings: true,
+                            deductions: true,
+                            employerContribution: true,
+                            employeeContribution: true
+                        }
         })
 
         return res.status(200).json({
