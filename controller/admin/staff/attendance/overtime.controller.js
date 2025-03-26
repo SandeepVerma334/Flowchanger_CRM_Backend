@@ -162,7 +162,8 @@ const addOvertimeData = async (req, res, next) => {
                 },
             });
 
-            return res.status(200).json({ message: "Overtime updated successfully", overtime });
+            return res.status(201).json({ message: "Overtime updated successfully", overtime });
+            
         }
 
         // If no overtime record exists, create a new one
