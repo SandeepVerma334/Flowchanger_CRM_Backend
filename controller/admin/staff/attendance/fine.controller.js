@@ -131,17 +131,18 @@ const addFineData = async (req, res, next) => {
         const perHourSalary = dailyCtc / totalWorkingHours;
         const convertedMinutsToHours = 60;
         const perMinuteSalary = perHourSalary / 60;
+        console.log("perMinuteSalary", perMinuteSalary);
         const lateEntryFineAmountToMinuts = lateEntryTimeToMinuts * perMinuteSalary;
         const lateEntryFineAmountMultiply = lateEntryFineAmountToMinuts * lateEntryFineAmount;
-
+        console.log("lateEntryFineAmountMultiply", lateEntryFineAmountMultiply);
         const excessBreakFineAmountToMinuts = excessBreakFineHoursTimeToMinuts * perMinuteSalary;
         const excessBreakFineAmountMultiply = excessBreakFineAmountToMinuts * excessBreakFineAmount;
 
         const earlyOutFineAmountToMinuts = earlyOutFineHoursTimeToMinuts * perMinuteSalary;
         const earlyOutFineAmountMultiply = earlyOutFineAmountToMinuts * earlyOutFineAmount;
-
+        console.log("earlyOutFineAmountMultiply", earlyOutFineAmountMultiply);
         const totalAmountToMinuts = lateEntryFineAmountMultiply + excessBreakFineAmountMultiply + earlyOutFineAmountMultiply;
-
+        console.log("totalAmountToMinuts", totalAmountToMinuts);
         // Convert minutes to HH:mm format
         const formatTime = (minutes) => {
             const hours = Math.floor(minutes / 60);
@@ -247,7 +248,6 @@ const addFineData = async (req, res, next) => {
         next(error);
     }
 };
-
 
 // get all fine data
 const getAllFine = async (req, res, next) => {
