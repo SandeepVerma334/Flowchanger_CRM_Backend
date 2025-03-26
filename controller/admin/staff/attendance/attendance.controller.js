@@ -6,6 +6,27 @@ import { late, string } from "zod";
 import { stat } from "fs";
 import { create } from "domain";
 
+const calculatePerMinuteSalary = (ctcAmount, date, workingHoursPerDay) => {
+    const givenDate = new Date(date);
+    const year = givenDate.getFullYear();
+    const month = givenDate.getMonth(); // 0-based (Jan = 0, Feb = 1, etc.)
+
+    // Get total days in the given month
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    console.log(" days in month ", daysInMonth);
+    // const workingHoursPerDay = 8;
+
+    // Calculate daily salary
+    const dailySalary = ctcAmount / daysInMonth;
+
+    // Calculate per hour & per minute salary
+    const perHourSalary = dailySalary / workingHoursPerDay;
+    const perMinuteSalary = perHourSalary / 60;
+
+    return perMinuteSalary;
+};
+
+
 function convertMinutesToTimeFormat(totalMinutes) {
     let hours = Math.floor(totalMinutes / 60);
     let minutes = totalMinutes % 60;
@@ -39,9 +60,14 @@ function calculateWorkedHours(startTime, endTime) {
         hour = parseInt(hour, 10);
         minute = parseInt(minute, 10);
 
-        // Convert to 24-hour format
-        if (period === "PM" && hour !== 12) hour += 12;
-        if (period === "AM" && hour === 12) hour = 0;
+        if (period) {
+            // Convert AM/PM format to 24-hour format
+            if (period.toUpperCase() === "PM" && hour !== 12) hour += 12;
+            if (period.toUpperCase() === "AM" && hour === 12) hour = 0;
+        } else {
+            // Assume 24-hour format if AM/PM is missing
+            if (hour === 24) hour = 0; // Handle "24:00" as midnight
+        }
 
         return hour * 60 + minute; // Total minutes from midnight
     }
@@ -109,6 +135,7 @@ const createAttendance = async (req, res, next) => {
         const officeStartTime = admin.user.adminDetails.officeStartTime;
         const officeEndtime = admin.user.adminDetails.officeEndtime;
         let PerMinuteSalary;
+
         if (officeStartTime && officeEndtime) {
             officeWorkingHours = calculateWorkedHours(officeStartTime, officeEndtime);
         }
@@ -445,7 +472,6 @@ const createAttendance = async (req, res, next) => {
                         await prisma.overtime.update({
                             where: { id: existingOvertime.id },
                             data: {
-
                                 adminId: admin.user.adminDetails.id,
                                 earlyCommingEntryHoursTime: convertMinutesToTimeFormat(EarlyCommingTime),
                                 // earlyCommingEntryAmoun   t,
@@ -502,7 +528,7 @@ const createAttendance = async (req, res, next) => {
         res.status(200).json({
             message: existingAttendance ? "Attendance updated successfully" : "Attendance created successfully",
             data: attendanceEntry,
-            perMinutSalary:PerMinuteSalary,
+            perMinutSalary: PerMinuteSalary,
         });
     } catch (error) {
         next(error);
@@ -914,6 +940,15 @@ const getAllAttendanceByDate = async (req, res, next) => {
         // Convert date to 'YYYY-MM-DD' string format if 'date' field is stored as a string
         const formattedDate = parsedDate.toISOString().split('T')[0]; // '2024-12-15'
 
+        let officeWorkingHours = admin.user.adminDetails.officeWorkinghours;
+        const officeStartTime = admin.user.adminDetails.officeStartTime;
+        const officeEndtime = admin.user.adminDetails.officeEndtime;
+
+        if (officeStartTime && officeEndtime) {
+            officeWorkingHours = calculateWorkedHours(officeStartTime, officeEndtime);
+        }
+
+
         const attendance = await pagination(prisma.user, {
             page, limit,
             where: {
@@ -923,6 +958,7 @@ const getAllAttendanceByDate = async (req, res, next) => {
             include: {
                 StaffDetails: {
                     include: {
+                        SalaryDetails: true,
                         AttendanceStaff: {
                             include: {
                                 fine: true,
@@ -942,6 +978,7 @@ const getAllAttendanceByDate = async (req, res, next) => {
                 ...staff,
                 StaffDetails: {
                     ...staff.StaffDetails,
+                    perMinSalary: calculatePerMinuteSalary(staff?.StaffDetails?.SalaryDetails[staff?.StaffDetails?.SalaryDetails?.length - 1]?.ctcAmount || 0, date, officeWorkingHours),
                     AttendanceStaff: staff.StaffDetails.AttendanceStaff.filter(
                         (attendance) => attendance.date === formattedDate
                     ),
@@ -1095,6 +1132,6 @@ const createBulkAttendance = async (req, res, next) => {
 };
 
 export {
-    createAttendance, getAllAttendance, getAttendanceByStaffId, startAttendanceBreak,
+    createAttendance, getAllAttendance, getAttendanceByStaffId, startAttendanceBreak, createBulkAttendance,
     endAttendanceBreak, getAttendanceByMonth, halfDayAttendance, getAllAttendanceByDate, getAllStartBreakRecord, getAllEndBreakRecord
 }
