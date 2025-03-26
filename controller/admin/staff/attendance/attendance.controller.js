@@ -108,7 +108,7 @@ const createAttendance = async (req, res, next) => {
         let officeWorkingHours = admin.user.adminDetails.officeWorkinghours;
         const officeStartTime = admin.user.adminDetails.officeStartTime;
         const officeEndtime = admin.user.adminDetails.officeEndtime;
-
+        let PerMinuteSalary;
         if (officeStartTime && officeEndtime) {
             officeWorkingHours = calculateWorkedHours(officeStartTime, officeEndtime);
         }
@@ -290,7 +290,7 @@ const createAttendance = async (req, res, next) => {
             console.log("LateOutOffice", LateOutOffice);
 
 
-            const PerMinuteSalary = perHourSalary / 60;
+            PerMinuteSalary = perHourSalary / 60;
             const LateCommingFine = PerMinuteSalary * LateCommingTime;
             const EarlyOutFine = PerMinuteSalary * EarlyOutOffice;
 
@@ -501,7 +501,8 @@ const createAttendance = async (req, res, next) => {
         }
         res.status(200).json({
             message: existingAttendance ? "Attendance updated successfully" : "Attendance created successfully",
-            data: attendanceEntry
+            data: attendanceEntry,
+            perMinutSalary:PerMinuteSalary,
         });
     } catch (error) {
         next(error);
