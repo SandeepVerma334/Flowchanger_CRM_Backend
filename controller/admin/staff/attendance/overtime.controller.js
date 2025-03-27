@@ -3,6 +3,7 @@ import { OverTimeSchema } from "../../../../utils/validation.js";
 import checkAdmin from "../../../../utils/adminChecks.js";
 import prisma from "../../../../prisma/prisma.js";
 import { pagination } from "../../../../utils/pagination.js";
+import { date } from "zod";
 
 const convertToMinutes = (timeString) => {
     const [hours, minutes] = timeString.split(':').map(Number);
@@ -25,6 +26,7 @@ const addOvertimeData = async (req, res, next) => {
         lateOutOvertimeAmount,
         lateOutAmount,
         totalAmount,
+        applyOvertime
     } = req.body;
 
 
@@ -159,11 +161,11 @@ const addOvertimeData = async (req, res, next) => {
                     salaryDetailId: salaryDetailsData.id,
                     adminId: admin.user.adminDetails.id,
                     date: staffAttendance.date,
+                    applyOvertime,
                 },
             });
 
             return res.status(201).json({ message: "Overtime updated successfully", overtime });
-            
         }
 
         // If no overtime record exists, create a new one
@@ -181,6 +183,7 @@ const addOvertimeData = async (req, res, next) => {
                 salaryDetailId: salaryDetailsData.id,
                 adminId: admin.user.adminDetails.id,
                 date: staffAttendance.date,
+                applyOvertime,
             },
         });
         return res.status(201).json({ message: "Overtime created successfully", overtime });
