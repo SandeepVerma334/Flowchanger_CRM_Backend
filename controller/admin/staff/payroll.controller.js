@@ -78,7 +78,7 @@ const getSpecificStaffPayroll = async (req, res, next) => {
             orderBy: {
                 date: 'asc',
             },
-            include: { 
+            include: {
                 attendanceBreakRecord: true,
                 fine: true,
                 overTime: true
@@ -130,7 +130,7 @@ const getSpecificStaffPayroll = async (req, res, next) => {
             if (record.status === "WEEK_OFF") totalWeekOff += 1;
             if (record.status === "PRESENT") totalPresent += 1;
             if (record.status === "HALF_DAY") totalHalfDay += 1;
-            if (record.status === "PAIDLEAVE") totalPaidLeave += 1;
+            if (record.status === "PAID_LEAVE") totalPaidLeave += 1;
             if (record.status === "ABSENT") totalAbsent += 1;
 
             if (record.attendanceBreakRecord.length > 0) {
@@ -140,7 +140,7 @@ const getSpecificStaffPayroll = async (req, res, next) => {
                 totalApplyBreakAmount += calculateBreakDuration(record.attendanceBreakRecord.filter((breakRecord) => breakRecord.applyBreak === true)) * (dailySalary / totalWorkingHours);
             }
 
-            
+
             if (record.fine.length > 0) {
                 totalFine += record.fine.reduce((acc, fine) => acc + fine.totalAmount, 0);
                 totalApplyFine += record.fine.filter((overtime) => overtime.applyFine === true).reduce((acc, fine) => acc + fine.totalAmount, 0);
@@ -160,11 +160,11 @@ const getSpecificStaffPayroll = async (req, res, next) => {
         });
 
         totalHoursWorked -= totalBreakTime;
+        
         const totalPaidLeaveAmount = totalPaidLeave * dailySalary;
-        const totalHalfDayAmount = totalHalfDay * dailySalary;
+        const totalHalfDayAmount = totalHalfDay * dailySalary / 2;
         const totalAbsentAmount = totalAbsent * dailySalary;
-        const payableSalary = dailySalary * (totalPresent + totalHalfDay + totalPaidLeave + totalWeekOff);
-
+        const payableSalary = dailySalary * (totalPresent + totalPaidLeave + totalWeekOff);
 
         const existingPayment = await prisma.paymentHistory.findFirst({
             where: {
@@ -228,7 +228,7 @@ const getSpecificStaffPayroll = async (req, res, next) => {
             totalApplyOverTime: parseFloat(totalApplyOverTime.toFixed(2)),
             perHourSalary: parseFloat((dailySalary / totalWorkingHours).toFixed(2)),
             dailySalary: parseFloat(dailySalary.toFixed(2)),
-            payableSalary: parseFloat((payableSalary - totalApplyFine + totalApplyOverTime - totalApplyBreakAmount).toFixed(2)),
+            payableSalary: parseFloat((payableSalary - totalApplyFine + totalHalfDayAmount + totalApplyOverTime - totalApplyBreakAmount).toFixed(2)),
         });
     } catch (error) {
         next(error);
@@ -387,7 +387,7 @@ const getMultipleStaffPayroll = async (req, res, next) => {
                 if (record.status === "WEEK_OFF") totalWeekOff += 1;
                 if (record.status === "PRESENT") totalPresent += 1;
                 if (record.status === "HALF_DAY") totalHalfDay += 1;
-                if (record.status === "PAIDLEAVE") totalPaidLeave += 1;
+                if (record.status === "PAID_LEAVE") totalPaidLeave += 1;
                 if (record.status === "ABSENT") totalAbsent += 1;
 
                 if (record.attendanceBreakRecord.length > 0) {
@@ -420,11 +420,12 @@ const getMultipleStaffPayroll = async (req, res, next) => {
 
 
             totalHoursWorked -= totalBreakTime;
-            const payableSalary = (totalPresent + totalWeekOff + totalPaidLeave) * dailySalary;
+            const payableSalary = (totalPresent + totalWeekOff + totalPaidLeave + totalHalfDay / 2) * dailySalary;
             const totalPaidLeaveAmount = dailySalary * totalPaidLeave
-            const totalHalfDayAmount = dailySalary * totalHalfDay
+            const totalHalfDayAmount = dailySalary * totalHalfDay / 2
             const totalAbsentAmount = totalAbsent * dailySalary
 
+            console.log(totalPresent + totalWeekOff + totalPaidLeave + totalHalfDay)
 
             if (isLastDayOfMonth()) {
                 await prisma.salaryDetail.update({
