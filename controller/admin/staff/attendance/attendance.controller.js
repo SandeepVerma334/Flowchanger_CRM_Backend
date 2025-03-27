@@ -29,6 +29,27 @@ const calculatePerMinuteSalary = (ctcAmount, date, workingHoursPerDay) => {
 };
 
 
+// const calculatePerMinuteSalary = (ctcAmount, date, workingHoursPerDay) => {
+//     const givenDate = new Date(date);
+//     const year = givenDate.getFullYear();
+//     const month = givenDate.getMonth(); // 0-based (Jan = 0, Feb = 1, etc.)
+
+//     // Get total days in the given month
+//     const daysInMonth = new Date(year, month + 1, 0).getDate();
+//     console.log(" days in month ", daysInMonth);
+//     // const workingHoursPerDay = 8;
+
+//     // Calculate daily salary
+//     const dailySalary = ctcAmount / daysInMonth;
+
+//     // Calculate per hour & per minute salary
+//     const perHourSalary = dailySalary / workingHoursPerDay;
+//     const perMinuteSalary = perHourSalary / 60;
+
+//     return perMinuteSalary;
+// };
+
+
 function convertMinutesToTimeFormat(totalMinutes) {
     let hours = Math.floor(totalMinutes / 60);
     let minutes = totalMinutes % 60;
@@ -132,7 +153,7 @@ const createAttendance = async (req, res, next) => {
         }
 
         let { staffId, shift, date, startTime, endTime, status } = req.body;
-         // Extract year, month, and day from the given date
+        // Extract year, month, and day from the given date
         const [year, month, day] = date.split('-').map(Number);
 
         // Get the number of days in the given month
@@ -235,8 +256,8 @@ const createAttendance = async (req, res, next) => {
             console.log(startTime === "" ? "00:00" : startTime, endTime !== "" ? endTime : "00:00", date)
             const workedHours = calculateWorkedHours(startTime === "" ? "00:00" : startTime, endTime !== "" ? endTime : "00:00", date);;
             const salaryDetails = await prisma.salaryDetail.findFirst({
-                where: { staffId: staffId }
-
+                where: { staffId: staffId, },
+                orderBy: { createdAt: "desc" }
             });
             const monthDays = new Date(attendanceDate.getFullYear(), attendanceDate.getMonth() + 1, 0).getDate();
             let ctcAmount = 0;
@@ -630,16 +651,59 @@ const getAttendanceByStaffId = async (req, res, next) => {
     }
 }
 
+// get single staff all attendance by id for by month
+const getAllAttendanceByMinthForStaffId = async (req, res, next) => {
+    try {
+        const staff = await checkAdmin(req.userId, "STAFF", res);
+        if (admin.error) {
+            return res.status(400).json({ message: admin.message });
+        }
+        const { page, limit } = req.query;
+        const { staffId } = req.params;
+        if (!staffId) {
+            return res.status(400).json({ message: "staffId is required" });
+        }
+        // ldkjfdslk
+        console.log(staffId);
+        const attendance = await pagination(prisma.attendanceStaff, {
+            page, limit,
+            where: {
+                // adminId: admin.id,
+                staffId: staffId,
+                adminId: admin.user.adminDetails.id
+            },
+            include: {
+                staffDetails: {
+                    include: {
+                        User: true,
+                    },
+                },
+                attendanceBreakRecord: true,
+                fine: true
+            },
+        });
+        console.log(" attedance data ", attendance);
+        res.status(200).json({ message: "Attendance fetched successfully", ...attendance });
+    } catch (error) {
+        next(error);
+    }
+}
+
 // get attendance by month or year
 const getAttendanceByMonth = async (req, res, next) => {
     try {
-        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        const { staffId, type } = req.params;
+
+        if (!type) {
+            return res.status(400).json({ message: "type is required as STAFF or ADMIN" });
+        }
+
+        const admin = await checkAdmin(req.userId, type, res);
         if (admin.error) {
             return res.status(400).json({
                 message: admin.message
             });
         }
-        const { staffId } = req.params;
         const { month, year, page = 1, limit = 10 } = req.query;
 
         if (!month || !year) {
@@ -649,7 +713,7 @@ const getAttendanceByMonth = async (req, res, next) => {
         const existsStaffId = await prisma.staffDetails.findFirst({
             where: {
                 id: staffId,
-                adminId: admin.user.adminDetails.id
+                adminId: type === "ADMIN" ? admin.user.adminDetails.id : req.adminId
             },
         });
         if (!existsStaffId) {
@@ -670,7 +734,7 @@ const getAttendanceByMonth = async (req, res, next) => {
             limit,
             where: {
                 staffId: staffId,
-                adminId: admin.user.adminDetails.id,
+                adminId: type === "ADMIN" ? admin.user.adminDetails.id : req.adminId,
                 date: {
                     gte: startDate,
                     lte: endDateString,
@@ -683,7 +747,7 @@ const getAttendanceByMonth = async (req, res, next) => {
 
         res.status(200).json({
             message: "Attendance records fetched successfully",
-            data: attendanceRecords,
+            ...attendanceRecords,
         });
 
     } catch (error) {
