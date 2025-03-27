@@ -34,6 +34,11 @@ function convertMinutesToTimeFormat(totalMinutes) {
     let minutes = totalMinutes % 60;
     return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
 }
+function convertTimeFormatToMinutes(timeString) {
+    let [hours, minutes] = timeString.split(":").map(Number);
+    return hours * 60 + minutes;
+}
+
 function convertTo24HourFormat(time) {
     const [timePart, modifier] = time.split(" ");
     let [hours, minutes] = timePart.split(":").map(Number);
@@ -1134,70 +1139,118 @@ const createBulkAttendance = async (req, res, next) => {
     }
 };
 
-
 const countStaffAttendance = async (req, res, next) => {
     try {
         const { date } = req.params;
         const admin = await checkAdmin(req.userId, "ADMIN", res);
         if (admin.error) {
-            return res.status(400).json({
-                message: admin.message
-            });
+            return res.status(400).json({ message: admin.message });
         }
+
         const allStaff = await prisma.staffDetails.findMany({
-            where: {
-                adminId: admin.user.adminDetails.id
-            },
+            where: { adminId: admin.user.adminDetails.id },
             select: {
-                AttendanceStaff: true
+                AttendanceStaff: {
+                    where: { date },
+                    select: {
+                        status: true,
+                        fine: true,
+                        overTime: true
+                    }
+                }
             }
-        })
+        });
+
+        console.log("allStaff", allStaff);
+        console.log("adminId", admin.user.adminDetails.id);
 
         let totalPresent = 0;
         let totalAbsent = 0;
         let totalPaidLeave = 0;
         let totalHalfDay = 0;
+        let totalFineMinutes = 0;
+        let totalOvertimeMinutes = 0;
 
-        if (!allStaff) {
-            return res.status(400).json({ message: "No staff found." })
+        if (!allStaff || allStaff.length === 0) {
+            return res.status(400).json({
+                message: "No staff found.", data: {
+                    totalStaff: allStaff.length,
+                    totalPresent,
+                    totalAbsent,
+                    totalPaidLeave,
+                    totalHalfDay,
+                    totalFineTime: 0,
+                    totalOvertimeTime: 0,
+                }
+            });
         }
-        let count = 0;
-        allStaff.forEach((staff) => {
-            staff.AttendanceStaff.forEach((attendance) => {
-                if (attendance.date === date) {
-                    if (attendance.status === "PERSENT" || attendance.status === "PRESENT") {
+
+
+        allStaff.forEach(staff => {
+            staff.AttendanceStaff.forEach(attendance => {
+                // Count different statuses
+                switch (attendance.status) {
+                    case "PRESENT":
                         totalPresent++;
-                    }
-                    if (attendance.status === "ABSENT") {
+                        break;
+                    case "ABSENT":
                         totalAbsent++;
-                    }
-                    if (attendance.status === "PAID_LEAVE") {
+                        break;
+                    case "PAID_LEAVE":
                         totalPaidLeave++;
-                    }
-                    if (attendance.status === "HALF_DAY") {
+                        break;
+                    case "HALF_DAY":
                         totalHalfDay++;
-                    }
-                    count++;
+                        break;
+                }
+
+                // Accumulate total fine minutes
+                if (attendance.fine && Array.isArray(attendance.fine)) {
+                    attendance.fine.forEach(fine => {
+                        if (fine.lateEntryFineHoursTime) {
+                            totalFineMinutes += convertTimeFormatToMinutes(fine.lateEntryFineHoursTime);
+                        }
+                        if (fine.excessBreakFineHoursTime) {
+                            totalFineMinutes += convertTimeFormatToMinutes(fine.excessBreakFineHoursTime);
+                        }
+                        if (fine.earlyOutFineHoursTime) {
+                            totalFineMinutes += convertTimeFormatToMinutes(fine.earlyOutFineHoursTime);
+                        }
+                    });
+                }
+
+                // Accumulate total overtime minutes
+                if (attendance.overTime && Array.isArray(attendance.overTime)) {
+                    attendance.overTime.forEach(overtime => {
+                        if (overtime.overtimeHoursTime) {
+                            totalOvertimeMinutes += convertTimeFormatToMinutes(overtime.overtimeHoursTime);
+                        }
+                        if (overtime.earlyCommingEntryHoursTime) {
+                            totalOvertimeMinutes += convertTimeFormatToMinutes(overtime.earlyCommingEntryHoursTime);
+                        }
+                    });
                 }
             });
         });
 
-        console.log(count);
+
 
         res.status(200).json({
-            message: "Attendance count fetched successfully", data: {
+            message: "Attendance count fetched successfully",
+            data: {
+                totalStaff: allStaff.length,
                 totalPresent,
                 totalAbsent,
                 totalPaidLeave,
                 totalHalfDay,
+                totalFineTime: totalFineMinutes ? parseFloat((totalFineMinutes / 60).toFixed(2)) : 0,
+                totalOvertimeTime: totalOvertimeMinutes ? parseFloat((totalOvertimeMinutes / 60).toFixed(2)) : 0,
             }
         });
-    }
-    catch (error) {
+    } catch (error) {
         next(error);
     }
-}
-
+};
 export {
     createAttendance, getAllAttendance, getAttendanceByStaffId, startAttendanceBreak, createBulkAttendance, countStaffAttendance,
     endAttendanceBreak, getAttendanceByMonth, halfDayAttendance, getAllAttendanceByDate, getAllStartBreakRecord, getAllEndBreakRecord
