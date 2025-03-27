@@ -60,6 +60,7 @@ const addOvertimeData = async (req, res, next) => {
         // Fetch salary details for the employee
         const salaryDetailsData = await prisma.salaryDetail.findFirst({
             where: { staffId: staffAttendance.staffId, adminId: req.userId },
+            orderBy: { createdAt: "desc" }
         });
         // console.log("salaryDetailsData", salaryDetailsData);
         if (!salaryDetailsData) {
