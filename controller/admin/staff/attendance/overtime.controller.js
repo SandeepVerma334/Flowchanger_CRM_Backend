@@ -124,7 +124,7 @@ const addOvertimeData = async (req, res, next) => {
         const formatTime = (minutes) => {
             const hours = Math.floor(minutes / 60);
             const mins = minutes % 60;
-            return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+            return `${ String(hours).padStart(2, '0') }:${ String(mins).padStart(2, '0') }`;
         };
         const formattedlateOutEntryTime = formatTime(lateOutMinutes);
         const formattedEarlyCommingTime = formatTime(earlyCommingMinutes);

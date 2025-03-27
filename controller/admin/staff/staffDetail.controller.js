@@ -776,7 +776,7 @@ const staffLogin = async (req, res, next) => {
     }
 
     if (staff.loginOtp !== loginOtp) {
-      return res.status(401).json({ message: "Invalid password" });
+      return res.status(401).json({ message: "Invalid OTP" });
     }
 
     const token = jwt.sign({ id: staff.User.id, adminId: staff.adminId }, process.env.JWT_SECRET, { expiresIn: '7d' }); // Generate JWT token with user ID    

@@ -54,7 +54,6 @@ function convertMinutesToTimeFormat(totalMinutes) {
     let minutes = totalMinutes % 60;
     return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
 }
-
 function convertTimeFormatToMinutes(timeString) {
     let [hours, minutes] = timeString.split(":").map(Number);
     return hours * 60 + minutes;
@@ -1292,7 +1291,6 @@ const createBulkAttendance = async (req, res, next) => {
     }
 };
 
-
 const countStaffAttendance = async (req, res, next) => {
     try {
         const { date } = req.params;
@@ -1314,6 +1312,7 @@ const countStaffAttendance = async (req, res, next) => {
                 }
             }
         });
+
 
         let totalPresent = 0;
         let totalAbsent = 0;
@@ -1384,6 +1383,8 @@ const countStaffAttendance = async (req, res, next) => {
             });
         });
 
+
+
         res.status(200).json({
             message: "Attendance count fetched successfully",
             data: {
@@ -1392,15 +1393,14 @@ const countStaffAttendance = async (req, res, next) => {
                 totalAbsent,
                 totalPaidLeave,
                 totalHalfDay,
-                totalFineTime: parseFloat((totalFineMinutes / 60).toFixed(2)),
-                totalOvertimeTime: parseFloat((totalOvertimeMinutes / 60).toFixed(2)),
+                totalFineTime: totalFineMinutes ? parseFloat((totalFineMinutes / 60).toFixed(2)) : 0,
+                totalOvertimeTime: totalOvertimeMinutes ? parseFloat((totalOvertimeMinutes / 60).toFixed(2)) : 0,
             }
         });
     } catch (error) {
         next(error);
     }
 };
-
 export {
     createAttendance, getAllAttendance, getAttendanceByStaffId, startAttendanceBreak, createBulkAttendance, countStaffAttendance,
     endAttendanceBreak, getAttendanceByMonth, halfDayAttendance, getAllAttendanceByDate, getAllStartBreakRecord, getAllEndBreakRecord

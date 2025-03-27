@@ -52,6 +52,8 @@ const addFineData = async (req, res, next) => {
             return res.status(400).json({ message: "attendanceStaffId is required to record fine." });
         }
 
+        console.log(staffId);
+
         const existingStaff = await prisma.staffDetails.findUnique({
             where: {
                 id: staffId,
@@ -63,6 +65,8 @@ const addFineData = async (req, res, next) => {
                 }
             }
         });
+
+        console.log("existingStaff", existingStaff);
         const staffEmails = existingStaff.User.email;
         console.log(staffEmails);
         if (!existingStaff) {
