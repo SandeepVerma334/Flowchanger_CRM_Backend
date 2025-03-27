@@ -76,7 +76,8 @@ const addFineData = async (req, res, next) => {
         }
 
         const salaryDetailsData = await prisma.salaryDetail.findFirst({
-            where: { staffId: existingAttendance.staffId }
+            where: { staffId: existingAttendance.staffId },
+            orderBy: { createdAt: "desc" }
         });
         if (!salaryDetailsData) {
             return res.status(404).json({ message: "Salary details not found for the given staffId." });
@@ -85,6 +86,7 @@ const addFineData = async (req, res, next) => {
         const officeWorkingHours = admin.user.adminDetails.officeWorkinghours;
         const officeStartTime = admin.user.adminDetails.officeStartTime;
         const officeEndTime = admin.user.adminDetails.officeEndtime;
+        console.log("officeWorkingHours", officeStartTime, officeEndTime);
         const convertTo24HourFormat = (timeString) => {
             if (!timeString) return null;
 
