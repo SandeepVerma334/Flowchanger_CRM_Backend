@@ -558,7 +558,73 @@ const sendInviteToAdminMail = async (email) => {
     }
 };
 
+// send overtime info
+const sendOvertimeToStaff = async (email) => {
+    try {
+        const subject = "Fine Created - Flow Changer Agency";
+        const text = `Hello,\n\nYour Overtime has been created. Please check your dashboard for Overtime Amount.\n\nBest Regards,\nFlow Changer Agency`;
 
+        const message = `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <h3 style="color: #000000;">Dear Team Members,</h3>
+                <p>Your overtime has been created please go your dashboard and View your Overtime amount.</p>
+                <p>Thank you for being a part of Flow Changer Agency.</p>
+                <br>
+                <p>Best Regards,<br>Flow Changer Agency</p>
+            </div>
+        `;
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject,
+            text,
+            html: message,
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log("Emails sent successfully:");
+
+        return { success: true };
+    } catch (error) {
+        console.error("Error sending email:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+// fine has been updated send email to staff 
+const sendOvertimeUpdateToStaff = async (email) => {
+    try {
+        const subject = "Fine Updated - Flow Changer Agency";
+        const text = `Hello,\n\nYour overtime has been updated. Please check your dashboard for overtime Amount.\n\nBest Regards,\nFlow Changer Agency`;
+
+        const message = `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <h3 style="color: #000000;">Dear Team Members,</h3>
+                <p>Your overtime has been updated please go your dashboard and view your updated overtime amount.</p>
+                <p>Thank you for being a part of Flow Changer Agency.</p>
+                <br>
+                <p>Best Regards,<br>Flow Changer Agency</p>
+            </div>
+        `;
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject,
+            text,
+            html: message,
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log("Emails sent successfully:");
+
+        return { success: true };
+    } catch (error) {
+        console.error("Error sending email:", error);
+        return { success: false, error: error.message };
+    }
+}
 
 
 export {
@@ -571,5 +637,7 @@ export {
     sendEmailWithPdf,
     sendSelectedStaffCustomers,
     sendFineToStaff,
-    sendFineUpdateToStaff
+    sendFineUpdateToStaff,
+        sendOvertimeUpdateToStaff,
+    sendOvertimeToStaff
 };
