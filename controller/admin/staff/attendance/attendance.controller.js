@@ -6,6 +6,24 @@ import { late, string } from "zod";
 import { stat } from "fs";
 import { create } from "domain";
 
+const calculatePerMinuteSalary = (ctcAmount, date, workingHoursPerDay) => {
+    const givenDate = new Date(date);
+    const year = givenDate.getFullYear();
+    const month = givenDate.getMonth(); // 0-based (Jan = 0, Feb = 1, etc.)
+
+    // Get total days in the given month
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    console.log(" days in month ", daysInMonth);
+
+    // Calculate daily salary
+    const dailySalary = ctcAmount / daysInMonth;
+
+    // Calculate per hour & per minute salary
+    const perHourSalary = dailySalary / workingHoursPerDay;
+    const perMinuteSalary = perHourSalary / 60;
+
+    return perMinuteSalary;
+};
 function convertMinutesToTimeFormat(totalMinutes) {
     let hours = Math.floor(totalMinutes / 60);
     let minutes = totalMinutes % 60;
@@ -145,7 +163,7 @@ const createAttendance = async (req, res, next) => {
 
         // console.log(attendanceDate.getDay())
         if (attendanceDate.getDay() == 0) {
-            attendanceStatus = "WEEK_OFF";
+            // attendanceStatus = "WEEK_OFF";
         } else {
             attendanceStatus = status.trim();
             if (!["ABSENT", "HALF_DAY", "PAID_LEAVE", "PRESENT", "WEEK_OFF"].includes(status)) {
@@ -1001,6 +1019,15 @@ const getAllAttendanceByDate = async (req, res, next) => {
         // Convert date to 'YYYY-MM-DD' string format if 'date' field is stored as a string
         const formattedDate = parsedDate.toISOString().split('T')[0]; // '2024-12-15'
 
+        let officeWorkingHours = admin.user.adminDetails.officeWorkinghours;
+        const officeStartTime = admin.user.adminDetails.officeStartTime;
+        const officeEndtime = admin.user.adminDetails.officeEndtime;
+
+        if (officeStartTime && officeEndtime) {
+            officeWorkingHours = calculateWorkedHours(officeStartTime, officeEndtime);
+        }
+
+
         const attendance = await pagination(prisma.user, {
             page, limit,
             where: {
@@ -1010,6 +1037,7 @@ const getAllAttendanceByDate = async (req, res, next) => {
             include: {
                 StaffDetails: {
                     include: {
+                        SalaryDetails: true,
                         AttendanceStaff: {
                             include: {
                                 fine: true,
@@ -1029,6 +1057,7 @@ const getAllAttendanceByDate = async (req, res, next) => {
                 ...staff,
                 StaffDetails: {
                     ...staff.StaffDetails,
+                    perMinSalary: calculatePerMinuteSalary(staff?.StaffDetails?.SalaryDetails[staff?.StaffDetails?.SalaryDetails?.length - 1]?.ctcAmount || 0, date, officeWorkingHours),
                     AttendanceStaff: staff.StaffDetails.AttendanceStaff.filter(
                         (attendance) => attendance.date === formattedDate
                     ),
