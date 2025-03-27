@@ -5,13 +5,16 @@ import prisma from "../../../../prisma/prisma.js";
 import { pagination } from "../../../../utils/pagination.js";
 import { sendFineToStaff, sendFineUpdateToStaff } from "../../../../utils/emailService.js";
 
+const convertToMinutes = (timeString) => {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    return hours * 60 + minutes;
+};
 const addFineData = async (req, res, next) => {
     try {
         const admin = await checkAdmin(req.userId, "ADMIN", res);
         if (admin.error) {
             return res.status(400).json({ message: admin.message });
         }
-
         const {
             staffId,
             attendanceStaffId,
@@ -48,10 +51,10 @@ const addFineData = async (req, res, next) => {
             return res.status(400).json({ message: "attendanceStaffId is required to record fine." });
         }
 
-        const existingStaff = await prisma.staffDetails.findFirst({
+        const existingStaff = await prisma.staffDetails.findUnique({
             where: {
                 id: staffId,
-                adminId: admin.user.adminDetails.id,
+                // adminId: admin.user.adminDetails.id,
             },
             include: {
                 User: {
@@ -60,7 +63,6 @@ const addFineData = async (req, res, next) => {
             }
         });
         const staffEmails = existingStaff.User.email;
-        console.log("admin.user.adminDetails.id", staffEmails);
 
         if (!existingStaff) {
             return res.status(400).json({ message: "Invalid staffId or staff does not belong to this admin" });
@@ -69,7 +71,6 @@ const addFineData = async (req, res, next) => {
         const existingAttendance = await prisma.attendanceStaff.findFirst({
             where: { id: attendanceStaffId, adminId: admin.user.adminDetails.id }
         });
-        // console.log("admin.user.adminDetails.id", existingAttendance);
         if (!existingAttendance) {
             return res.status(400).json({ message: "Invalid attendanceStaffId or attendance does not belong to this admin" });
         }
@@ -77,7 +78,6 @@ const addFineData = async (req, res, next) => {
         const salaryDetailsData = await prisma.salaryDetail.findFirst({
             where: { staffId: existingAttendance.staffId }
         });
-
         if (!salaryDetailsData) {
             return res.status(404).json({ message: "Salary details not found for the given staffId." });
         }
@@ -85,63 +85,87 @@ const addFineData = async (req, res, next) => {
         const officeWorkingHours = admin.user.adminDetails.officeWorkinghours;
         const officeStartTime = admin.user.adminDetails.officeStartTime;
         const officeEndTime = admin.user.adminDetails.officeEndtime;
-
-        function convertTo24HourFormat(timeString) {
+        const convertTo24HourFormat = (timeString) => {
             if (!timeString) return null;
-            let [time, modifier] = timeString.split(/(AM|PM)/);
-            let [hours, minutes] = time.split(':').map(num => parseInt(num, 10));
 
-            if (modifier === "AM" && hours === 12) {
-                hours = 0;
-            } else if (modifier === "PM" && hours !== 12) {
-                hours += 12;
-            }
+            let [time, modifier] = timeString.split(' ');
+            let [hours, minutes] = time.split(':').map(Number);
+
+            if (modifier === 'AM' && hours === 12) hours = 0;
+            if (modifier === 'PM' && hours !== 12) hours += 12;
+
             return { hours, minutes };
-        }
+        };
 
-        function calculateWorkingHours(startTime, endTime, date) {
-            const start24 = convertTo24HourFormat(startTime);
-            const end24 = convertTo24HourFormat(endTime);
+        // Function to calculate hours between two times
+        const calculateWorkingHours = (startTime, endTime) => {
+            const start = convertTo24HourFormat(startTime);
+            const end = convertTo24HourFormat(endTime);
 
-            if (!start24 || !end24) return officeWorkingHours; // Default to officeWorkingHours if any value is missing
+            if (!start || !end) return 0;
 
-            const startDate = new Date(`${date}T${start24.hours.toString().padStart(2, '0')}:${start24.minutes.toString().padStart(2, '0')}:00`);
-            const endDate = new Date(`${date}T${end24.hours.toString().padStart(2, '0')}:${end24.minutes.toString().padStart(2, '0')}:00`);
+            const startDate = new Date();
+            startDate.setHours(start.hours, start.minutes, 0);
 
-            return (endDate - startDate) / (1000 * 60 * 60);
-        }
+            const endDate = new Date();
+            endDate.setHours(end.hours, end.minutes, 0);
 
-        let requiredHours = officeWorkingHours;
-        if (officeStartTime && officeEndTime) {
-            requiredHours = calculateWorkingHours(officeStartTime, officeEndTime, existingAttendance.date);
-        }
+            return (endDate - startDate) / (1000 * 60 * 60); // Convert milliseconds to hours
+        };
+        const totalWorkingHours = calculateWorkingHours(officeStartTime, officeEndTime);
+        // console.log("totalWorkingHours", totalWorkingHours);
+        const timeToMinutes = (timeString) => {
+            if (!timeString) return 0;
+            const [hours, minutes] = timeString.split(':').map(Number);
+            return hours * 60 + minutes;
+        };
 
         // Salary calculations
+        const lateEntryTimeToMinuts = timeToMinutes(lateEntryFineHoursTime);
+        const excessBreakFineHoursTimeToMinuts = timeToMinutes(excessBreakFineHoursTime);
+        const earlyOutFineHoursTimeToMinuts = timeToMinutes(earlyOutFineHoursTime);
+
         const ctcAmount = salaryDetailsData.ctcAmount;
         const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
         const dailyCtc = ctcAmount / daysInMonth;
-        const perHourSalary = dailyCtc / requiredHours;
+        const perHourSalary = dailyCtc / totalWorkingHours;
         const convertedMinutsToHours = 60;
-        const perMinuteSalary = perHourSalary / convertedMinutsToHours;
+        const perMinuteSalary = perHourSalary / 60;
+        console.log("perMinuteSalary", perMinuteSalary);
+        const lateEntryFineAmountToMinuts = lateEntryTimeToMinuts * perMinuteSalary;
+        const lateEntryFineAmountMultiply = lateEntryFineAmountToMinuts * lateEntryFineAmount;
+        console.log("lateEntryFineAmountMultiply", lateEntryFineAmountMultiply);
+        const excessBreakFineAmountToMinuts = excessBreakFineHoursTimeToMinuts * perMinuteSalary;
+        const excessBreakFineAmountMultiply = excessBreakFineAmountToMinuts * excessBreakFineAmount;
 
-        // Convert fine hours to minutes
-        const lateEntryMinutes = parseInt(lateEntryFineHoursTime) || 0;
-        const excessBreakMinutes = parseInt(excessBreakFineHoursTime) || 0;
-        const earlyOutMinutes = parseInt(earlyOutFineHoursTime) || 0;
-
+        const earlyOutFineAmountToMinuts = earlyOutFineHoursTimeToMinuts * perMinuteSalary;
+        const earlyOutFineAmountMultiply = earlyOutFineAmountToMinuts * earlyOutFineAmount;
+        console.log("earlyOutFineAmountMultiply", earlyOutFineAmountMultiply);
+        const totalAmountToMinuts = lateEntryFineAmountMultiply + excessBreakFineAmountMultiply + earlyOutFineAmountMultiply;
+        console.log("totalAmountToMinuts", totalAmountToMinuts);
         // Convert minutes to HH:mm format
-        const formatTime = (minutes) => `${Math.floor(minutes / convertedMinutsToHours)}:${minutes % convertedMinutsToHours}`;
-        const formattedLateEntry = formatTime(lateEntryMinutes);
-        const formattedExcessBreak = formatTime(excessBreakMinutes);
-        const formattedEarlyOut = formatTime(earlyOutMinutes);
-
-        // Fine calculations
-        const lateEntryFine = parseFloat((lateEntryMinutes * perMinuteSalary * lateEntryFineAmount).toFixed(2));
-        const excessBreakFine = parseFloat((excessBreakMinutes * perMinuteSalary * excessBreakFineAmount).toFixed(2));
-        const earlyOutFine = parseFloat((earlyOutMinutes * perMinuteSalary * earlyOutFineAmount).toFixed(2));
-        const calculatedTotalFine = parseFloat((lateEntryFine + excessBreakFine + earlyOutFine).toFixed(2));
+        const formatTime = (minutes) => {
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+        };
+        const formattedLateEntry = formatTime(lateEntryTimeToMinuts);
+        const formattedExcessBreak = formatTime(excessBreakFineHoursTimeToMinuts);
+        const formattedEarlyOut = formatTime(earlyOutFineHoursTimeToMinuts);
 
         const currentDate = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+
+        // find firstly overtime same attendanceStaffId on the current date first delete overtime entry then create new fine entry
+        const findOvertimeExistEntry = await prisma.overtime.findFirst({
+            where: {
+                attendanceStaffId: attendanceStaffId,
+            }
+        })
+        if (findOvertimeExistEntry) {
+            await prisma.overtime.delete({
+                where: { id: findOvertimeExistEntry.id }
+            });
+        }
 
         // Check if  a fine record already exists for the same attendanceStaffId on the current date
         const existingFine = await prisma.fine.findFirst({
@@ -159,17 +183,18 @@ const addFineData = async (req, res, next) => {
                     staffId: existingAttendance.staffId,
                     lateEntryFineHoursTime: formattedLateEntry,
                     lateEntryFineAmount,
-                    lateEntryAmount,
+                    lateEntryAmount: lateEntryFineAmountMultiply,
                     excessBreakFineHoursTime: formattedExcessBreak,
                     excessBreakFineAmount,
-                    excessBreakAmount,
+                    excessBreakAmount: excessBreakFineAmountMultiply,
                     earlyOutFineHoursTime: formattedEarlyOut,
                     earlyOutFineAmount,
-                    earlyOutAmount,
-                    totalAmount: calculatedTotalFine,
+                    earlyOutAmount: earlyOutFineAmountMultiply,
+                    totalAmount: totalAmountToMinuts,
                     salaryDetailId: salaryDetailsData.id,
                     adminId: admin.user.adminDetails.id,
-                    applyFine: applyFine
+                    applyFine: applyFine,
+                    date: existingAttendance.date,
                 },
             });
             const checkSendSMStoStaffisTrue = await prisma.fine.findFirst({
@@ -179,11 +204,8 @@ const addFineData = async (req, res, next) => {
                 },
                 select: { sendSMStoStaff: true }
             });
-            const sendMail = await sendFineUpdateToStaff(staffEmails)
-            console.log("checkSendSMStoStaffisTrue:", checkSendSMStoStaffisTrue);
-            console.log("fine updated");
 
-            return res.status(200).json({ message: "Fine updated successfully", fine });
+            return res.status(201).json({ message: "Fine updated successfully", data: fine, perMinuteSalary });
         }
 
         // Create a new fine record if no existing fine for today
@@ -193,39 +215,39 @@ const addFineData = async (req, res, next) => {
                 attendanceStaffId,
                 lateEntryFineHoursTime: formattedLateEntry,
                 lateEntryFineAmount,
-                lateEntryAmount,
+                lateEntryAmount: lateEntryFineAmountMultiply,
                 excessBreakFineHoursTime: formattedExcessBreak,
                 excessBreakFineAmount,
-                excessBreakAmount,
+                excessBreakAmount: excessBreakFineAmountMultiply,
                 earlyOutFineHoursTime: formattedEarlyOut,
                 earlyOutFineAmount,
-                earlyOutAmount,
-                totalAmount: calculatedTotalFine,
+                earlyOutAmount: earlyOutFineAmountMultiply,
+                totalAmount: totalAmountToMinuts,
                 salaryDetailId: salaryDetailsData.id,
                 adminId: admin.user.adminDetails.id,
-                applyFine: applyFine
+                applyFine: applyFine,
+                date: existingAttendance.date,
             },
         });
 
-        const checkSendSMStoStaffisTrue = await prisma.fine.findFirst({
-            where: {
-                attendanceStaffId: req.body.attendanceStaffId,
-                adminId: admin.user.adminDetails.id,
-            },
-            select: { sendSMStoStaff: true }
-        });
-        const sendMail = await sendFineUpdateToStaff(staffEmails)
-        console.log("checkSendSMStoStaffisTrue:", checkSendSMStoStaffisTrue);
+        // const checkSendSMStoStaffisTrue = await prisma.fine.findFirst({
+        //     where: {
+        //         attendanceStaffId: req.body.attendanceStaffId,
+        //         adminId: admin.user.adminDetails.id,
+        //     },
+        //     select: { sendSMStoStaff: true }
+        // });
+        // const sendMail = await sendFineUpdateToStaff(staffEmails)
+        // console.log("checkSendSMStoStaffisTrue:", checkSendSMStoStaffisTrue);
         // send email to staff email
 
 
-        return res.status(201).json({ message: "Fine created successfully", fine, sendMail });
+        return res.status(201).json({ message: "Fine created successfully", data: fine, perMinuteSalary });
         console.log("fine created successfully");
     } catch (error) {
         next(error);
     }
 };
-
 
 // get all fine data
 const getAllFine = async (req, res, next) => {

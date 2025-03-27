@@ -408,11 +408,11 @@ const projectSchema = z.object({
 });
 
 const taskSchema = z.object({
-  subject: z.string().min(3, "Subject must be at least 3 characters long"),
-  hourlyRate: z.string().regex(/^\d+(\.\d{1,2})?$/, "Hourly rate must be a valid number"),
+  subject: z.string().optional(),
+  hourlyRate: z.string().regex(/^(\d+)(\.\d{1,2})?$/, "Hourly rate must be a valid number"),
   startDate: z.string().refine((date) => !isNaN(Date.parse(date)), { message: "Invalid start date" }),
   dueDate: z.string().refine((date) => !isNaN(Date.parse(date)), { message: "Invalid due date" }),
-  priority: z.string(),
+  priority: z.string().optional(),
   repeateEvery: z.string().optional(),
   relatedTo: z.string().optional(),
   insertChecklishtTemplates: z.string().default(false),
@@ -420,7 +420,7 @@ const taskSchema = z.object({
   description: z.string().optional(),
   public: z.boolean().default(false),
   billable: z.boolean().default(false),
-  attachFiles: z.array(z.string()).optional(), // File paths or URLs
+  attachFiles: z.array(z.string()).optional(),
   assignedBy: z.array(z.string()).min(1, "At least one staff ID is required"),
 });
 
@@ -485,7 +485,7 @@ const StaffFinancialDetailsSchema = z.object({
 });
 
 const AttendanceStatus = Object.freeze({
-  PERSENT: "PERSENT",
+  PERSENT: "PRESENT",
   ABSENT: "ABSENT",
   HALF_DAY: "HALF_DAY",
   PAID_LEAVE: "PAID_LEAVE",

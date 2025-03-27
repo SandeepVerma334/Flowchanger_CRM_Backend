@@ -155,6 +155,8 @@ const getAllStaff = async (req, res, next) => {
             Branch: true,
             AttendanceStaff: true,
             StaffEducationQualification: true,
+            BankDetails: true,
+            SalaryDetails:true,
           },
         },
       },

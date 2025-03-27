@@ -482,7 +482,6 @@ const getSalaryForSingleStaff = async (req, res, next) => {
         next(error);
     }
 };
-
 const bulkSalaryCreateOrUpdate = async (req, res, next) => {
     try {
         const admin = await checkAdmin(req.userId, "ADMIN");

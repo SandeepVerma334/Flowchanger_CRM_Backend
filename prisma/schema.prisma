@@ -541,6 +541,9 @@ model AdminDetails {
   officeWorkinghours String  @default("0")
   officeStartTime    String?
   officeEndtime      String?
+  // createdAt          DateTime? @default(now())
+  // updatedAt          DateTime? @updatedAt
+  Task               Task[]
 }
 
 model BankDetails {
@@ -637,8 +640,9 @@ model Task {
   updatedAt                 DateTime       @updatedAt
   project                   Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId                 String?
-  StaffDetails              StaffDetails[]
-  adminId                   String
+  assignedBy                StaffDetails[]
+  adminId                   String?
+  adminDetails              AdminDetails?  @relation(fields: [adminId], references: [id], onDelete: Cascade)
 }
 
 model ProjectPermissions {
@@ -905,6 +909,7 @@ model Fine {
   adminId                  String
   date                     String?
   applyFine                Boolean?         @default(false)
+  totalOvertimeHours       String?
 
   @@unique([staffId, createdAt]) // Ensure one fine per staff per day
 }
@@ -928,6 +933,5 @@ model Overtime {
   date                       String?
   applyOvertime              Boolean?         @default(false)
   createdAt                  DateTime         @default(now())
-
   @@unique([staffId, createdAt]) // Ensure one fine per staff per day
 }

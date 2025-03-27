@@ -2,28 +2,48 @@ import prisma from "../../../prisma/prisma.js";
 import { taskSchema } from "../../../utils/validation.js";
 import { pagination } from "../../../utils/pagination.js";
 import checkAdmin from "../../../utils/adminChecks.js";
+import { sendTaskToStaff } from "../../../utils/emailService.js";
 
 const createTask = async (req, res, next) => {
     try {
-        // Validate request body
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({ message: admin.message });
+        }
+        console.log("admin Details", admin);
         const validatedData = taskSchema.parse(req.body);
-        console.log("Validated Data:", validatedData); // Debugging
 
-        // Ensure `assignedBy` is an array
-        if (!Array.isArray(validatedData.assignedBy) || validatedData.assignedBy.length === 0) {
+        // Check if assignedBy staff exists
+        const staffExists = await prisma.staffDetails.findMany({
+            where: { id: { in: validatedData.assignedBy } },
+        });
+
+        if (staffExists.length !== validatedData.assignedBy.length) {
             return res.status(400).json({
                 status: false,
-                message: "AssignedBy must be a non-empty array of user IDs",
+                message: "Some staff IDs are invalid",
             });
         }
-        const getAllProjects = await prisma.project.findMany({
+
+        const staffEmails = await prisma.staffDetails.findMany({
+            where: { id: { in: validatedData.assignedBy } },
             select: {
-                id: true,
-                projectName: true
-            },
+                User: { select: { email: true } }
+            }
         });
-        console.log(getAllProjects)
-        // Manually assign values from validated data
+        const assignedEmails = staffEmails.map(staff => staff.User?.email).filter(email => email);
+
+        // Check if related project exists
+        if (validatedData.relatedTo) {
+            const project = await prisma.project.findUnique({ where: { id: validatedData.relatedTo } });
+            if (!project) {
+                return res.status(400).json({
+                    status: false,
+                    message: "Invalid related project ID",
+                });
+            }
+        }
+
         const task = await prisma.task.create({
             data: {
                 subject: validatedData.subject,
@@ -32,33 +52,36 @@ const createTask = async (req, res, next) => {
                 dueDate: new Date(validatedData.dueDate),
                 priority: validatedData.priority,
                 repeateEvery: validatedData.repeateEvery,
-                project: {
-                    connect: { id: validatedData.relatedTo }
-                },
+                project: validatedData.relatedTo ? { connect: { id: validatedData.relatedTo } } : undefined,
                 insertChecklishtTemplates: validatedData.insertChecklishtTemplates,
                 postingDate: validatedData.postingDate ? new Date(validatedData.postingDate) : new Date(),
                 description: validatedData.description,
                 public: validatedData.public,
                 billable: validatedData.billable,
                 attachFiles: validatedData.attachFiles || [],
-                // projectId: validatedData.projectId || null,
-                StaffDetails: {
+                assignedBy: {
                     connect: validatedData.assignedBy.map((staffId) => ({ id: staffId }))
+                },
+                adminDetails: {
+                    connect: { id: admin.user.adminDetails.id }
                 }
-
             },
             include: {
-                StaffDetails: true
+                assignedBy: true,
+                project: true,
             },
         });
-
-        // Send success response
+        // Check if there are any emails before sending
+        if (assignedEmails.length > 0) {
+            await sendTaskToStaff(assignedEmails);
+        } else {
+            console.log("No valid recipient emails found, skipping email sending.");
+        }
         res.status(201).json({
             status: true,
             message: "Task created successfully",
             data: task,
         });
-
     } catch (error) {
         next(error);
     }
@@ -68,9 +91,15 @@ const createTask = async (req, res, next) => {
 
 const getAllTasks = async (req, res, next) => {
     try {
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({ message: admin.message });
+        }
         const { page, limit } = req.query;
 
-        const tasks = await prisma.task.findMany({
+        const tasks = await pagination(prisma.task, {
+            page,
+            limit,
             include: {
                 StaffDetails: {
                     include: {

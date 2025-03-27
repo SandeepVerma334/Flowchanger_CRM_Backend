@@ -6,8 +6,6 @@ const attendanceRouter = express.Router();
 
 attendanceRouter.post("/create", authorizationMiddleware, createAttendance);
 attendanceRouter.get("/all-attendance", authorizationMiddleware, getAllAttendance);
-attendanceRouter.get("/single-attendance/:staffId", authorizationMiddleware, getAttendanceByStaffId);
-// attendanceRouter.put("/end-attendance-time/:id", authorizationMiddleware, updateAttendanceEndTime);
 attendanceRouter.get("/attendance-getBy-month/:staffId", authorizationMiddleware, getAttendanceByMonth);
 attendanceRouter.post('/attendance-create-bulk', authorizationMiddleware, createBulkAttendance);
 attendanceRouter.get("/all-attendance-by-date", authorizationMiddleware, getAllAttendanceByDate);
@@ -16,9 +14,6 @@ attendanceRouter.put("/end-break/:startBreakid", authorizationMiddleware, upload
 attendanceRouter.get("/all-start-break", authorizationMiddleware, getAllStartBreakRecord);
 attendanceRouter.get("/all-end-break", authorizationMiddleware, getAllEndBreakRecord);
 attendanceRouter.get("/count/:date", authorizationMiddleware, countStaffAttendance);
-
-// halfday
-
 attendanceRouter.post("/halfday", authorizationMiddleware, halfDayAttendance);
 
 export default attendanceRouter;
