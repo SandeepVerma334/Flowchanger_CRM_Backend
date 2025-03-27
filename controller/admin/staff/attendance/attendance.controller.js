@@ -5,61 +5,12 @@ import { pagination } from "../../../../utils/pagination.js";
 import { late, string } from "zod";
 import { stat } from "fs";
 import { create } from "domain";
-// const cron = require('node-cron');
-
-const calculatePerMinuteSalary = (ctcAmount, date, workingHoursPerDay) => {
-    const givenDate = new Date(date);
-    const year = givenDate.getFullYear();
-    const month = givenDate.getMonth(); // 0-based (Jan = 0, Feb = 1, etc.)
-
-    // Get total days in the given month
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    console.log(" days in month ", daysInMonth);
-    // const workingHoursPerDay = 8;
-
-    // Calculate daily salary
-    const dailySalary = ctcAmount / daysInMonth;
-
-    // Calculate per hour & per minute salary
-    const perHourSalary = dailySalary / workingHoursPerDay;
-    const perMinuteSalary = perHourSalary / 60;
-
-    return perMinuteSalary;
-};
-
-
-// const calculatePerMinuteSalary = (ctcAmount, date, workingHoursPerDay) => {
-//     const givenDate = new Date(date);
-//     const year = givenDate.getFullYear();
-//     const month = givenDate.getMonth(); // 0-based (Jan = 0, Feb = 1, etc.)
-
-//     // Get total days in the given month
-//     const daysInMonth = new Date(year, month + 1, 0).getDate();
-//     console.log(" days in month ", daysInMonth);
-//     // const workingHoursPerDay = 8;
-
-//     // Calculate daily salary
-//     const dailySalary = ctcAmount / daysInMonth;
-
-//     // Calculate per hour & per minute salary
-//     const perHourSalary = dailySalary / workingHoursPerDay;
-//     const perMinuteSalary = perHourSalary / 60;
-
-//     return perMinuteSalary;
-// };
-
 
 function convertMinutesToTimeFormat(totalMinutes) {
     let hours = Math.floor(totalMinutes / 60);
     let minutes = totalMinutes % 60;
     return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
 }
-
-function convertTimeFormatToMinutes(timeString) {
-    let [hours, minutes] = timeString.split(":").map(Number);
-    return hours * 60 + minutes;
-}
-
 function convertTo24HourFormat(time) {
     const [timePart, modifier] = time.split(" ");
     let [hours, minutes] = timePart.split(":").map(Number);
@@ -88,14 +39,9 @@ function calculateWorkedHours(startTime, endTime) {
         hour = parseInt(hour, 10);
         minute = parseInt(minute, 10);
 
-        if (period) {
-            // Convert AM/PM format to 24-hour format
-            if (period.toUpperCase() === "PM" && hour !== 12) hour += 12;
-            if (period.toUpperCase() === "AM" && hour === 12) hour = 0;
-        } else {
-            // Assume 24-hour format if AM/PM is missing
-            if (hour === 24) hour = 0; // Handle "24:00" as midnight
-        }
+        // Convert to 24-hour format
+        if (period === "PM" && hour !== 12) hour += 12;
+        if (period === "AM" && hour === 12) hour = 0;
 
         return hour * 60 + minute; // Total minutes from midnight
     }
@@ -158,21 +104,10 @@ const createAttendance = async (req, res, next) => {
         }
 
         let { staffId, shift, date, startTime, endTime, status } = req.body;
-        // Extract year, month, and day from the given date
-        const [year, month, day] = date.split('-').map(Number);
-
-        // Get the number of days in the given month
-        const daysInMonth = new Date(year, month, 0).getDate();
-
-        // Validate that the day is within the allowed range
-        if (day > daysInMonth) {
-            return res.status(400).json({ message: `Invalid date: ${year}-${month}-${day}. This month has only ${daysInMonth} days.` });
-        }
         // console.log(shift);
         let officeWorkingHours = admin.user.adminDetails.officeWorkinghours;
         const officeStartTime = admin.user.adminDetails.officeStartTime;
         const officeEndtime = admin.user.adminDetails.officeEndtime;
-        let PerMinuteSalary;
 
         if (officeStartTime && officeEndtime) {
             officeWorkingHours = calculateWorkedHours(officeStartTime, officeEndtime);
@@ -261,8 +196,8 @@ const createAttendance = async (req, res, next) => {
             console.log(startTime === "" ? "00:00" : startTime, endTime !== "" ? endTime : "00:00", date)
             const workedHours = calculateWorkedHours(startTime === "" ? "00:00" : startTime, endTime !== "" ? endTime : "00:00", date);;
             const salaryDetails = await prisma.salaryDetail.findFirst({
-                where: { staffId: staffId, },
-                orderBy: { createdAt: "desc" }
+                where: { staffId: staffId }
+
             });
             const monthDays = new Date(attendanceDate.getFullYear(), attendanceDate.getMonth() + 1, 0).getDate();
             let ctcAmount = 0;
@@ -355,7 +290,7 @@ const createAttendance = async (req, res, next) => {
             console.log("LateOutOffice", LateOutOffice);
 
 
-            PerMinuteSalary = perHourSalary / 60;
+            const PerMinuteSalary = perHourSalary / 60;
             const LateCommingFine = PerMinuteSalary * LateCommingTime;
             const EarlyOutFine = PerMinuteSalary * EarlyOutOffice;
 
@@ -413,7 +348,7 @@ const createAttendance = async (req, res, next) => {
 
                     // Check if fine entry already exists
                     let existingFine = await prisma.fine.findFirst({
-                        where: { staffId: staffId }
+                        where: { staffId: staffId, date }
                     });
 
                     console.log("existing fine", existingFine);
@@ -426,10 +361,10 @@ const createAttendance = async (req, res, next) => {
                             where: { id: existingFine.id },
                             data: {
                                 lateEntryFineHoursTime: convertMinutesToTimeFormat(LateCommingTime),
-                                lateEntryFineAmount: 1,
+                                lateEntryFineAmount: parseFloat(LateCommingFine.toFixed(2)),
                                 lateEntryAmount: parseFloat(LateCommingFine.toFixed(2)),
                                 earlyOutFineHoursTime: convertMinutesToTimeFormat(EarlyOutOffice),
-                                earlyOutFineAmount: 1,
+                                earlyOutFineAmount: parseFloat(EarlyOutFine.toFixed(2)),
                                 earlyOutAmount: parseFloat(EarlyOutFine.toFixed(2)),
                                 totalAmount: parseFloat((TotalFine ? TotalFine : totalFineTime * PerMinuteSalary).toFixed(2)),
                                 date: date,
@@ -461,10 +396,10 @@ const createAttendance = async (req, res, next) => {
                                 adminId: admin.user.adminDetails.id,
 
                                 lateEntryFineHoursTime: convertMinutesToTimeFormat(LateCommingTime),
-                                lateEntryFineAmount: 1,
+                                lateEntryFineAmount: parseFloat(LateCommingFine.toFixed(2)),
                                 lateEntryAmount: parseFloat(LateCommingFine.toFixed(2)),
                                 earlyOutFineHoursTime: convertMinutesToTimeFormat(EarlyOutOffice),
-                                earlyOutFineAmount: 1,
+                                earlyOutFineAmount: parseFloat(EarlyOutFine.toFixed(2)),
                                 earlyOutAmount: parseFloat(EarlyOutFine.toFixed(2)),
                                 totalAmount: parseFloat((TotalFine ? TotalFine : totalFineTime * PerMinuteSalary).toFixed(2)),
                                 // lateEntryFineHoursTime: formatHoursToTime(missingHours),
@@ -510,6 +445,7 @@ const createAttendance = async (req, res, next) => {
                         await prisma.overtime.update({
                             where: { id: existingOvertime.id },
                             data: {
+
                                 adminId: admin.user.adminDetails.id,
                                 earlyCommingEntryHoursTime: convertMinutesToTimeFormat(EarlyCommingTime),
                                 // earlyCommingEntryAmoun   t,
@@ -565,8 +501,7 @@ const createAttendance = async (req, res, next) => {
         }
         res.status(200).json({
             message: existingAttendance ? "Attendance updated successfully" : "Attendance created successfully",
-            data: attendanceEntry,
-            perMinutSalary: PerMinuteSalary,
+            data: attendanceEntry
         });
     } catch (error) {
         next(error);
@@ -631,44 +566,6 @@ const getAttendanceByStaffId = async (req, res, next) => {
         if (!staffId) {
             return res.status(400).json({ message: "staffId is required" });
         }
-        console.log(staffId);
-        const attendance = await pagination(prisma.attendanceStaff, {
-            page, limit,
-            where: {
-                // adminId: admin.id,
-                staffId: staffId,
-                adminId: admin.user.adminDetails.id
-            },
-            include: {
-                staffDetails: {
-                    include: {
-                        User: true,
-                    },
-                },
-                attendanceBreakRecord: true,
-                fine: true
-            },
-        });
-        console.log(" attedance data ", attendance);
-        res.status(200).json({ message: "Attendance fetched successfully", ...attendance });
-    } catch (error) {
-        next(error);
-    }
-}
-
-// get single staff all attendance by id for by month
-const getAllAttendanceByMinthForStaffId = async (req, res, next) => {
-    try {
-        const staff = await checkAdmin(req.userId, "STAFF", res);
-        if (admin.error) {
-            return res.status(400).json({ message: admin.message });
-        }
-        const { page, limit } = req.query;
-        const { staffId } = req.params;
-        if (!staffId) {
-            return res.status(400).json({ message: "staffId is required" });
-        }
-        // ldkjfdslk
         console.log(staffId);
         const attendance = await pagination(prisma.attendanceStaff, {
             page, limit,
@@ -797,7 +694,7 @@ const getAttendanceByMonth = async (req, res, next) => {
         }
 
         // After ensuring attendance is created, now fetch the attendance records for the requested month
-        const attendanceRecords = await prisma.attendanceStaff.findMany ({
+        const attendanceRecords = await prisma.attendanceStaff.findMany({
             where: {
                 staffId: staffId,
                 adminId: type === "ADMIN" ? admin.user.adminDetails.id : req.adminId,
@@ -810,7 +707,8 @@ const getAttendanceByMonth = async (req, res, next) => {
                 date: "asc",
             },
         });
-        console.log("attendanceRecords " , attendanceRecords);
+        console.log("attendanceRecords ", attendanceRecords);
+
         // Count the attendance status types for the requested month
         const statusCounts = {
             PRESENT: 0,
@@ -820,6 +718,7 @@ const getAttendanceByMonth = async (req, res, next) => {
             ABSENT: 0,
         };
 
+        // Loop through attendance records and update status counts
         attendanceRecords?.forEach(record => {
             if (record.status === "PRESENT") statusCounts.PRESENT++;
             if (record.status === "WEEK_OFF") statusCounts.WEEK_OFF++;
@@ -828,6 +727,7 @@ const getAttendanceByMonth = async (req, res, next) => {
             if (record.status === "ABSENT") statusCounts.ABSENT++;
         });
 
+        // Send response with attendance records and status counts
         res.status(200).json({
             message: "Attendance records fetched successfully",
             attendanceRecords,
@@ -838,6 +738,7 @@ const getAttendanceByMonth = async (req, res, next) => {
         next(error);
     }
 };
+
 
 // start break and end break
 const startAttendanceBreak = async (req, res, next) => {
@@ -1100,15 +1001,6 @@ const getAllAttendanceByDate = async (req, res, next) => {
         // Convert date to 'YYYY-MM-DD' string format if 'date' field is stored as a string
         const formattedDate = parsedDate.toISOString().split('T')[0]; // '2024-12-15'
 
-        let officeWorkingHours = admin.user.adminDetails.officeWorkinghours;
-        const officeStartTime = admin.user.adminDetails.officeStartTime;
-        const officeEndtime = admin.user.adminDetails.officeEndtime;
-
-        if (officeStartTime && officeEndtime) {
-            officeWorkingHours = calculateWorkedHours(officeStartTime, officeEndtime);
-        }
-
-
         const attendance = await pagination(prisma.user, {
             page, limit,
             where: {
@@ -1118,7 +1010,6 @@ const getAllAttendanceByDate = async (req, res, next) => {
             include: {
                 StaffDetails: {
                     include: {
-                        SalaryDetails: true,
                         AttendanceStaff: {
                             include: {
                                 fine: true,
@@ -1138,7 +1029,6 @@ const getAllAttendanceByDate = async (req, res, next) => {
                 ...staff,
                 StaffDetails: {
                     ...staff.StaffDetails,
-                    perMinSalary: calculatePerMinuteSalary(staff?.StaffDetails?.SalaryDetails[staff?.StaffDetails?.SalaryDetails?.length - 1]?.ctcAmount || 0, date, officeWorkingHours),
                     AttendanceStaff: staff.StaffDetails.AttendanceStaff.filter(
                         (attendance) => attendance.date === formattedDate
                     ),
@@ -1194,7 +1084,6 @@ const getAllEndBreakRecord = async (req, res, next) => {
         next(error);
     }
 };
-
 const createBulkAttendance = async (req, res, next) => {
     try {
         const admin = await checkAdmin(req.userId, "ADMIN", res);
@@ -1292,116 +1181,7 @@ const createBulkAttendance = async (req, res, next) => {
     }
 };
 
-
-const countStaffAttendance = async (req, res, next) => {
-    try {
-        const { date } = req.params;
-        const admin = await checkAdmin(req.userId, "ADMIN", res);
-        if (admin.error) {
-            return res.status(400).json({ message: admin.message });
-        }
-
-        const allStaff = await prisma.staffDetails.findMany({
-            where: { adminId: admin.user.adminDetails.id },
-            select: {
-                AttendanceStaff: {
-                    where: { date },
-                    select: {
-                        status: true,
-                        fine: true,
-                        overTime: true
-                    }
-                }
-            }
-        });
-
-        let totalPresent = 0;
-        let totalAbsent = 0;
-        let totalPaidLeave = 0;
-        let totalHalfDay = 0;
-        let totalFineMinutes = 0;
-        let totalOvertimeMinutes = 0;
-
-        if (!allStaff || allStaff.length === 0) {
-            return res.status(400).json({
-                message: "No staff found.", data: {
-                    totalStaff: allStaff.length,
-                    totalPresent,
-                    totalAbsent,
-                    totalPaidLeave,
-                    totalHalfDay,
-                    totalFineTime: 0,
-                    totalOvertimeTime: 0,
-                }
-            });
-        }
-
-
-        allStaff.forEach(staff => {
-            staff.AttendanceStaff.forEach(attendance => {
-                // Count different statuses
-                switch (attendance.status) {
-                    case "PRESENT":
-                        totalPresent++;
-                        break;
-                    case "ABSENT":
-                        totalAbsent++;
-                        break;
-                    case "PAID_LEAVE":
-                        totalPaidLeave++;
-                        break;
-                    case "HALF_DAY":
-                        totalHalfDay++;
-                        break;
-                }
-
-                // Accumulate total fine minutes
-                if (attendance.fine && Array.isArray(attendance.fine)) {
-                    attendance.fine.forEach(fine => {
-                        if (fine.lateEntryFineHoursTime) {
-                            totalFineMinutes += convertTimeFormatToMinutes(fine.lateEntryFineHoursTime);
-                        }
-                        if (fine.excessBreakFineHoursTime) {
-                            totalFineMinutes += convertTimeFormatToMinutes(fine.excessBreakFineHoursTime);
-                        }
-                        if (fine.earlyOutFineHoursTime) {
-                            totalFineMinutes += convertTimeFormatToMinutes(fine.earlyOutFineHoursTime);
-                        }
-                    });
-                }
-
-                // Accumulate total overtime minutes
-                if (attendance.overTime && Array.isArray(attendance.overTime)) {
-                    attendance.overTime.forEach(overtime => {
-                        if (overtime.overtimeHoursTime) {
-                            totalOvertimeMinutes += convertTimeFormatToMinutes(overtime.overtimeHoursTime);
-                        }
-                        if (overtime.earlyCommingEntryHoursTime) {
-                            totalOvertimeMinutes += convertTimeFormatToMinutes(overtime.earlyCommingEntryHoursTime);
-                        }
-                    });
-                }
-            });
-        });
-
-        res.status(200).json({
-            message: "Attendance count fetched successfully",
-            data: {
-                totalStaff: allStaff.length,
-                totalPresent,
-                totalAbsent,
-                totalPaidLeave,
-                totalHalfDay,
-                totalFineTime: parseFloat((totalFineMinutes / 60).toFixed(2)),
-                totalOvertimeTime: parseFloat((totalOvertimeMinutes / 60).toFixed(2)),
-            }
-        });
-    } catch (error) {
-        next(error);
-    }
-};
-
 export {
-    createAttendance, getAllAttendance, getAttendanceByStaffId, startAttendanceBreak, createBulkAttendance, countStaffAttendance,
+    createAttendance, getAllAttendance, getAttendanceByStaffId, startAttendanceBreak,
     endAttendanceBreak, getAttendanceByMonth, halfDayAttendance, getAllAttendanceByDate, getAllStartBreakRecord, getAllEndBreakRecord
 }
