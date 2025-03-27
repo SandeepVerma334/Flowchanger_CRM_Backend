@@ -6,7 +6,7 @@ const attendanceRouter = express.Router();
 
 attendanceRouter.post("/create", authorizationMiddleware, createAttendance);
 attendanceRouter.get("/all-attendance", authorizationMiddleware, getAllAttendance);
-attendanceRouter.get("/attendance-getBy-month/:staffId", authorizationMiddleware, getAttendanceByMonth);
+attendanceRouter.get("/attendance-getBy-month/:staffId/:type", authorizationMiddleware, getAttendanceByMonth);
 attendanceRouter.post('/attendance-create-bulk', authorizationMiddleware, createBulkAttendance);
 attendanceRouter.get("/all-attendance-by-date", authorizationMiddleware, getAllAttendanceByDate);
 attendanceRouter.post("/start-break", authorizationMiddleware, uploadSingle("startBreakImage"), startAttendanceBreak);
