@@ -471,7 +471,14 @@ const getSalaryForSingleStaff = async (req, res, next) => {
             },
             orderBy: {
                 createdAt: "desc"  // Ordering by newest first
-            }
+            },
+                        include: {
+                            earnings: true,
+                            deductions: true,
+                            employerContribution: true,
+                            employeeContribution: true
+                        }
+
         })
 
         return res.status(200).json({
