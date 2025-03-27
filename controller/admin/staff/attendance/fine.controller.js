@@ -72,11 +72,11 @@ const addFineData = async (req, res, next) => {
         const existingAttendance = await prisma.attendanceStaff.findFirst({
             where: { id: attendanceStaffId, adminId: admin.user.adminDetails.id }
         });
-
+        // console.log();
         // check staffId or attendanceId in this belong to staffId in attendnaceId
-        if(existingAttendance.staffId !== staffId) {
-            return res.status(400).json({ message: "Invalid staffId or staff does not belong to this admin" });
-        }
+        // if(existingAttendance.staffId !== staffId) {
+        //     return res.status(400).json({ message: "Invalid staffId or staff does not belong to this admin" });
+        // }
 
         const salaryDetailsData = await prisma.salaryDetail.findFirst({
             where: { staffId: existingAttendance.staffId },
