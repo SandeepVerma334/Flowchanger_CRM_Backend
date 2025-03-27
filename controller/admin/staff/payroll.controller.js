@@ -128,7 +128,7 @@ const getSpecificStaffPayroll = async (req, res, next) => {
             }
 
             if (record.status === "WEEK_OFF") totalWeekOff += 1;
-            if (record.status === "PERSENT") totalPresent += 1;
+            if (record.status === "PRESENT") totalPresent += 1;
             if (record.status === "HALF_DAY") totalHalfDay += 1;
             if (record.status === "PAIDLEAVE") totalPaidLeave += 1;
             if (record.status === "ABSENT") totalAbsent += 1;
@@ -385,7 +385,7 @@ const getMultipleStaffPayroll = async (req, res, next) => {
                 }
 
                 if (record.status === "WEEK_OFF") totalWeekOff += 1;
-                if (record.status === "PERSENT") totalPresent += 1;
+                if (record.status === "PRESENT") totalPresent += 1;
                 if (record.status === "HALF_DAY") totalHalfDay += 1;
                 if (record.status === "PAIDLEAVE") totalPaidLeave += 1;
                 if (record.status === "ABSENT") totalAbsent += 1;
