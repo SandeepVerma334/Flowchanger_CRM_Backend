@@ -4,6 +4,8 @@ import checkAdmin from "../../../../utils/adminChecks.js";
 import prisma from "../../../../prisma/prisma.js";
 import { pagination } from "../../../../utils/pagination.js";
 import { date } from "zod";
+import { sendOvertimeUpdateToStaff, sendOvertimeToStaff } from "../../../../utils/emailService.js";
+
 
 const convertToMinutes = (timeString) => {
     const [hours, minutes] = timeString.split(':').map(Number);
@@ -26,7 +28,8 @@ const addOvertimeData = async (req, res, next) => {
         lateOutOvertimeAmount,
         lateOutAmount,
         totalAmount,
-        applyOvertime
+        applyOvertime,
+        sendSMStoStaff
     } = req.body;
 
 
@@ -57,6 +60,23 @@ const addOvertimeData = async (req, res, next) => {
         if (!staffAttendance) {
             return res.status(404).json({ message: "Attendance record not found for the given attendanceStaffId." });
         }
+
+        const existingStaff = await prisma.staffDetails.findUnique({
+            where: {
+                id: staffId,
+                // adminId: admin.user.adminDetails.id,
+            },
+            include: {
+                User: {
+                    select: { email: true }
+                }
+            }
+        });
+        console.log("existingStaff", existingStaff)
+        const staffEmails = existingStaff.User.email;
+
+        console.log("staffEmails", staffEmails)
+
         // Fetch salary details for the employee
         const salaryDetailsData = await prisma.salaryDetail.findFirst({
             where: { staffId: staffAttendance.staffId, adminId: req.userId },
@@ -124,7 +144,7 @@ const addOvertimeData = async (req, res, next) => {
         const formatTime = (minutes) => {
             const hours = Math.floor(minutes / 60);
             const mins = minutes % 60;
-            return `${ String(hours).padStart(2, '0') }:${ String(mins).padStart(2, '0') }`;
+            return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
         };
         const formattedlateOutEntryTime = formatTime(lateOutMinutes);
         const formattedEarlyCommingTime = formatTime(earlyCommingMinutes);
@@ -163,8 +183,18 @@ const addOvertimeData = async (req, res, next) => {
                     adminId: admin.user.adminDetails.id,
                     date: staffAttendance.date,
                     applyOvertime,
+                    sendSMStoStaff,
                 },
             });
+            const checkSendSMStoStaffisTrue = await prisma.overtime.findFirst({
+                where: {
+                    attendanceStaffId: req.body.attendanceStaffId,
+                    adminId: admin.user.adminDetails.id,
+                },
+                select: { sendSMStoStaff: true }
+            });
+            if(checkSendSMStoStaffisTrue.sendSMStoStaff === true){
+            const sendMail = await sendOvertimeUpdateToStaff(staffEmails);}
 
             return res.status(201).json({ message: "Overtime updated successfully", overtime });
         }
@@ -185,9 +215,20 @@ const addOvertimeData = async (req, res, next) => {
                 adminId: admin.user.adminDetails.id,
                 date: staffAttendance.date,
                 applyOvertime,
+                sendSMStoStaff
             },
         });
-        return res.status(201).json({ message: "Overtime created successfully", overtime });
+        const checkSendSMStoStaffisTrue = await prisma.overtime.findFirst({
+            where: {
+                attendanceStaffId: req.body.attendanceStaffId,
+                adminId: admin.user.adminDetails.id,
+            },
+            select: { sendSMStoStaff: true }
+        });
+        if (checkSendSMStoStaffisTrue.sendSMStoStaff === true) {
+            const sendMail = await sendOvertimeToStaff(staffEmails);
+        }
+        return res.status(201).json({ message: "Overtime updated successfully", overtime });
     } catch (error) {
         next(error);
     }

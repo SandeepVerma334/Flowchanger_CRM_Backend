@@ -2,6 +2,7 @@ import { config } from "dotenv";
 import express from "express";
 import cors from "cors";
 import rootRouter from "./router/routes.js";
+import jwt from "jsonwebtoken";
 import path from "path";
 import { createServer } from "http";
 // Load environment variables
@@ -25,9 +26,6 @@ app.use(express.static("public"));
 // API Routes
 app.use("/api/", rootRouter);
 
-
-// ✅ Start HTTP & WebSocket server
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
