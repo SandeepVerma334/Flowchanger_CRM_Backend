@@ -3,7 +3,7 @@ import { FineSchema } from "../../../../utils/validation.js";
 import checkAdmin from "../../../../utils/adminChecks.js";
 import prisma from "../../../../prisma/prisma.js";
 import { pagination } from "../../../../utils/pagination.js";
-import { sendFineToStaff, sendFineUpdateToStaff } from "../../../../utils/emailService.js";
+import { sendFineToStaff, sendFineUpdateToStaff, sendOvertimeUpdateToStaff, sendOvertimeToStaff } from "../../../../utils/emailService.js";
 
 const convertToMinutes = (timeString) => {
     const [hours, minutes] = timeString.split(':').map(Number);
@@ -28,7 +28,8 @@ const addFineData = async (req, res, next) => {
             earlyOutFineAmount,
             earlyOutAmount,
             totalAmount,
-            applyFine
+            applyFine,
+            sendSMStoStaff
         } = req.body;
 
         // Validate input data using Zod schema
@@ -63,7 +64,7 @@ const addFineData = async (req, res, next) => {
             }
         });
         const staffEmails = existingStaff.User.email;
-
+        console.log(staffEmails);
         if (!existingStaff) {
             return res.status(400).json({ message: "Invalid staffId or staff does not belong to this admin" });
         }
@@ -71,8 +72,10 @@ const addFineData = async (req, res, next) => {
         const existingAttendance = await prisma.attendanceStaff.findFirst({
             where: { id: attendanceStaffId, adminId: admin.user.adminDetails.id }
         });
-        if (!existingAttendance) {
-            return res.status(400).json({ message: "Invalid attendanceStaffId or attendance does not belong to this admin" });
+
+        // check staffId or attendanceId in this belong to staffId in attendnaceId
+        if(existingAttendance.staffId !== staffId) {
+            return res.status(400).json({ message: "Invalid staffId or staff does not belong to this admin" });
         }
 
         const salaryDetailsData = await prisma.salaryDetail.findFirst({
@@ -86,7 +89,6 @@ const addFineData = async (req, res, next) => {
         const officeWorkingHours = admin.user.adminDetails.officeWorkinghours;
         const officeStartTime = admin.user.adminDetails.officeStartTime;
         const officeEndTime = admin.user.adminDetails.officeEndtime;
-        console.log("officeWorkingHours", officeStartTime, officeEndTime);
         const convertTo24HourFormat = (timeString) => {
             if (!timeString) return null;
 
@@ -115,7 +117,6 @@ const addFineData = async (req, res, next) => {
             return (endDate - startDate) / (1000 * 60 * 60); // Convert milliseconds to hours
         };
         const totalWorkingHours = calculateWorkingHours(officeStartTime, officeEndTime);
-        // console.log("totalWorkingHours", totalWorkingHours);
         const timeToMinutes = (timeString) => {
             if (!timeString) return 0;
             const [hours, minutes] = timeString.split(':').map(Number);
@@ -133,18 +134,14 @@ const addFineData = async (req, res, next) => {
         const perHourSalary = dailyCtc / totalWorkingHours;
         const convertedMinutsToHours = 60;
         const perMinuteSalary = perHourSalary / 60;
-        console.log("perMinuteSalary", perMinuteSalary);
         const lateEntryFineAmountToMinuts = lateEntryTimeToMinuts * perMinuteSalary;
         const lateEntryFineAmountMultiply = lateEntryFineAmountToMinuts * lateEntryFineAmount;
-        console.log("lateEntryFineAmountMultiply", lateEntryFineAmountMultiply);
         const excessBreakFineAmountToMinuts = excessBreakFineHoursTimeToMinuts * perMinuteSalary;
         const excessBreakFineAmountMultiply = excessBreakFineAmountToMinuts * excessBreakFineAmount;
 
         const earlyOutFineAmountToMinuts = earlyOutFineHoursTimeToMinuts * perMinuteSalary;
         const earlyOutFineAmountMultiply = earlyOutFineAmountToMinuts * earlyOutFineAmount;
-        console.log("earlyOutFineAmountMultiply", earlyOutFineAmountMultiply);
         const totalAmountToMinuts = lateEntryFineAmountMultiply + excessBreakFineAmountMultiply + earlyOutFineAmountMultiply;
-        console.log("totalAmountToMinuts", totalAmountToMinuts);
         // Convert minutes to HH:mm format
         const formatTime = (minutes) => {
             const hours = Math.floor(minutes / 60);
@@ -185,18 +182,19 @@ const addFineData = async (req, res, next) => {
                     staffId: existingAttendance.staffId,
                     lateEntryFineHoursTime: formattedLateEntry,
                     lateEntryFineAmount,
-                    lateEntryAmount: lateEntryFineAmountMultiply,
+                    lateEntryAmount: parseFloat(lateEntryFineAmountMultiply.toFixed(2)),
                     excessBreakFineHoursTime: formattedExcessBreak,
                     excessBreakFineAmount,
-                    excessBreakAmount: excessBreakFineAmountMultiply,
+                    excessBreakAmount: parseFloat(excessBreakFineAmountMultiply.toFixed(2)),
                     earlyOutFineHoursTime: formattedEarlyOut,
                     earlyOutFineAmount,
-                    earlyOutAmount: earlyOutFineAmountMultiply,
-                    totalAmount: totalAmountToMinuts,
+                    earlyOutAmount: parseFloat(earlyOutFineAmountMultiply.toFixed(2)),
+                    totalAmount: parseFloat(totalAmountToMinuts.toFixed(2)),
                     salaryDetailId: salaryDetailsData.id,
                     adminId: admin.user.adminDetails.id,
                     applyFine: applyFine,
                     date: existingAttendance.date,
+                    sendSMStoStaff,
                 },
             });
             const checkSendSMStoStaffisTrue = await prisma.fine.findFirst({
@@ -206,7 +204,8 @@ const addFineData = async (req, res, next) => {
                 },
                 select: { sendSMStoStaff: true }
             });
-
+            const sendMail = await sendFineUpdateToStaff(staffEmails)
+            console.log("checkSendSMStoStaffisTrue", checkSendSMStoStaffisTrue);
             return res.status(201).json({ message: "Fine updated successfully", data: fine, perMinuteSalary });
         }
 
@@ -217,30 +216,32 @@ const addFineData = async (req, res, next) => {
                 attendanceStaffId,
                 lateEntryFineHoursTime: formattedLateEntry,
                 lateEntryFineAmount,
-                lateEntryAmount: lateEntryFineAmountMultiply,
+                lateEntryAmount: parseFloat(lateEntryFineAmountMultiply.toFixed(2)),
                 excessBreakFineHoursTime: formattedExcessBreak,
                 excessBreakFineAmount,
-                excessBreakAmount: excessBreakFineAmountMultiply,
+                excessBreakAmount: parseFloat(excessBreakFineAmountMultiply.toFixed(2)),
                 earlyOutFineHoursTime: formattedEarlyOut,
                 earlyOutFineAmount,
-                earlyOutAmount: earlyOutFineAmountMultiply,
-                totalAmount: totalAmountToMinuts,
+                earlyOutAmount: parseFloat(earlyOutFineAmountMultiply.toFixed(2)),
+                totalAmount: parseFloat(totalAmountToMinuts.toFixed(2)),
                 salaryDetailId: salaryDetailsData.id,
                 adminId: admin.user.adminDetails.id,
                 applyFine: applyFine,
                 date: existingAttendance.date,
+                sendSMStoStaff
             },
         });
 
-        // const checkSendSMStoStaffisTrue = await prisma.fine.findFirst({
-        //     where: {
-        //         attendanceStaffId: req.body.attendanceStaffId,
-        //         adminId: admin.user.adminDetails.id,
-        //     },
-        //     select: { sendSMStoStaff: true }
-        // });
-        // const sendMail = await sendFineUpdateToStaff(staffEmails)
-        // console.log("checkSendSMStoStaffisTrue:", checkSendSMStoStaffisTrue);
+        const checkSendSMStoStaffisTrue = await prisma.fine.findFirst({
+            where: {
+                attendanceStaffId: attendanceStaffId,
+                adminId: admin.user.adminDetails.id,
+            },
+            select: { sendSMStoStaff: true }
+        });
+        console.log("checkSendSMStoStaffisTrue" , checkSendSMStoStaffisTrue)
+        const sendMail = await sendFineToStaff(staffEmails)
+        console.log("checkSendSMStoStaffisTrue:", checkSendSMStoStaffisTrue, sendMail);
         // send email to staff email
 
 
