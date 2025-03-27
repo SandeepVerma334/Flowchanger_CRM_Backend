@@ -1,4 +1,3 @@
-import { error } from "pdf-lib";
 import prisma from "../../../prisma/prisma.js";
 import checkAdmin from "../../../utils/adminChecks.js";
 import { pagination } from "../../../utils/pagination.js";
@@ -208,6 +207,7 @@ const createORUpdateSalary = async (req, res, next) => {
     try {
         const admin = await checkAdmin(req.userId, "ADMIN");
         if (admin.error) return res.status(403).json({ error: admin.message });
+
         const {
             effectiveDate,
             salaryType,
@@ -242,69 +242,80 @@ const createORUpdateSalary = async (req, res, next) => {
 
         if (!findStaff) return res.status(404).json({ message: "Staff not found" });
 
-        let salary;
-        let id = null;
+        const ineffectiveDate = new Date(effectiveDate);
+        const joiningDate = new Date(findStaff?.dateOfJoining);
+        const currentDate = new Date();
+
+        // Validate effective date
+        if (ineffectiveDate < joiningDate) {
+            return res.status(400).json({ message: "Effective date cannot be less than joining date" });
+        }
+        if (ineffectiveDate > currentDate) {
+            return res.status(400).json({ message: "Effective date cannot be greater than the current date" });
+        }
+
 
         // Find existing salary by effectiveDate
         const findSalary = await prisma.salaryDetail.findFirst({
             where: { staffId: staffId, effectiveDate }
         });
 
+        let salary;
+        let id = null;
+
         if (findSalary) {
+            // Update existing salary
             id = findSalary.id;
 
-            salary = await prisma.$transaction(async (prisma) => {
-                // Delete old salary details before updating
-                await prisma.earnings.deleteMany({ where: { salaryDetailsId: id } });
-                await prisma.deductions.deleteMany({ where: { salaryDetailsId: id } });
-                await prisma.employerContribution.deleteMany({ where: { salaryDetailsId: id } });
-                await prisma.employeeContribution.deleteMany({ where: { salaryDetailsId: id } });
+            // Delete existing related records
+            await prisma.earnings.deleteMany({ where: { salaryDetailsId: id } });
+            await prisma.deductions.deleteMany({ where: { salaryDetailsId: id } });
+            await prisma.employerContribution.deleteMany({ where: { salaryDetailsId: id } });
+            await prisma.employeeContribution.deleteMany({ where: { salaryDetailsId: id } });
 
-                return await prisma.salaryDetail.update({
-                    where: { id },
-                    data: {
-                        effectiveDate: new Date(new Date(effectiveDate).setDate(15)),
-                        salaryType,
-                        ctcAmount,
-                        employerPf,
-                        employerEsi,
-                        employerLwf,
-                        employeePf,
-                        employeeEsi,
-                        professionalTax,
-                        employeeLwf,
-                        earnings: { create: earnings.map(e => ({ ...e, staffId })) },
-                        deductions: deductions.length > 0 ? { create: deductions.map(d => ({ ...d, staffId })) } : undefined,
-                        employerContribution: employerContributions.length > 0 ? { create: employerContributions.map(ec => ({ ...ec, staffId })) } : undefined,
-                        employeeContribution: employeeContributions.length > 0 ? { create: employeeContributions.map(ec => ({ ...ec, staffId })) } : undefined
-                    },
-                    include: { earnings: true, deductions: true, employerContribution: true, employeeContribution: true }
-                });
+            // Update salary details
+            salary = await prisma.salaryDetail.update({
+                where: { id },
+                data: {
+                    effectiveDate: new Date(new Date(effectiveDate).setDate(15)),
+                    salaryType,
+                    ctcAmount,
+                    employerPf,
+                    employerEsi,
+                    employerLwf,
+                    employeePf,
+                    employeeEsi,
+                    professionalTax,
+                    employeeLwf,
+                    earnings: { create: earnings.map(e => ({ ...e, staffId })) },
+                    deductions: deductions.length > 0 ? { create: deductions.map(d => ({ ...d, staffId })) } : undefined,
+                    employerContribution: employerContributions.length > 0 ? { create: employerContributions.map(ec => ({ ...ec, staffId })) } : undefined,
+                    employeeContribution: employeeContributions.length > 0 ? { create: employeeContributions.map(ec => ({ ...ec, staffId })) } : undefined
+                },
+                include: { earnings: true, deductions: true, employerContribution: true, employeeContribution: true }
             });
         } else {
-            // Creating new salary
-            salary = await prisma.$transaction(async (prisma) => {
-                return await prisma.salaryDetail.create({
-                    data: {
-                        effectiveDate: new Date(new Date(effectiveDate).setDate(15)),
-                        salaryType,
-                        ctcAmount,
-                        employerPf,
-                        employerEsi,
-                        employerLwf,
-                        employeePf,
-                        employeeEsi,
-                        professionalTax,
-                        employeeLwf,
-                        adminId: req.userId,
-                        Staff: { connect: { id: staffId } },
-                        earnings: { create: earnings.map(e => ({ ...e, staffId })) },
-                        deductions: deductions.length > 0 ? { create: deductions.map(d => ({ ...d, staffId })) } : undefined,
-                        employerContribution: employerContributions.length > 0 ? { create: employerContributions.map(ec => ({ ...ec, staffId })) } : undefined,
-                        employeeContribution: employeeContributions.length > 0 ? { create: employeeContributions.map(ec => ({ ...ec, staffId })) } : undefined
-                    },
-                    include: { earnings: true, deductions: true, employerContribution: true, employeeContribution: true }
-                });
+            // Create new salary
+            salary = await prisma.salaryDetail.create({
+                data: {
+                    effectiveDate: new Date(new Date(effectiveDate).setDate(15)),
+                    salaryType,
+                    ctcAmount,
+                    employerPf,
+                    employerEsi,
+                    employerLwf,
+                    employeePf,
+                    employeeEsi,
+                    professionalTax,
+                    employeeLwf,
+                    adminId: req.userId,
+                    Staff: { connect: { id: staffId } },
+                    earnings: { create: earnings.map(e => ({ ...e, staffId })) },
+                    deductions: deductions.length > 0 ? { create: deductions.map(d => ({ ...d, staffId })) } : undefined,
+                    employerContribution: employerContributions.length > 0 ? { create: employerContributions.map(ec => ({ ...ec, staffId })) } : undefined,
+                    employeeContribution: employeeContributions.length > 0 ? { create: employeeContributions.map(ec => ({ ...ec, staffId })) } : undefined
+                },
+                include: { earnings: true, deductions: true, employerContribution: true, employeeContribution: true }
             });
         }
 
@@ -411,8 +422,7 @@ const getSalaryForStaff = async (req, res, next) => {
             return res.status(400).json({ message: "Invalid salary type. Use 'monthly' or 'yearly'." });
         }
 
-
-
+        
         const salary = await pagination(prisma.salaryDetail, {
             where: {
                 staffId: isStaff.user.StaffDetails.id,
@@ -435,51 +445,38 @@ const getSalaryForStaff = async (req, res, next) => {
 const getSalaryForSingleStaff = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { date, type } = req.query;
+        const { date } = req.query;
+        const startDate = new Date(date);
+        startDate.setUTCDate(1);
+        startDate.setUTCHours(0, 0, 0, 0);
+
+        const endDate = new Date(date);
+        endDate.setUTCDate(15);
+        endDate.setUTCHours(23, 59, 59, 999);
         const isAdmin = await checkAdmin(req.userId);
         if (isAdmin.error) {
             return res.status(401).json({ message: isAdmin.message });
         }
 
-        let startDate, endDate;
-
-        if (type === "monthly") {
-            startDate = new Date(date);
-            startDate.setUTCDate(1);
-            startDate.setUTCHours(0, 0, 0, 0);
-
-            endDate = new Date(date);
-            endDate.setUTCDate(15);
-            endDate.setUTCHours(23, 59, 59, 999);
-
-        } else if (type === "yearly") {
-            startDate = new Date(date);
-            startDate.setUTCMonth(0, 1);
-            startDate.setUTCHours(0, 0, 0, 0);
-
-            endDate = new Date(date);
-            endDate.setUTCMonth(11, 31);
-            endDate.setUTCHours(23, 59, 59, 999);
-        } else {
-            return res.status(400).json({ message: "Invalid salary type. Use 'monthly' or 'yearly'." });
-        }
-
-
-
-        const salary = await pagination(prisma.salaryDetail, {
+        console.log(startDate, endDate);
+        const salary = await prisma.salaryDetail.findFirst({
             where: {
                 staffId: id,
-                adminId: req.userId,
-                effectiveDate: {
-                    gte: startDate,
-                    lte: endDate,
-                }
+                ...(date && {
+                    effectiveDate: {
+                        gte: startDate,
+                        lte: endDate,
+                    }
+                })
+            },
+            orderBy: {
+                createdAt: "desc"  // Ordering by newest first
             }
-        });
+        })
 
         return res.status(200).json({
-            message: `Salary details retrieved successfully for specific staff for ${type} `,
-            ...salary
+            message: `Salary details retrieved successfully for specific staff `,
+            data: salary
         });
     } catch (error) {
         next(error);
@@ -574,4 +571,4 @@ const bulkSalaryCreateOrUpdate = async (req, res, next) => {
 };
 
 
-export { createSalary, updateSalary, deleteSalary, getSalaryForAdmin, getSalaryForStaff, getSalaryForSingleStaff, bulkSalaryCreateOrUpdate, createORUpdateSalary }
+export { bulkSalaryCreateOrUpdate, createORUpdateSalary, createSalary, deleteSalary, getSalaryForAdmin, getSalaryForSingleStaff, getSalaryForStaff, updateSalary };

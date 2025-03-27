@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  // directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -43,6 +43,10 @@ model User {
   PaymentHistory              PaymentHistory[]
   Branch                      Branch[]
   Department                  Department[]
+  ProjectGroup                ProjectGroup?                 @relation(fields: [roomId], references: [id])
+  roomId                      String?
+  RecieveMessage              Message[]                     @relation("ReciverRelation")
+  SendMessage                 Message[]                     @relation(name: "SenderRelation")
 }
 
 model StaffDetails {
@@ -59,7 +63,7 @@ model StaffDetails {
   degreeCertificate String?
   dateOfJoining     DateTime?   @default(now())
   dateOfBirth       String?
-  employeeId        String?
+  employeeId        String?     @unique
   maritalStatus     String?
   cityOfresidence   String?
   address           String?
@@ -72,8 +76,8 @@ model StaffDetails {
   Department        Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   Role              Role?       @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
-  PunchRecords PunchRecords[]
-  Fine         Fine[]
+  // PunchRecords PunchRecords[]
+  Fine Fine[]
 
   Overtime                    Overtime[]
   Project                     Project[]
@@ -99,6 +103,12 @@ model AttendanceStaff {
   date                  String?
   startTime             String?
   endTime               String?
+  punchInMethod         PunchMethod?            @default(PHOTOCLICK)
+  punchOutMethod        PunchMethod?            @default(PHOTOCLICK)
+  punchInLocation       String?
+  punchOutLocation      String?
+  punchInPhoto          String?
+  punchOutPhoto         String?
   status                AttendanceStatus
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @default(now())
@@ -113,6 +123,12 @@ model AttendanceStaff {
   salaryDetailId        String?
 
   officeWorkingHours String?
+}
+
+enum PunchMethod {
+  BIOMETRIC
+  QRSCAN
+  PHOTOCLICK
 }
 
 model AttendanceBreakRecord {
@@ -133,7 +149,7 @@ model AttendanceBreakRecord {
 }
 
 enum AttendanceStatus {
-  PERSENT
+  PRESENT
   ABSENT
   PAID_LEAVE
   HALF_DAY
@@ -522,7 +538,7 @@ model AdminDetails {
   createdAt                   DateTime?                     @default(now())
   updatedAt                   DateTime?                     @updatedAt
 
-  officeWorkinghours String    @default("0")
+  officeWorkinghours String  @default("0")
   officeStartTime    String?
   officeEndtime      String?
 }
@@ -598,6 +614,7 @@ model Project {
   ProjectPermissions   ProjectPermissions[]
   task                 Task[]
   adminId              String?
+  ProjectGroup         ProjectGroup[]
 }
 
 model Task {
@@ -750,6 +767,31 @@ model Report {
   updatedAt   DateTime     @updatedAt
 }
 
+model ProjectGroup {
+  id          String    @id @default(uuid()) // Unique Room ID
+  name        String
+  description String?
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  users       User[]
+  Message     Message[]
+}
+
+model Message {
+  id             String        @id @default(uuid())
+  text           String
+  senderId       String?
+  sender         User?         @relation(fields: [senderId], references: [id], onDelete: Cascade, name: "SenderRelation")
+  reciverId      String?
+  reciver        User?         @relation(fields: [reciverId], references: [id], onDelete: Cascade, name: "ReciverRelation")
+  createdAt      DateTime      @default(now())
+  ProjectGroup   ProjectGroup? @relation(fields: [projectGroupId], references: [id])
+  projectGroupId String?
+  userId         String?
+}
+
 enum ReportStatus {
   PENDING
   REJECTED
@@ -778,67 +820,67 @@ enum TransactionStatus {
   REFUNDED
 }
 
-enum PunchInMethod {
-  BIOMETRIC
-  QRSCAN
-  PHOTOCLICK
-}
+// enum PunchInMethod {
+//   BIOMETRIC
+//   QRSCAN
+//   PHOTOCLICK
+// }
 
-enum PunchOutMethod {
-  BIOMETRIC
-  QRSCAN
-  PHOTOCLICK
-}
+// enum PunchOutMethod {
+//   BIOMETRIC
+//   QRSCAN
+//   PHOTOCLICK
+// }
 
-enum punchRecordStatus {
-  ABSENT
-  PRESENT
-  // Add any other statuses you need here
-}
+// enum punchRecordStatus {
+//   ABSENT
+//   PRESENT
+//   // Add any other statuses you need here
+// }
 
-model PunchIn {
-  id            String         @id @default(dbgenerated("gen_random_uuid()"))
-  punchInMethod PunchInMethod? @default(PHOTOCLICK)
-  punchInTime   DateTime       @default(now())
-  punchInDate   DateTime       @default(now())
-  biometricData String?
-  qrCodeValue   String?
-  photoUrl      String?
-  location      String?
-  PunchRecords  PunchRecords?
-  approve       String?        @default("Pending")
-}
+// model PunchIn {
+//   id            String         @id @default(dbgenerated("gen_random_uuid()"))
+//   punchInMethod PunchInMethod? @default(PHOTOCLICK)
+//   punchInTime   DateTime       @default(now())
+//   punchInDate   DateTime       @default(now())
+//   biometricData String?
+//   qrCodeValue   String?
+//   photoUrl      String?
+//   location      String?
+//   PunchRecords  PunchRecords?
+//   approve       String?        @default("Pending")
+// }
 
-model PunchOut {
-  id             String          @id @default(dbgenerated("gen_random_uuid()"))
-  punchOutMethod PunchOutMethod? @default(PHOTOCLICK)
-  punchOutTime   DateTime        @default(now())
-  punchOutDate   DateTime        @default(now())
-  biometricData  String?
-  qrCodeValue    String?
-  photoUrl       String?
-  location       String?
-  overtime       String?
-  punchRecords   PunchRecords?
-}
+// model PunchOut {
+//   id             String          @id @default(dbgenerated("gen_random_uuid()"))
+//   punchOutMethod PunchOutMethod? @default(PHOTOCLICK)
+//   punchOutTime   DateTime        @default(now())
+//   punchOutDate   DateTime        @default(now())
+//   biometricData  String?
+//   qrCodeValue    String?
+//   photoUrl       String?
+//   location       String?
+//   overtime       String?
+//   punchRecords   PunchRecords?
+// }
 
-model PunchRecords {
-  id         String            @id @default(dbgenerated("gen_random_uuid()"))
-  punchDate  DateTime          @default(now())
-  isApproved Boolean           @default(false)
-  punchInId  String?           @unique
-  punchOutId String?           @unique
-  staffId    String?
-  status     punchRecordStatus @default(ABSENT)
-  // fine       Fine?             @relation(fields: [fineId], references: [id])
-  // Overtime   Overtime?
-  punchIn    PunchIn?          @relation(fields: [punchInId], references: [id], onDelete: Cascade)
-  punchOut   PunchOut?         @relation(fields: [punchOutId], references: [id], onDelete: Cascade)
-  staff      StaffDetails?     @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  // fineId     String?
+// model PunchRecords {
+//   id         String            @id @default(dbgenerated("gen_random_uuid()"))
+//   punchDate  DateTime          @default(now())
+//   isApproved Boolean           @default(false)
+//   punchInId  String?           @unique
+//   punchOutId String?           @unique
+//   staffId    String?
+//   status     punchRecordStatus @default(ABSENT)
+//   // fine       Fine?             @relation(fields: [fineId], references: [id])
+//   // Overtime   Overtime?
+//   punchIn    PunchIn?          @relation(fields: [punchInId], references: [id], onDelete: Cascade)
+//   punchOut   PunchOut?         @relation(fields: [punchOutId], references: [id], onDelete: Cascade)
+//   staff      StaffDetails?     @relation(fields: [staffId], references: [id], onDelete: Cascade)
+//   // fineId     String?
 
-  @@unique([staffId, punchDate])
-}
+//   @@unique([staffId, punchDate])
+// }
 
 model Fine {
   id                       String           @id @default(dbgenerated("gen_random_uuid()"))
@@ -886,5 +928,6 @@ model Overtime {
   date                       String?
   applyOvertime              Boolean?         @default(false)
   createdAt                  DateTime         @default(now())
+
   @@unique([staffId, createdAt]) // Ensure one fine per staff per day
 }

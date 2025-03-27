@@ -247,5 +247,20 @@ const bulkDeleteClient = async (req, res, next) => {
     }
 };
 
-
-export { createClient, getClients, updateClient, getClientById, searchClientByName, deleteClient, bulkDeleteClient };
+const countClients = async (req, res, next) => {
+    try {
+        const admin = await checkAdmin(req.userId);
+        if (admin.error) {
+            return res.status(401).json(admin.message);
+        }
+        const count = await prisma.user.count({
+            where: {
+                role: "CLIENT",
+            }
+        });
+        res.status(200).json({ message: "Total client count successfully", count });
+    } catch (error) {
+        next(error);
+    }
+}
+export { createClient, getClients, updateClient, getClientById, searchClientByName, deleteClient, bulkDeleteClient, countClients };

@@ -4,26 +4,27 @@ const rootRouter = Router();
 import adminSignup from "./admin/admin.router.js";
 import branchRouter from "./admin/branch.router.js";
 import departmentRouter from "./admin/department.router.js";
+import discussionRouter from "./admin/discusstion.router.js";
+import noteRouter from "./admin/note.router.js";
 import packageRouter from "./admin/package.router.js";
+import payrollRouter from "./admin/payroll.router.js";
+import projectRouter from "./admin/project.router.js";
+import reportRouter from "./admin/report.router.js";
+import roleRouter from "./admin/role.router.js";
+import attendanceRouter from "./admin/staff/attendance.router.js";
+import bankDetailsRouter from "./admin/staff/bankDetails.router.js";
+import educationRouter from "./admin/staff/education.router.js";
+import financialRouter from "./admin/staff/financial.router.js";
+import fineRouter from "./admin/staff/fine.router.js";
+import overtimeRouter from "./admin/staff/overtime.router.js";
+import salaryDetailRouter from "./admin/staff/salaryDetail.router.js";
 import staffRouter from "./admin/staff/staffDetail.router.js";
+import taskRouter from "./admin/task.router.js";
+import clientRouter from "./client/client.router.js";
 import subscriptionRouter from "./superAdmin/subscription.router.js";
 import superAdminRouter from "./superAdmin/superAdmin.router.js";
 import transactionRouter from "./superAdmin/transaction.router.js";
-import clientRouter from "./client/client.router.js";
-import roleRouter from "./admin/role.router.js";
-import projectRouter from "./admin/project.router.js";
-import taskRouter from "./admin/task.router.js";
-import noteRouter from "./admin/note.router.js";
-import discussionRouter from "./admin/discusstion.router.js";
-import reportRouter from "./admin/report.router.js";
-import educationRouter from "./admin/staff/education.router.js"
-import financialRouter from "./admin/staff/financial.router.js"
-import attendanceRouter from "./admin/staff/attendance.router.js"
-import salaryDetailRouter from "./admin/staff/salaryDetail.router.js";
-import overtimeRouter from "./admin/staff/overtime.router.js"
-import fineRouter from "./admin/staff/fine.router.js"
-import bankDetailsRouter from "./admin/staff/bankDetails.router.js"
-import payrollRouter from "./admin/payroll.router.js";
+import punchRouter from "./admin/staff/punch.router.js";
 
 rootRouter.use("/branch", branchRouter);
 rootRouter.use("/department", departmentRouter);
@@ -48,5 +49,6 @@ rootRouter.use("/overtime", overtimeRouter);
 rootRouter.use("/fine", fineRouter);
 rootRouter.use("/bank-details", bankDetailsRouter);
 rootRouter.use("/payroll", payrollRouter);
+rootRouter.use("/punch", punchRouter);
 
 export default rootRouter;

@@ -1,30 +1,58 @@
 import { AttendanceSchema, AttendanceBreakRecordSchema } from "../../../../utils/validation.js";
 import checkAdmin from "../../../../utils/adminChecks.js";
 import prisma from "../../../../prisma/prisma.js";
+// import { pagination } from "../../../../utils/pagination.js";
 import { pagination } from "../../../../utils/pagination.js";
+// import {}
+import cron from "node-cron";
 import { late } from "zod";
 import { stat } from "fs";
 import { create } from "domain";
+// const cron = require('node-cron');
 
-function calculateMinutesDifference(startTime, endTime) {
-    const parseTime = (time) => {
-        let [hour, minute] = time.split(/[: ]/);
-        const period = time.slice(-2);
-        hour = parseInt(hour, 10);
-        minute = parseInt(minute, 10);
+// Schedule job to run at 10 AM daily
+// cron.schedule('0 10 * * *', async () => {
+//     try {
+//         // Get all staff members for the admin
+//         const staffList = await prisma.staffDetails.findMany({
+//             where: { adminId: admin.user.adminDetails.id },
+//             select: { id: true }
+//         });
 
-        // Convert to 24-hour format
-        if (period === "PM" && hour !== 12) hour += 12;
-        if (period === "AM" && hour === 12) hour = 0;
+//         // Get today's date
+//         const today = new Date().toISOString().split('T')[0]; // Get the current date in 'YYYY-MM-DD' format
 
-        return hour * 60 + minute; // Convert to total minutes from midnight
-    };
+//         for (let staff of staffList) {
+//             // Check if attendance already exists for today
+//             const existingAttendance = await prisma.attendanceStaff.findFirst({
+//                 where: {
+//                     staffId: staff.id,
+//                     date: today
+//                 }
+//             });
 
-    let startMinutes = parseTime(startTime);
-    let endMinutes = parseTime(endTime);
-
-    return endMinutes - startMinutes; // Return difference in minutes
-}
+//             // If no attendance exists for the day, create it with status 'ABSENT'
+//             if (!existingAttendance) {
+//                 await prisma.attendanceStaff.create({
+//                     data: {
+//                         shift: "Morning", // Default shift (or adjust based on your needs)
+//                         date: today,
+//                         status: "ABSENT",
+//                         staffDetails: {
+//                             connect: { id: staff.id }
+//                         },
+//                         adminDetail: {
+//                             connect: { id: admin.user.adminDetails.id } // Use dynamic admin ID
+//                         }
+//                     }
+//                 });
+//                 console.log(`Attendance marked as ABSENT for staff ${staff.id} on ${today}`);
+//             }
+//         }
+//     } catch (error) {
+//         console.error('Error creating automatic attendance:', error);
+//     }
+// });
 
 function formatHoursToTime(decimalHours) {
     if (decimalHours < 0 || decimalHours >= 24) return "00:00"; // Handle edge cases
@@ -150,7 +178,7 @@ const createAttendance = async (req, res, next) => {
 
         if (attendanceEntry && status !== "PERSENT") {
             const findOvertimeEntry = await prisma.overtime.findFirst({
-                where: { staffId: staffId, date: date }
+                where: { attendanceStaffId: existingAttendance.id }
             })
             if (findOvertimeEntry) {
                 await prisma.overtime.delete({
@@ -158,7 +186,7 @@ const createAttendance = async (req, res, next) => {
                 });
             }
             const findFineEntry = await prisma.fine.findFirst({
-                where: { staffId: staffId, date: date }
+                where: { attendanceStaffId: existingAttendance.id }
             });
             if (findFineEntry) {
                 await prisma.fine.delete({
@@ -204,7 +232,7 @@ const createAttendance = async (req, res, next) => {
 
                     // Check if fine entry already exists
                     let existingFine = await prisma.fine.findFirst({
-                        where: { staffId: staffId, date }
+                        where: { staffId: staffId }
                     });
 
                     if (existingFine) {
@@ -335,15 +363,19 @@ const getAllAttendance = async (req, res, next) => {
                 message: admin.message
             });
         }
+        console.log(admin);
+
         const existingAdminId = await prisma.attendanceStaff.findFirst({
             where: {
                 // id: attendanceId,
                 adminId: admin.user.adminDetails.id,
             }
         });
+        console.log(existingAdminId);
         if (!existingAdminId || (existingAdminId.adminId !== admin.user.adminDetails.id)) {
             return res.status(400).json({ message: "Invalid adminId" });
         }
+
         const { page, limit } = req.query;
         const attendance = await pagination(prisma.attendanceStaff, {
             page, limit,
@@ -572,6 +604,7 @@ const endAttendanceBreak = async (req, res, next) => {
 };
 
 // halfday Attendance 
+
 const halfDayAttendance = async (req, res, next) => {
     try {
         const admin = await checkAdmin(req.userId, "ADMIN", res);
@@ -793,6 +826,7 @@ const getAllEndBreakRecord = async (req, res, next) => {
         next(error);
     }
 };
+
 const createBulkAttendance = async (req, res, next) => {
     try {
         const admin = await checkAdmin(req.userId, "ADMIN", res);
@@ -890,7 +924,71 @@ const createBulkAttendance = async (req, res, next) => {
     }
 };
 
+
+const countStaffAttendance = async (req, res, next) => {
+    try {
+        const { date } = req.params;
+        const admin = await checkAdmin(req.userId, "ADMIN", res);
+        if (admin.error) {
+            return res.status(400).json({
+                message: admin.message
+            });
+        }
+        const allStaff = await prisma.staffDetails.findMany({
+            where: {
+                adminId: admin.user.adminDetails.id
+            },
+            select: {
+                AttendanceStaff: true
+            }
+        })
+
+        let totalPresent = 0;
+        let totalAbsent = 0;
+        let totalPaidLeave = 0;
+        let totalHalfDay = 0;
+
+        if (!allStaff) {
+            return res.status(400).json({ message: "No staff found." })
+        }
+        let count = 0;
+        allStaff.forEach((staff) => {
+            staff.AttendanceStaff.forEach((attendance) => {
+                if (attendance.date === date) {
+                    if (attendance.status === "PERSENT" || attendance.status === "PRESENT") {
+                        totalPresent++;
+                    }
+                    if (attendance.status === "ABSENT") {
+                        totalAbsent++;
+                    }
+                    if (attendance.status === "PAID_LEAVE") {
+                        totalPaidLeave++;
+                    }
+                    if (attendance.status === "HALF_DAY") {
+                        totalHalfDay++;
+                    }
+                    count++;
+                }
+            });
+        });
+
+        console.log(count);
+
+        res.status(200).json({
+            message: "Attendance count fetched successfully", data: {
+                totalPresent,
+                totalAbsent,
+                totalPaidLeave,
+                totalHalfDay,
+            }
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+}
+
 export {
-    createAttendance, getAllAttendance, getAttendanceByStaffId, startAttendanceBreak, createBulkAttendance,
+    createAttendance, getAllAttendance, getAttendanceByStaffId, startAttendanceBreak, createBulkAttendance, countStaffAttendance,
     endAttendanceBreak, getAttendanceByMonth, halfDayAttendance, getAllAttendanceByDate, getAllStartBreakRecord, getAllEndBreakRecord
 }

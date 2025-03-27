@@ -1,7 +1,7 @@
 import { Router } from "express";
 const taskRouter = Router();
 import { authorizationMiddleware } from "../../middleware/auth.js";
-import { createTask, getAllTasks, updateTask, bulkDeleteTasks, getTaskById, deletetaskById, searchTasks } from "../../controller/admin/task/task.controller.js";
+import { createTask, getAllTasks, updateTask, bulkDeleteTasks, getTaskById, deletetaskById, searchTasks, countTasks } from "../../controller/admin/task/task.controller.js";
 
 taskRouter.post("/", authorizationMiddleware, createTask);
 taskRouter.get("/all-task", authorizationMiddleware, getAllTasks);
@@ -10,5 +10,6 @@ taskRouter.delete("/bulk-delete", authorizationMiddleware, bulkDeleteTasks);
 taskRouter.get("/get-single/:taskId", authorizationMiddleware, getTaskById);
 taskRouter.delete("/delete/:taskId", authorizationMiddleware, deletetaskById);
 taskRouter.get("/search", authorizationMiddleware, searchTasks);
+taskRouter.get("/count", authorizationMiddleware, countTasks);
 
 export default taskRouter;

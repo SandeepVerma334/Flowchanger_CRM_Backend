@@ -1,6 +1,7 @@
 import prisma from "../../../prisma/prisma.js";
 import { taskSchema } from "../../../utils/validation.js";
 import { pagination } from "../../../utils/pagination.js";
+import checkAdmin from "../../../utils/adminChecks.js";
 
 const createTask = async (req, res, next) => {
     try {
@@ -31,8 +32,8 @@ const createTask = async (req, res, next) => {
                 dueDate: new Date(validatedData.dueDate),
                 priority: validatedData.priority,
                 repeateEvery: validatedData.repeateEvery,
-                project:{
-                    connect:{id:validatedData.relatedTo}
+                project: {
+                    connect: { id: validatedData.relatedTo }
                 },
                 insertChecklishtTemplates: validatedData.insertChecklishtTemplates,
                 postingDate: validatedData.postingDate ? new Date(validatedData.postingDate) : new Date(),
@@ -65,34 +66,34 @@ const createTask = async (req, res, next) => {
 
 // get all tasks
 
-const getAllTasks = async (req, res,next) => {
-try{
-    const { page, limit } = req.query;
+const getAllTasks = async (req, res, next) => {
+    try {
+        const { page, limit } = req.query;
 
-const tasks = await prisma.task.findMany({
-    include: {
-        StaffDetails: {
+        const tasks = await prisma.task.findMany({
             include: {
-                User: true, 
+                StaffDetails: {
+                    include: {
+                        User: true,
+                    },
+                },
+                project: true,
             },
-        },
-        project: true, 
-    },
-});
+        });
 
-    const result = await pagination(prisma.task, { page, limit });
+        const result = await pagination(prisma.task, { page, limit });
 
-    return res.status(200).json({message:"Task Fetch Successfully!", data:tasks });
-}catch(error){
-    next(error)
-}
+        return res.status(200).json({ message: "Task Fetch Successfully!", data: tasks });
+    } catch (error) {
+        next(error)
+    }
 }
 
 // update task
 
 const updateTask = async (req, res, next) => {
     try {
-        const { taskId } = req.params; 
+        const { taskId } = req.params;
         const admin = await prisma.user.findUnique({
             where: {
                 id: req.userId,
@@ -111,7 +112,7 @@ const updateTask = async (req, res, next) => {
                 message: "Unauthorized access",
             });
         }
-        const validatedData = taskSchema.parse(req.body); 
+        const validatedData = taskSchema.parse(req.body);
 
         console.log("Validated Data for Update:", validatedData);
 
@@ -148,8 +149,8 @@ const updateTask = async (req, res, next) => {
                 dueDate: new Date(validatedData.dueDate),
                 priority: validatedData.priority,
                 repeateEvery: validatedData.repeateEvery,
-                project:{
-                    connect:{id:validatedData.relatedTo}
+                project: {
+                    connect: { id: validatedData.relatedTo }
                 },
                 insertChecklishtTemplates: validatedData.insertChecklishtTemplates,
                 postingDate: validatedData.postingDate ? new Date(validatedData.postingDate) : new Date(),
@@ -183,7 +184,7 @@ const updateTask = async (req, res, next) => {
 
 const bulkDeleteTasks = async (req, res, next) => {
     try {
-        const { taskIds } = req.body; 
+        const { taskIds } = req.body;
         const admin = await prisma.user.findUnique({
             where: {
                 id: req.userId,
@@ -210,7 +211,7 @@ const bulkDeleteTasks = async (req, res, next) => {
         }
         const deletedTasks = await prisma.task.deleteMany({
             where: {
-                id: { in: taskIds }, 
+                id: { in: taskIds },
             },
         });
 
@@ -363,4 +364,16 @@ const searchTasks = async (req, res, next) => {
     }
 };
 
-export { createTask, getAllTasks, updateTask, bulkDeleteTasks, getTaskById, deletetaskById, searchTasks }
+const countTasks = async (req, res, next) => {
+    try {
+        const admin = await checkAdmin(req.userId);
+        if (admin.error) {
+            return res.status(400).json(admin.message);
+        }
+        const count = await prisma.task.count();
+        res.status(200).json({ message: "Total task count successfully", count });
+    } catch (error) {
+        next(error);
+    }
+}
+export { createTask, getAllTasks, updateTask, bulkDeleteTasks, getTaskById, deletetaskById, searchTasks, countTasks }

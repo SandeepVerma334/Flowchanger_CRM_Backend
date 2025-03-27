@@ -569,4 +569,21 @@ const bulkDeleteProjectById = async (req, res, next) => {
     }
 };
 
-export { createProject, getAllProjects, getProjectById, deleteProjectById, searchProjectByName, updateProjectById, bulkDeleteProjectById };
+const countProjects = async (req, res, next) => {
+    const admin = await checkAdmin(req.userId, "ADMIN", res);
+    if (admin.error) {
+        return res.status(400).json({ message: admin.message });
+    }
+    try {
+        const count = await prisma.project.count({
+            where: {
+                adminId: req.userId,
+            },
+        });
+        res.status(200).json({ message: "Total project count successfully", count });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export { createProject, getAllProjects, getProjectById, deleteProjectById, searchProjectByName, updateProjectById, bulkDeleteProjectById, countProjects };

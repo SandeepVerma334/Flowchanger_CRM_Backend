@@ -4,6 +4,17 @@ import { pagination } from "../../../utils/pagination.js";
 import prisma from "../../../prisma/prisma.js";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
+import { sendEmailWithPdf } from "../../../utils/emailService.js";
+
+function generateRandomString() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz123456789';
+  let result = '';
+  for (let i = 0; i < 5; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 
 // create staff
 const createStaff = async (req, res, next) => {
@@ -57,7 +68,7 @@ const createStaff = async (req, res, next) => {
 
     const admin = await checkAdmin(req.userId);
 
-    const uniqueEmployeeId = `FLOW#-${new Date().getTime()}-${uuidv4().replace(/-/g, "").substring(0, 5)}`;
+    const uniqueEmployeeId = generateRandomString();
     const staffData = await prisma.user.create({
       data: {
         firstName: validation.firstName,
@@ -68,10 +79,10 @@ const createStaff = async (req, res, next) => {
         profileImage: req?.file?.path === undefined ? null : req.file.path,
         role: "STAFF",
         email: validation.officialMail,
-        otp: validation.otp,
         adminId: req.userId,
         StaffDetails: {
           create: {
+            loginOtp: validation.loginOtp,
             Admin: {
               connect: {
                 id: admin.user.adminDetails.id,
@@ -748,31 +759,32 @@ const bulkDeleteStaff = async (req, res, next) => {
 
 const staffLogin = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { employeeId, loginOtp } = req.body;
 
-    const user = await prisma.user.findUnique({
-      where: { email: email }
+    const staff = await prisma.staffDetails.findUnique({
+      where: {
+        employeeId: employeeId
+      },
+      include: {
+        User: true
+      }
     });
-    if (!user) {
+    if (!staff) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (user.role !== 'STAFF') {
-      return res.status(403).json({ message: "Access denied. User is not an admin." });
-    }
-
-
-    if (user.password !== password) {
+    if (staff.loginOtp !== loginOtp) {
       return res.status(401).json({ message: "Invalid password" });
     }
 
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' }); // Generate JWT token with user ID    
+    const token = jwt.sign({ id: staff.User.id, adminId: staff.adminId }, process.env.JWT_SECRET, { expiresIn: '7d' }); // Generate JWT token with user ID    
 
     res.status(200).json({
       message: "Login successfuly",
       token,
-      data: user  // Send token in response
+      data: staff  // Send token in response
     });
+
 
   } catch (error) {
     next(error);
