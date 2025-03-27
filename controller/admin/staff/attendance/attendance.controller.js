@@ -132,6 +132,16 @@ const createAttendance = async (req, res, next) => {
         }
 
         let { staffId, shift, date, startTime, endTime, status } = req.body;
+         // Extract year, month, and day from the given date
+        const [year, month, day] = date.split('-').map(Number);
+
+        // Get the number of days in the given month
+        const daysInMonth = new Date(year, month, 0).getDate();
+
+        // Validate that the day is within the allowed range
+        if (day > daysInMonth) {
+            return res.status(400).json({ message: `Invalid date: ${year}-${month}-${day}. This month has only ${daysInMonth} days.` });
+        }
         // console.log(shift);
         let officeWorkingHours = admin.user.adminDetails.officeWorkinghours;
         const officeStartTime = admin.user.adminDetails.officeStartTime;
