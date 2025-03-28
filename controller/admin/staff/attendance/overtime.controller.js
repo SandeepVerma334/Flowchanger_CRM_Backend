@@ -28,7 +28,7 @@ const addOvertimeData = async (req, res, next) => {
         lateOutAmount,
         totalAmount,
         applyOvertime,
-        sendSMStoStaff
+        // sendSMStoStaff
     } = req.body;
 
 
@@ -185,15 +185,15 @@ const addOvertimeData = async (req, res, next) => {
                     sendSMStoStaff,
                 },
             });
-            const checkSendSMStoStaffisTrue = await prisma.overtime.findFirst({
-                where: {
-                    attendanceStaffId: req.body.attendanceStaffId,
-                    adminId: admin.user.adminDetails.id,
-                },
-                select: { sendSMStoStaff: true }
-            });
-            if(checkSendSMStoStaffisTrue.sendSMStoStaff === true){
-            const sendMail = await sendOvertimeUpdateToStaff(staffEmails);}
+            // const checkSendSMStoStaffisTrue = await prisma.overtime.findFirst({
+            //     where: {
+            //         attendanceStaffId: req.body.attendanceStaffId,
+            //         adminId: admin.user.adminDetails.id,
+            //     },
+            //     select: { sendSMStoStaff: true }
+            // });
+            // if(checkSendSMStoStaffisTrue.sendSMStoStaff === true){
+            // const sendMail = await sendOvertimeUpdateToStaff(staffEmails);}
 
             return res.status(201).json({ message: "Overtime updated successfully", overtime });
         }
@@ -217,16 +217,16 @@ const addOvertimeData = async (req, res, next) => {
                 sendSMStoStaff
             },
         });
-        const checkSendSMStoStaffisTrue = await prisma.overtime.findFirst({
-            where: {
-                attendanceStaffId: req.body.attendanceStaffId,
-                adminId: admin.user.adminDetails.id,
-            },
-            select: { sendSMStoStaff: true }
-        });
-        if (checkSendSMStoStaffisTrue.sendSMStoStaff === true) {
-            const sendMail = await sendOvertimeToStaff(staffEmails);
-        }
+        // const checkSendSMStoStaffisTrue = await prisma.overtime.findFirst({
+        //     where: {
+        //         attendanceStaffId: req.body.attendanceStaffId,
+        //         adminId: admin.user.adminDetails.id,
+        //     },
+        //     select: { sendSMStoStaff: true }
+        // });
+        // if (checkSendSMStoStaffisTrue.sendSMStoStaff === true) {
+        //     const sendMail = await sendOvertimeToStaff(staffEmails);
+        // }
         return res.status(201).json({ message: "Overtime updated successfully", overtime });
     } catch (error) {
         next(error);
