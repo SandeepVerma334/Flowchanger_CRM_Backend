@@ -27,7 +27,6 @@ const calculatePerMinuteSalary = (ctcAmount, date, workingHoursPerDay) => {
     return perMinuteSalary;
 };
 
-
 // const calculatePerMinuteSalary = (ctcAmount, date, workingHoursPerDay) => {
 //     const givenDate = new Date(date);
 //     const year = givenDate.getFullYear();
@@ -36,7 +35,6 @@ const calculatePerMinuteSalary = (ctcAmount, date, workingHoursPerDay) => {
 //     // Get total days in the given month
 //     const daysInMonth = new Date(year, month + 1, 0).getDate();
 //     console.log(" days in month ", daysInMonth);
-//     // const workingHoursPerDay = 8;
 
 //     // Calculate daily salary
 //     const dailySalary = ctcAmount / daysInMonth;
@@ -47,8 +45,6 @@ const calculatePerMinuteSalary = (ctcAmount, date, workingHoursPerDay) => {
 
 //     return perMinuteSalary;
 // };
-
-
 function convertMinutesToTimeFormat(totalMinutes) {
     let hours = Math.floor(totalMinutes / 60);
     let minutes = totalMinutes % 60;
@@ -209,7 +205,7 @@ const createAttendance = async (req, res, next) => {
 
         // console.log(attendanceDate.getDay())
         if (attendanceDate.getDay() == 0) {
-            attendanceStatus = "WEEK_OFF";
+            // attendanceStatus = "WEEK_OFF";
         } else {
             attendanceStatus = status.trim();
             if (!["ABSENT", "HALF_DAY", "PAID_LEAVE", "PRESENT", "WEEK_OFF"].includes(status)) {
@@ -796,7 +792,7 @@ const getAttendanceByMonth = async (req, res, next) => {
         }
 
         // After ensuring attendance is created, now fetch the attendance records for the requested month
-        const attendanceRecords = await prisma.attendanceStaff.findMany ({
+        const attendanceRecords = await prisma.attendanceStaff.findMany({
             where: {
                 staffId: staffId,
                 adminId: type === "ADMIN" ? admin.user.adminDetails.id : req.adminId,
@@ -809,7 +805,8 @@ const getAttendanceByMonth = async (req, res, next) => {
                 date: "asc",
             },
         });
-        console.log("attendanceRecords " , attendanceRecords);
+        console.log("attendanceRecords ", attendanceRecords);
+
         // Count the attendance status types for the requested month
         const statusCounts = {
             PRESENT: 0,
@@ -819,6 +816,7 @@ const getAttendanceByMonth = async (req, res, next) => {
             ABSENT: 0,
         };
 
+        // Loop through attendance records and update status counts
         attendanceRecords?.forEach(record => {
             if (record.status === "PRESENT") statusCounts.PRESENT++;
             if (record.status === "WEEK_OFF") statusCounts.WEEK_OFF++;
@@ -827,6 +825,7 @@ const getAttendanceByMonth = async (req, res, next) => {
             if (record.status === "ABSENT") statusCounts.ABSENT++;
         });
 
+        // Send response with attendance records and status counts
         res.status(200).json({
             message: "Attendance records fetched successfully",
             attendanceRecords,
@@ -837,6 +836,7 @@ const getAttendanceByMonth = async (req, res, next) => {
         next(error);
     }
 };
+
 
 // start break and end break
 const startAttendanceBreak = async (req, res, next) => {

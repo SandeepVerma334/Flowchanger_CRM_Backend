@@ -6,6 +6,9 @@ import jwt from "jsonwebtoken";
 import path from "path";
 import { createServer } from "http";
 // Load environment variables
+import cron from "node-cron";
+import autoCreateAttendance from "./utils/autoAttendanceMarkAdminsStaff.js";
+
 config();
 
 const app = express();
@@ -28,4 +31,5 @@ app.use("/api/", rootRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  autoCreateAttendance();
 });

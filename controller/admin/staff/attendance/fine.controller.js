@@ -1,3 +1,4 @@
+// import {OverTimeSchema, AttendanceSchema, AttendanceBreakRecordSchema } from "../../../../utils/validation.js";
 import { FineSchema } from "../../../../utils/validation.js";
 import checkAdmin from "../../../../utils/adminChecks.js";
 import prisma from "../../../../prisma/prisma.js";
@@ -51,8 +52,6 @@ const addFineData = async (req, res, next) => {
             return res.status(400).json({ message: "attendanceStaffId is required to record fine." });
         }
 
-        console.log(staffId);
-
         const existingStaff = await prisma.staffDetails.findUnique({
             where: {
                 id: staffId,
@@ -64,8 +63,6 @@ const addFineData = async (req, res, next) => {
                 }
             }
         });
-
-        console.log("existingStaff", existingStaff);
         const staffEmails = existingStaff.User.email;
         console.log(staffEmails);
         if (!existingStaff) {
@@ -75,11 +72,11 @@ const addFineData = async (req, res, next) => {
         const existingAttendance = await prisma.attendanceStaff.findFirst({
             where: { id: attendanceStaffId, adminId: admin.user.adminDetails.id }
         });
-
+        // console.log();
         // check staffId or attendanceId in this belong to staffId in attendnaceId
-        if(existingAttendance.staffId !== staffId) {
-            return res.status(400).json({ message: "Invalid staffId or staff does not belong to this admin" });
-        }
+        // if(existingAttendance.staffId !== staffId) {
+        //     return res.status(400).json({ message: "Invalid staffId or staff does not belong to this admin" });
+        // }
 
         const salaryDetailsData = await prisma.salaryDetail.findFirst({
             where: { staffId: existingAttendance.staffId },
