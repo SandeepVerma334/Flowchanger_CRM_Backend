@@ -18,14 +18,43 @@ function isLastDayOfMonth(date = new Date()) {
     return tomorrow.getDate() === 1;
 }
 
+function calculateWorkedHours(startTime, endTime) {
+    function parseTimeToMinutes(time) {
+        let [hour, minute, period] = time.match(/(\d+):(\d+) (AM|PM)/).slice(1);
+        hour = parseInt(hour, 10);
+        minute = parseInt(minute, 10);
+
+        // Convert to 24-hour format
+        if (period === "PM" && hour !== 12) hour += 12;
+        if (period === "AM" && hour === 12) hour = 0;
+
+        return hour * 60 + minute; // Total minutes from midnight
+    }
+
+    let startMinutes = parseTimeToMinutes(startTime);
+    let endMinutes = parseTimeToMinutes(endTime);
+
+    if (endMinutes < startMinutes) {
+        // If endTime is earlier than or equal to startTime, assume endTime is the next day
+        endMinutes += 24 * 60;
+    }
+
+    let workedMinutes = endMinutes - startMinutes;
+    let workedHours = workedMinutes / 60;
+
+    return workedHours;
+}
+
 const getSpecificStaffPayroll = async (req, res, next) => {
     try {
         const admin = await checkAdmin(req.userId);
 
-        if (admin.error) {
-            return res.status(401).json({ message: admin.message });
+        let totalWorkingHours = Number(admin.user.adminDetails.officeWorkinghours || 8);
+        const officeStartTime = admin.user.adminDetails.officeStartTime;
+        const officeEndtime = admin.user.adminDetails.officeEndtime;
+        if (officeStartTime && officeEndtime) {
+            totalWorkingHours = calculateWorkedHours(officeStartTime, officeEndtime);
         }
-        const totalWorkingHours = Number(admin.user.adminDetails.officeWorkinghours || "8");
 
         const { staffId, month, year } = req.params;
 
@@ -160,7 +189,7 @@ const getSpecificStaffPayroll = async (req, res, next) => {
         });
 
         totalHoursWorked -= totalBreakTime;
-        
+
         const totalPaidLeaveAmount = totalPaidLeave * dailySalary;
         const totalHalfDayAmount = totalHalfDay * dailySalary / 2;
         const totalAbsentAmount = totalAbsent * dailySalary;
@@ -239,10 +268,18 @@ const getMultipleStaffPayroll = async (req, res, next) => {
     try {
 
         const admin = await checkAdmin(req.userId);
-        const totalWorkingHours = Number(admin.user.adminDetails.officeWorkinghours || "8");
+
+
 
         if (admin.error) {
             return res.status(401).json({ message: admin.message });
+        }
+
+        let totalWorkingHours = Number(admin.user.adminDetails.officeWorkinghours || 8);
+        const officeStartTime = admin.user.adminDetails.officeStartTime;
+        const officeEndtime = admin.user.adminDetails.officeEndtime;
+        if (officeStartTime && officeEndtime) {
+            totalWorkingHours = calculateWorkedHours(officeStartTime, officeEndtime);
         }
 
         const staffIds = await prisma.staffDetails.findMany({
@@ -425,7 +462,6 @@ const getMultipleStaffPayroll = async (req, res, next) => {
             const totalHalfDayAmount = dailySalary * totalHalfDay / 2
             const totalAbsentAmount = totalAbsent * dailySalary
 
-            console.log(totalPresent + totalWeekOff + totalPaidLeave + totalHalfDay)
 
             if (isLastDayOfMonth()) {
                 await prisma.salaryDetail.update({
