@@ -4,7 +4,8 @@ import cors from "cors";
 import rootRouter from "./router/routes.js";
 import jwt from "jsonwebtoken";
 import path from "path";
-
+import cron from "node-cron";
+import autoCreateAttendance from "./utils/autoAttendanceMarkAdminsStaff.js";
 
 config();
 
@@ -29,4 +30,5 @@ app.use("/api/", rootRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  autoCreateAttendance();
 });

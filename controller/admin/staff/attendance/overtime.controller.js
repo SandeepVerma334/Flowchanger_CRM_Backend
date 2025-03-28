@@ -6,7 +6,6 @@ import { pagination } from "../../../../utils/pagination.js";
 import { date } from "zod";
 import { sendOvertimeUpdateToStaff, sendOvertimeToStaff } from "../../../../utils/emailService.js";
 
-
 const convertToMinutes = (timeString) => {
     const [hours, minutes] = timeString.split(':').map(Number);
     return hours * 60 + minutes;
