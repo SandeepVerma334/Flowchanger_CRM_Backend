@@ -29,6 +29,12 @@ function convertMinutesToTimeFormat(totalMinutes) {
     let minutes = totalMinutes % 60;
     return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
 }
+
+function convertTimeFormatToMinutes(timeString) {
+    let [hours, minutes] = timeString.split(":").map(Number);
+    return hours * 60 + minutes;
+}
+
 function convertTo24HourFormat(time) {
     const [timePart, modifier] = time.split(" ");
     let [hours, minutes] = timePart.split(":").map(Number);
