@@ -622,10 +622,10 @@ const getAttendanceByMonth = async (req, res, next) => {
         const { staffId, type } = req.params;
 
         if (!type) {
-            return res.status(400).json({ message: "type is required as STAFF or ADMIN" });
+            return res.status(400).json({ message: "Type is required as STAFF or ADMIN" });
         }
         if (!staffId) {
-            return res.status(400).json({ message: "staff id is required!" })
+            return res.status(400).json({ message: "Staff ID is required!" });
         }
 
         const admin = await checkAdmin(req.userId, type, res);
@@ -646,13 +646,11 @@ const getAttendanceByMonth = async (req, res, next) => {
         // Get total days in the requested month
         const totalDaysInMonth = new Date(yearNum, monthNum, 0).getDate();
 
-        // Define start and end dates for the requested month
-        const startDate = new Date(yearNum, monthNum - 1, 2);
+        // Define start and end dates for the requested month (used for querying attendance)
+        let startDate = new Date(yearNum, monthNum - 1, 1);
         startDate.setHours(0, 0, 0, 0);
-        let endDate = new Date(yearNum, monthNum - 1, totalDaysInMonth);
-        endDate.setHours(23, 59, 59, 999);
+        let endDate = new Date();
 
-        console.log(startDate, endDate);
         // Fetch staff details
         const staff = await prisma.staffDetails.findFirst({
             where: {
@@ -668,48 +666,33 @@ const getAttendanceByMonth = async (req, res, next) => {
 
         const dateOfJoining = new Date(staff.dateOfJoining);
         const currentDate = new Date();
-        console.log("currentDate", currentDate)
         // If the requested month is the current month, set endDate as today
-        // if (yearNum === currentDate.getFullYear() && monthNum === currentDate.getMonth() + 1) {
-        //     endDate = currentDate;
-        // }
+        if (yearNum === currentDate.getFullYear() && monthNum === currentDate.getMonth() + 1) {
+            endDate = currentDate;
+        }
 
-        // Fetch existing attendance records for the staff in the requested month
+        // Fetch existing attendance records for the staff starting from the date of joining to the current date
         const existingAttendances = await prisma.attendanceStaff.findMany({
             where: {
                 staffId: staffId,
                 adminId: type === "ADMIN" ? admin.user.adminDetails.id : req.adminId,
                 date: {
-                    gte: startDate.toISOString().split("T")[0],
-                    lte: endDate.toISOString().split("T")[0]
+                    gte: dateOfJoining.toISOString().split("T")[0],  // Start from the date of joining
+                    lte: endDate.toISOString().split("T")[0]  // End at the current date
                 },
             },
             select: { date: true }
         });
-        // console.log("existingAttendances " , existingAttendances)
-        // Convert existing attendance dates to a Set for fast lookup
+
+        // Create a Set for fast lookup of existing attendance dates
         const existingDatesSet = new Set(existingAttendances.map(attendance => attendance.date));
-        // console.log("existingDatesSet " , existingDatesSet)
-        let currentDay = new Date(startDate);
-        // console.log("currentDay " , currentDay)
-        // Iterate through each date in the requested month
+        // Loop through the range from the date of joining to the current date and create attendance records for missing dates
+        let currentDay = new Date(dateOfJoining);  // Start from the date of joining
         while (currentDay <= endDate) {
             const formattedDate = currentDay.toISOString().split("T")[0];
 
-            // Skip if the staff joined after this date
-            if (currentDay < dateOfJoining) {
-                currentDay.setDate(currentDay.getDate() + 1);
-                continue;
-            }
-
-            // Skip if attendance already exists
+            // Skip if attendance already exists for this date
             if (existingDatesSet.has(formattedDate)) {
-                currentDay.setDate(currentDay.getDate() + 1);
-                continue;
-            }
-
-            // Ensure the date is within the requested month (skip if it's outside the month)
-            if (currentDay.getMonth() + 1 !== monthNum || currentDay.getFullYear() !== yearNum) {
                 currentDay.setDate(currentDay.getDate() + 1);
                 continue;
             }
@@ -727,13 +710,18 @@ const getAttendanceByMonth = async (req, res, next) => {
                 },
             });
 
-            console.log(`Created attendance for ${formattedDate} with status ${status}`);
+            // console.log(`Created attendance for ${formattedDate} with status ${status}`);
 
             // Move to the next day
             currentDay.setDate(currentDay.getDate() + 1);
         }
 
-        // Fetch updated attendance records after ensuring all missing entries are created
+
+        startDate = new Date(yearNum, monthNum - 1, 2);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(yearNum, monthNum, 1);
+        // endDate.setDate(totalDaysInMonth);
+        // Fetch updated attendance records for the requested month (based on params)
         const attendanceRecords = await prisma.attendanceStaff.findMany({
             where: {
                 staffId: staffId,
@@ -745,8 +733,6 @@ const getAttendanceByMonth = async (req, res, next) => {
             },
             orderBy: { date: "asc" },
         });
-
-        // console.log("Final attendanceRecords:", attendanceRecords);
 
         // Count occurrences of each status
         const statusCounts = {
