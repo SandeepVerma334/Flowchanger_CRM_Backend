@@ -152,7 +152,8 @@ const getPunchRecords = async (req, res, next) => {
     }
 }
 
-const startBreakStaff = async (req, res, next) => {
+
+const startBreak = async (req, res, next) => {
     try {
         const isStaff = await checkAdmin(req.userId, "STAFF");
 
@@ -160,43 +161,43 @@ const startBreakStaff = async (req, res, next) => {
             return res.status(403).json({ message: "You are not staff" });
         }
 
-        const {  } = req.body;
+        const startBreakPhoto = req?.files?.startBreakPhoto?.[0]?.path ? req?.files?.startBreakPhoto?.[0]?.path : null;
 
-        const punchInPhoto = req.file.path ? req.file.path : null;
-        const findAttendance = await prisma.attendanceStaff.findFirst({
+
+        const { startBreakLocation, attendanceId, startBreakTime, startBreakDate } = req.body;
+
+        const findAttendance = await prisma.attendanceStaff.findUnique({
             where: {
-                staffId: isStaff.user.StaffDetails.id,
-                date: date
+                id: attendanceId
             }
         })
 
-        if (findAttendance) {
-            return res.status(400).json({ message: "Staff has been punched in at " + findAttendance.date + " on " + findAttendance.startTime });
+        if (!findAttendance) {
+            return res.status(400).json({ message: "Staff has not punch in first" });
         }
 
-        const attendance = await prisma.attendanceStaff.create({
+        const attendance = await prisma.attendanceBreakRecord.create({
             data: {
-                startTime: startTime,
-                date: date,
-                status: "PRESENT",
-                punchInMethod: punchInMethod,
-                punchInLocation: location,
-                punchInPhoto: punchInPhoto,
+                startBreakLocation,
+                attendanceId,
+                startBreakTime,
+                startBreakDate,
+                startBreakPhoto,
                 staffDetails: {
                     connect: { id: isStaff.user.StaffDetails.id }
                 },
-                adminDetail: {
-                    connect: { id: req.adminId }
+                attendanceStaff: {
+                    connect: { id: attendanceId }
                 }
             },
             select: {
                 id: true,
-                shift: true,
-                date: true,
-                startTime: true,
-                punchInMethod: true,
-                punchInLocation: true,
-                punchInPhoto: true
+                startBreakPhoto: true,
+                startBreakLocation: true,
+                startBreakTime: true,
+                startBreakDate: true,
+
+
             }
         });
         res.status(200).json({ message: "Punch in successfully", data: attendance });
@@ -205,7 +206,8 @@ const startBreakStaff = async (req, res, next) => {
         next(err);
     }
 }
-const endBreakStaff = async (req, res, next) => {
+
+const endBreak = async (req, res, next) => {
     try {
         const isStaff = await checkAdmin(req.userId, "STAFF");
 
@@ -213,53 +215,102 @@ const endBreakStaff = async (req, res, next) => {
             return res.status(403).json({ message: "You are not staff" });
         }
 
-        const { date, punchOutMethod, location, endTime } = req.body;
+        const { endBreakLocation, attendanceId, endBreakTime, endBreakDate } = req.body;
+        const endBreakPhoto = req?.files?.startBreakPhoto?.[0]?.path ? req?.files?.startBreakPhoto?.[0]?.path : null;
 
-        const punchOutPhoto = req?.files?.punchOutPhoto?.[0]?.path ? req?.files?.punchOutPhoto?.[0]?.path : null;
-
-        const findAttendance = await prisma.attendanceStaff.findFirst({
+        const findAttendance = await prisma.attendanceStaff.findUnique({
             where: {
-                staffId: isStaff.user.StaffDetails.id,
-                date: date
+                id: attendanceId
             }
         })
 
         if (!findAttendance) {
-            return res.status(400).json({ message: "Staff has not punch in first. " });
+            return res.status(400).json({ message: "Staff has not punch in first" });
         }
 
-        if (findAttendance.endTime) {
-            return res.status(400).json({ message: "Staff has been punched out at " + findAttendance.date + " on " + findAttendance.endTime });
-        }
-
-        const attendance = await prisma.attendanceStaff.update({
-            where: {
-                id: findAttendance.id
-            },
+        const attendance = await prisma.attendanceBreakRecord.create({
             data: {
-                endTime: endTime,
-                date: date,
-                status: "PRESENT",
-                punchOutMethod: punchOutMethod,
-                punchOutLocation: location,
-                punchOutPhoto: punchOutPhoto,
-
+                endBreakLocation,
+                attendanceId,
+                endBreakTime,
+                endBreakDate,
+                endBreakPhoto,
+                staffDetails: {
+                    connect: { id: isStaff.user.StaffDetails.id }
+                },
+                attendanceStaff: {
+                    connect: { id: attendanceId }
+                }
             },
             select: {
                 id: true,
-                shift: true,
-                date: true,
-                endTime: true,
-                punchOutMethod: true,
-                punchOutLocation: true,
-                punchOutPhoto: true
+                endBreakTime: true,
+                endBreakDate: true,
+                endBreakLocation: true,
+                endBreakPhoto: true,
             }
         });
-        res.status(200).json({ message: "Punch out successfully", data: attendance });
+        res.status(200).json({ message: "Punch in successfully", data: attendance });
     }
     catch (err) {
         next(err);
     }
 }
+// const endBreak = async (req, res, next) => {
+//     try {
+//         const isStaff = await checkAdmin(req.userId, "STAFF");
 
-export { punchInStaff, punchOutStaff, getPunchRecords };
+//         if (isStaff.error) {
+//             return res.status(403).json({ message: "You are not staff" });
+//         }
+
+//         const { endBreakLocation, endbreakPhoto, endBreakTime, endBreakDate } = req.body;
+
+//         const punchOutPhoto = req?.files?.punchOutPhoto?.[0]?.path ? req?.files?.punchOutPhoto?.[0]?.path : null;
+
+//         const findAttendance = await prisma.attendanceStaff.findFirst({
+//             where: {
+//                 staffId: isStaff.user.StaffDetails.id,
+//                 date: date
+//             }
+//         })
+
+//         if (!findAttendance) {
+//             return res.status(400).json({ message: "Staff has not punch in first. " });
+//         }
+
+//         if (findAttendance.endTime) {
+//             return res.status(400).json({ message: "Staff has been punched out at " + findAttendance.date + " on " + findAttendance.endTime });
+//         }
+
+//         const attendance = await prisma.attendanceStaff.update({
+//             where: {
+//                 id: findAttendance.id
+//             },
+//             data: {
+//                 endTime: endTime,
+//                 date: date,
+//                 status: "PRESENT",
+//                 punchOutMethod: punchOutMethod,
+//                 punchOutLocation: location,
+//                 punchOutPhoto: punchOutPhoto,
+
+//             },
+//             select: {
+//                 id: true,
+//                 shift: true,
+//                 date: true,
+//                 endTime: true,
+//                 punchOutMethod: true,
+//                 punchOutLocation: true,
+//                 punchOutPhoto: true
+//             }
+//         });
+//         res.status(200).json({ message: "Punch out successfully", data: attendance });
+//     }
+//     catch (err) {
+//         next(err);
+//     }
+// }
+
+export { punchInStaff, punchOutStaff, getPunchRecords, startBreak, endBreak };
