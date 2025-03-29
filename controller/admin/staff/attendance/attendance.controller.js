@@ -7,6 +7,23 @@ import { stat } from "fs";
 import getIndiaTime from "../../../../utils/currentDate.js";
 import { create } from "domain";
 
+function getDateDifference(date1, date2) {
+    // Convert to Date objects and reset time to 00:00:00 for accurate date comparison
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+
+    d1.setHours(0, 0, 0, 0);
+    d2.setHours(0, 0, 0, 0);
+
+    // Calculate difference in milliseconds
+    const diffMs = d2 - d1;
+
+    // Convert milliseconds to days
+    const days = diffMs / (1000 * 60 * 60 * 24);
+
+    return Math.abs(days); // Ensure positive value
+}
+
 const calculatePerMinuteSalary = (ctcAmount, date, workingHoursPerDay) => {
     const givenDate = new Date(date);
     const year = givenDate.getFullYear();
@@ -667,6 +684,7 @@ const getAttendanceByMonth = async (req, res, next) => {
         // Define start and end dates for the requested month (used for querying attendance)
         let startDate = getIndiaTime(`${yearNum}-${monthNum}-01`);
         let endDate = getIndiaTime();
+        console.log(" start date ", startDate.setHours(0, 0, 0, 0), " end date ", endDate.setHours(0, 0, 0, 0));
 
         // Fetch staff details
         const staff = await prisma.staffDetails.findFirst({
@@ -683,7 +701,7 @@ const getAttendanceByMonth = async (req, res, next) => {
 
         const dateOfJoining = getIndiaTime(staff.dateOfJoining);
         const currentDate = getIndiaTime();
-        // If the requested month is the current month, set endDate as today
+        
         if (yearNum === currentDate.getFullYear() && monthNum === currentDate.getMonth() + 1) {
             endDate = currentDate;
         }
@@ -701,44 +719,42 @@ const getAttendanceByMonth = async (req, res, next) => {
             select: { date: true }
         });
 
-        // Create a Set for fast lookup of existing attendance dates
         const existingDatesSet = new Set(existingAttendances.map(attendance => attendance.date));
-        // Loop through the range from the date of joining to the current date and create attendance records for missing dates
-        let currentDay = new Date(dateOfJoining);  // Start from the date of joining
-       console.log(" current day ", currentDay);
-        console.log(" end date ", endDate.toISOString().split("T")[0] + "T00:00:00.000Z");
 
-        while (currentDay <= endDate.toISOString().split("T")[0] + "T00:00:00.000Z") {
-            const formattedDate = currentDay.toISOString().split("T")[0];
+        let currentDay = new Date(dateOfJoining);
 
-            // Skip if attendance already exists for this date
-            if (existingDatesSet.has(formattedDate)) {
+        if (existingAttendances.length < (getDateDifference(currentDay, endDate) + 1)) {
+            while (currentDay <= endDate) {
+                const formattedDate = currentDay.toISOString().split("T")[0];
+                // console.log(" formatted date ", formattedDate);
+
+                // // Skip if attendance already exists for this date
+                if (existingDatesSet.has(formattedDate)) {
+                    currentDate.setDate(currentDate.getDate() + 1);
+                    continue;
+                }
+
+                // if(existingDatesSet)
+
+
+                // Determine default status (Sunday = "WEEK_OFF", otherwise "ABSENT")
+                let status = currentDay.getDay() === 0 ? "WEEK_OFF" : "ABSENT";
+                const cehckCurrentDate = currentDay.toDateString() === new Date().toDateString();
+                if (cehckCurrentDate) {
+                    status = "NOT_DEFINED";
+                }
+                // Create missing attendance record
+                await prisma.attendanceStaff.create({
+                    data: {
+                        staffId: staffId,
+                        adminId: admin.user.adminDetails.id,
+                        date: formattedDate,
+                        status: status,
+                    },
+                });
                 currentDay.setDate(currentDay.getDate() + 1);
-                continue;
             }
-
-            // Determine default status (Sunday = "WEEK_OFF", otherwise "ABSENT")
-            let status = currentDay.getDay() === 0 ? "WEEK_OFF" : "ABSENT";
-            const cehckCurrentDate = currentDay.toDateString() === new Date().toDateString();
-            if (cehckCurrentDate) {
-                status = "NOT_DEFINED";
-            }
-            // Create missing attendance record
-            await prisma.attendanceStaff.create({
-                data: {
-                    staffId: staffId,
-                    adminId: admin.user.adminDetails.id,
-                    date: formattedDate,
-                    status: status,
-                },
-            });
-
-            // console.log(`Created attendance for ${formattedDate} with status ${status}`);
-
-            // Move to the next day
-            currentDay.setDate(currentDay.getDate() + 1);
         }
-
 
         startDate = new Date(yearNum, monthNum - 1, 2);
         startDate.setHours(0, 0, 0, 0);
