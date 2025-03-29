@@ -777,7 +777,7 @@ const getAttendanceByMonth = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
-};
+}; 
 
 // start break and end break
 const startAttendanceBreak = async (req, res, next) => {
