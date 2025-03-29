@@ -756,7 +756,7 @@ const getAttendanceByMonth = async (req, res, next) => {
             }
         }
 
-        startDate = new Date(yearNum, monthNum - 1, 2);
+        startDate = new Date(yearNum, monthNum - 1, 1);
         startDate.setHours(0, 0, 0, 0);
         endDate = new Date(yearNum, monthNum, 1);
         // endDate.setDate(totalDaysInMonth);
