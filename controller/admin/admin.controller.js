@@ -93,6 +93,9 @@ const updateAdminProfile = async (req, res, next) => {
             return res.status(404).json({ message: "User not found" });
         }
 
+        const companyLogo = req?.file?.path ? req?.file?.path : null;
+
+        console.log(companyLogo);
         // Update User fields
         const updatedUser = await prisma.user.update({
             where: { id: user.id },
@@ -103,6 +106,7 @@ const updateAdminProfile = async (req, res, next) => {
                     upsert: {
                         where: { userId: user.id },  // Use the adminDetailId to check existence
                         update: {
+                            companyLogo,
                             officeStartTime,
                             officeEndtime,
                             officeWorkinghours,
