@@ -47,20 +47,32 @@ function calculateWorkedHours(startTime, endTime) {
 
 const getSpecificStaffPayroll = async (req, res, next) => {
     try {
-        const admin = await checkAdmin(req.userId);
+        const isStaff = await checkAdmin(req.userId, "STAFF");
 
-        let totalWorkingHours = Number(admin.user.adminDetails.officeWorkinghours || 8);
-        const officeStartTime = admin.user.adminDetails.officeStartTime;
-        const officeEndtime = admin.user.adminDetails.officeEndtime;
+        if (isStaff.error) {
+            return res.status(403).json({ message: "You are not staff" });
+        }
+
+        const admin = await prisma.adminDetails.findFirst({
+            where: {
+                id: req.adminId,
+            },
+        });
+
+
+        console.log(isStaff);
+
+        let totalWorkingHours = Number(admin.officeWorkinghours || 8);
+        const officeStartTime = admin.userofficeStartTime;
+        const officeEndtime = admin.officeEndtime;
+
         if (officeStartTime && officeEndtime) {
             totalWorkingHours = calculateWorkedHours(officeStartTime, officeEndtime);
         }
 
-        const { staffId, month, year } = req.params;
+        const { month, year } = req.params;
 
-        if (!staffId) {
-            return res.status(400).json({ message: "Staff ID is required" });
-        }
+
         if (!month || !year) {
             return res.status(400).json({ message: "Month and year are required" });
         }
@@ -72,11 +84,10 @@ const getSpecificStaffPayroll = async (req, res, next) => {
         const endDate = `${year}-${formattedMonth}-${formattedDay}`;
         const totalDays = parseInt(formattedDay); // Total days in the selected month
 
-
         const staff = await prisma.staffDetails.findFirst({
             where: {
-                id: staffId,
-                adminId: admin.user.adminDetails.id,
+                id: isStaff.user.StaffDetails.id,
+                adminId: req.adminId,
             },
         });
 
@@ -98,7 +109,7 @@ const getSpecificStaffPayroll = async (req, res, next) => {
 
         let attendance = await prisma.attendanceStaff.findMany({
             where: {
-                staffId: staffId,
+                staffId: req.userId,
                 date: {
                     gte: startDate,
                     lte: endDate,
@@ -115,20 +126,16 @@ const getSpecificStaffPayroll = async (req, res, next) => {
         });
 
         const salary = await prisma.salaryDetail.findFirst({
-            where: { staffId },
+            where: { staffId: req.userId },
             orderBy: {
                 createdAt: "desc"  // Ordering by newest first
             }
 
         });
 
-
-
-
         if (!salary) {
             return res.status(404).json({ message: "Salary details not found for this staff member" });
         }
-
 
         const totalSalary = salary.ctcAmount; // Monthly salary
         const dailySalary = totalSalary / totalDays;
@@ -237,7 +244,6 @@ const getSpecificStaffPayroll = async (req, res, next) => {
 
         res.status(200).json({
             message: "Payrolls fetched successfully",
-            attendance,
             totalHoursWorked,
             totalPresent,
             totalHalfDay,

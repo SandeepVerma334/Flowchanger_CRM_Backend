@@ -5,7 +5,7 @@ import { getMultipleStaffPayroll, getPaymentHistory, getSpecificStaffPayroll } f
 
 const payrollRouter = express.Router();
 
-payrollRouter.get("/singleStaff/:staffId/:month/:year", authorizationMiddleware, getSpecificStaffPayroll);
+payrollRouter.get("/singleStaff/:month/:year", authorizationMiddleware, getSpecificStaffPayroll);
 payrollRouter.get("/allStaff/:month/:year", authorizationMiddleware, getMultipleStaffPayroll);
 payrollRouter.get("/paymentHistory/:staffId", authorizationMiddleware, getPaymentHistory);
 

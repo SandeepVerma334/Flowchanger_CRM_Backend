@@ -7,7 +7,7 @@ const punchRouter = express.Router();
 punchRouter.post("/in", authorizationMiddleware, uploadSingle("punchInPhoto"), punchInStaff);
 punchRouter.post("/out", authorizationMiddleware, uploadMultipleFields([{ name: "punchOutPhoto" }]), punchOutStaff);
 punchRouter.get("/record/:date", authorizationMiddleware, getPunchRecords);
-punchRouter.get("/startBreak", authorizationMiddleware, startBreak);
-punchRouter.get("/endBreak", authorizationMiddleware, endBreak);
+punchRouter.post("/startBreak", authorizationMiddleware, uploadSingle("startBreakPhoto"), startBreak);
+punchRouter.post("/endBreak", authorizationMiddleware, uploadSingle("endBreakPhoto"), endBreak);
 
 export default punchRouter;

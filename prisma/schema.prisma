@@ -135,8 +135,8 @@ model AttendanceBreakRecord {
   id                 String           @id @default(dbgenerated("gen_random_uuid()"))
   startBreakLocation String?
   endBreakLocation   String?
-  startbreakPhoto    String?
-  endbreakPhoto      String?
+  startBreakPhoto    String?
+  endBreakPhoto      String?
   startBreakTime     String?
   endBreakTime       String?
   startBreakDate     String?
