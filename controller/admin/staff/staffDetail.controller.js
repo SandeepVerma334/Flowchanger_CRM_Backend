@@ -18,6 +18,14 @@ function generateRandomString() {
 
 
 // create staff
+function generateRandomString() {
+  const chars = '0123456789';
+  let result = '';
+  for (let i = 0; i < 5; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
 const createStaff = async (req, res, next) => {
   try {
     const adminCheck = await checkAdmin(req.userId);
@@ -121,10 +129,11 @@ const createStaff = async (req, res, next) => {
       }
     });
     const staffOfficialEmail = staffData.email;
+    const staffEmployeeId = staffData.StaffDetails.employeeId;
+    const stafLoginOtp = staffData.StaffDetails.loginOtp;
     if(staffOfficialEmail){
-      await sendMailtoStaffForCreated(staffOfficialEmail);
+      await sendMailtoStaffForCreated(staffOfficialEmail, staffEmployeeId, stafLoginOtp);
     }
-    console.log("staffOfficialEmail " , staffOfficialEmail);
     return res.status(201).json({ status: 201, message: "Staff created successfully", data: staffData });
 
   } catch (error) {
