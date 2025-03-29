@@ -626,7 +626,39 @@ const sendOvertimeUpdateToStaff = async (email) => {
     }
 }
 
-// send email to created staff info
+// send email after created staff
+const sendMailtoStaffForCreated = async(email) => {
+    try {
+        const subject = "Account Created - Flow Changer Agency";
+        const text = `Hello,\n\nYour account has been created. Please login your dashboard.\n\nBest Regards,\nFlow Changer Agency`;
+
+        const message = `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <h3 style="color: #000000;">Dear Team Members,</h3>
+                <p>Your account has been created please go your dashboard and login.</p>
+                <p>Thank you for being a part of Flow Changer Agency.</p>
+                <br>
+                <p>Best Regards,<br>Flow Changer Agency</p>
+            </div>
+        `;
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject,
+            text,
+            html: message,
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log("Emails sent successfully:");
+
+        return { success: true };
+    } catch (error) {
+        console.error("Error sending email:", error);
+        return { success: false, error: error.message };
+    }
+}
 
 
 export {
@@ -641,5 +673,6 @@ export {
     sendFineToStaff,
     sendFineUpdateToStaff,
     sendOvertimeUpdateToStaff,
-    sendOvertimeToStaff
+    sendOvertimeToStaff,
+    sendMailtoStaffForCreated
 };

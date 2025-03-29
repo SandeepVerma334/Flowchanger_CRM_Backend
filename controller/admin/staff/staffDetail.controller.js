@@ -1,6 +1,7 @@
 import { staffDetailSchema } from "../../../utils/validation.js";
 import checkAdmin from "../../../utils/adminChecks.js";
 import { pagination } from "../../../utils/pagination.js";
+import { sendMailtoStaffForCreated } from "../../../utils/emailService.js";
 import prisma from "../../../prisma/prisma.js";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
@@ -35,16 +36,12 @@ const createStaff = async (req, res, next) => {
     const branchExists = await prisma.branch.findFirst({
       where: { id: branchId, adminId: req.userId },
     });
-    console.log("jsdlkflkfd ", req.userId);
-    console.log(branchExists);
     const departmentExists = await prisma.department.findFirst({
       where: { id: departmentId, adminId: req.userId },
     });
-    console.log(departmentExists);
     const roleExists = await prisma.role.findFirst({
       where: { id: roleId, adminId: req.userId },
     });
-    console.log(roleExists);
     if (!branchExists) {
       return res.status(400).json({ message: "Invalid branch ID for this admin" });
     }
@@ -123,7 +120,11 @@ const createStaff = async (req, res, next) => {
         // Branch: true,
       }
     });
-    console.log(req.file)
+    const staffOfficialEmail = staffData.email;
+    if(staffOfficialEmail){
+      await sendMailtoStaffForCreated(staffOfficialEmail);
+    }
+    console.log("staffOfficialEmail " , staffOfficialEmail);
     return res.status(201).json({ status: 201, message: "Staff created successfully", data: staffData });
 
   } catch (error) {

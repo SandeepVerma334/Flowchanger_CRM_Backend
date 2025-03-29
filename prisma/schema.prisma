@@ -161,6 +161,7 @@ enum AttendanceStatus {
   ON_BREAK
   HOLIDAY
   WEEK_OFF
+  NOT_DEFINED
 }
 
 model SalaryDetail {

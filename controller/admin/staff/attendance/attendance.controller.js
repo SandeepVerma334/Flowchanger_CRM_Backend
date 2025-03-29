@@ -596,7 +596,6 @@ const getAllAttendance = async (req, res, next) => {
     }
 };
 
-
 // get attendance by staff id 
 const getAttendanceByStaffId = async (req, res, next) => {
     try {
