@@ -19,10 +19,59 @@ const punchInStaff = async (req, res, next) => {
             }
         })
 
-        if (findAttendance) {
+const punchInStaff = async (req, res, next) => {
+    try {
+        const isStaff = await checkAdmin(req.userId, "STAFF");
+
+        if (isStaff.error) {
+            return res.status(403).json({ message: "You are not staff" });
+        }
+
+        const { date, punchInMethod, location, startTime } = req.body;
+
+        const punchInPhoto = req.file.path ? req.file.path : null;
+        const findAttendance = await prisma.attendanceStaff.findFirst({
+            where: {
+                staffId: isStaff.user.StaffDetails.id,
+                date: date
+            }
+        })
+
+        if (findAttendance.status !== "ABSENT") {
             return res.status(400).json({ message: "Staff has been punched in at " + findAttendance.date + " on " + findAttendance.startTime });
         }
 
+        const attendance = await prisma.attendanceStaff.create({
+            data: {
+                startTime: startTime,
+                date: date,
+                status: "PRESENT",
+                punchInMethod: punchInMethod,
+                punchInLocation: location,
+                punchInPhoto: punchInPhoto,
+                staffDetails: {
+                    connect: { id: isStaff.user.StaffDetails.id }
+                },
+                adminDetail: {
+                    connect: { id: req.adminId }
+                }
+            },
+            select: {
+                id: true,
+                shift: true,
+                date: true,
+                startTime: true,
+                punchInMethod: true,
+                punchInLocation: true,
+                punchInPhoto: true
+            }
+        });
+        res.status(200).json({ message: "Punch in successfully", data: attendance });
+    }
+    catch (err) {
+        next(err);
+    }
+}
         const attendance = await prisma.attendanceStaff.create({
             data: {
                 startTime: startTime,
