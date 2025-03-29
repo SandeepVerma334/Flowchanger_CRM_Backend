@@ -1,5 +1,5 @@
 import express from "express";
-import {  createAttendance, endAttendanceBreak, getAllAttendance, getAllAttendanceByDate, getAllEndBreakRecord, getAllStartBreakRecord, getAttendanceByMonth, halfDayAttendance, startAttendanceBreak ,countStaffAttendance} from "../../../controller/admin/staff/attendance/attendance.controller.js";
+import {  createAttendance, endAttendanceBreak, getAllAttendance, getAllAttendanceByDate, getAllEndBreakRecord, getAllStartBreakRecord, getAttendanceByMonth, halfDayAttendance, startAttendanceBreak } from "../../../controller/admin/staff/attendance/attendance.controller.js";
 import { authorizationMiddleware } from "../../../middleware/auth.js";
 import { uploadSingle } from "../../../middleware/multer.middleware.js";
 const attendanceRouter = express.Router();
@@ -13,7 +13,7 @@ attendanceRouter.post("/start-break", authorizationMiddleware, uploadSingle("sta
 attendanceRouter.put("/end-break/:startBreakid", authorizationMiddleware, uploadSingle("endBreakImage"), endAttendanceBreak);
 attendanceRouter.get("/all-start-break", authorizationMiddleware, getAllStartBreakRecord);
 attendanceRouter.get("/all-end-break", authorizationMiddleware, getAllEndBreakRecord);
-attendanceRouter.get("/count/:date", authorizationMiddleware, countStaffAttendance);
+// attendanceRouter.get("/count/:date", authorizationMiddleware, countStaffAttendance);
 attendanceRouter.post("/halfday", authorizationMiddleware, halfDayAttendance);
 
 export default attendanceRouter;

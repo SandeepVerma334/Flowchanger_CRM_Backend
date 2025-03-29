@@ -24,12 +24,30 @@ const calculatePerMinuteSalary = (ctcAmount, date, workingHoursPerDay) => {
 
     return perMinuteSalary;
 };
+
+// const calculatePerMinuteSalary = (ctcAmount, date, workingHoursPerDay) => {
+//     const givenDate = new Date(date);
+//     const year = givenDate.getFullYear();
+//     const month = givenDate.getMonth(); // 0-based (Jan = 0, Feb = 1, etc.)
+
+//     // Get total days in the given month
+//     const daysInMonth = new Date(year, month + 1, 0).getDate();
+//     console.log(" days in month ", daysInMonth);
+
+//     // Calculate daily salary
+//     const dailySalary = ctcAmount / daysInMonth;
+
+//     // Calculate per hour & per minute salary
+//     const perHourSalary = dailySalary / workingHoursPerDay;
+//     const perMinuteSalary = perHourSalary / 60;
+
+//     return perMinuteSalary;
+// };
 function convertMinutesToTimeFormat(totalMinutes) {
     let hours = Math.floor(totalMinutes / 60);
     let minutes = totalMinutes % 60;
     return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
 }
-
 function convertTimeFormatToMinutes(timeString) {
     let [hours, minutes] = timeString.split(":").map(Number);
     return hours * 60 + minutes;
@@ -716,12 +734,7 @@ const getAttendanceByMonth = async (req, res, next) => {
             currentDay.setDate(currentDay.getDate() + 1);
         }
 
-
-        startDate = new Date(yearNum, monthNum - 1, 2);
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(yearNum, monthNum, 1);
-        // endDate.setDate(totalDaysInMonth);
-        // Fetch updated attendance records for the requested month (based on params)
+        // After ensuring attendance is created, now fetch the attendance records for the requested month
         const attendanceRecords = await prisma.attendanceStaff.findMany({
             where: {
                 staffId: staffId,
@@ -733,8 +746,9 @@ const getAttendanceByMonth = async (req, res, next) => {
             },
             orderBy: { date: "asc" },
         });
+        console.log("attendanceRecords ", attendanceRecords);
 
-        // Count occurrences of each status
+        // Count the attendance status types for the requested month
         const statusCounts = {
             PRESENT: 0,
             WEEK_OFF: 0,
@@ -743,13 +757,16 @@ const getAttendanceByMonth = async (req, res, next) => {
             ABSENT: 0,
         };
 
-        attendanceRecords.forEach(record => {
-            if (statusCounts.hasOwnProperty(record.status)) {
-                statusCounts[record.status]++;
-            }
+        // Loop through attendance records and update status counts
+        attendanceRecords?.forEach(record => {
+            if (record.status === "PRESENT") statusCounts.PRESENT++;
+            if (record.status === "WEEK_OFF") statusCounts.WEEK_OFF++;
+            if (record.status === "PAID_LEAVE") statusCounts.PAID_LEAVE++;
+            if (record.status === "HALF_DAY") statusCounts.HALF_DAY++;
+            if (record.status === "ABSENT") statusCounts.ABSENT++;
         });
 
-        // Send response
+        // Send response with attendance records and status counts
         res.status(200).json({
             message: "Attendance records fetched successfully",
             attendanceRecords,
@@ -1236,8 +1253,6 @@ const countStaffAttendance = async (req, res, next) => {
             }
         });
 
-        console.log("allStaff", allStaff);
-        console.log("adminId", admin.user.adminDetails.id);
 
         let totalPresent = 0;
         let totalAbsent = 0;
@@ -1326,7 +1341,6 @@ const countStaffAttendance = async (req, res, next) => {
         next(error);
     }
 };
-
 export {
     createAttendance, getAllAttendance, getAttendanceByStaffId, startAttendanceBreak, countStaffAttendance,
     endAttendanceBreak, getAttendanceByMonth, halfDayAttendance, getAllAttendanceByDate, getAllStartBreakRecord, getAllEndBreakRecord

@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  // directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -132,20 +132,23 @@ enum PunchMethod {
 }
 
 model AttendanceBreakRecord {
-  id              String           @id @default(dbgenerated("gen_random_uuid()"))
-  startBreak      String?
-  endBreak        String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @default(now())
-  location        String?
-  attendanceId    String?
-  startBreakImage String?
-  endBreakImage   String?
-  adminId         String
-  applyBreak      Boolean?         @default(false)
-  attendanceStaff AttendanceStaff? @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
-  staffId         String?
-  staffDetails    StaffDetails?    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  id                 String           @id @default(dbgenerated("gen_random_uuid()"))
+  startBreakLocation String?
+  endBreakLocation   String?
+  startbreakPhoto    String?
+  endbreakPhoto      String?
+  startBreakTime     String?
+  endBreakTime       String?
+  startBreakDate     String?
+  endBreakDate       String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @default(now())
+  attendanceId       String?
+  adminId            String
+  applyBreak         Boolean?         @default(false)
+  attendanceStaff    AttendanceStaff? @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+  staffId            String?
+  staffDetails       StaffDetails?    @relation(fields: [staffId], references: [id], onDelete: Cascade)
 }
 
 enum AttendanceStatus {
@@ -933,5 +936,6 @@ model Overtime {
   date                       String?
   applyOvertime              Boolean?         @default(false)
   createdAt                  DateTime         @default(now())
+
   @@unique([staffId, createdAt]) // Ensure one fine per staff per day
 }
