@@ -626,15 +626,19 @@ const sendOvertimeUpdateToStaff = async (email) => {
 }
 
 // send email after created staff
-const sendMailtoStaffForCreated = async(email) => {
+const sendMailtoStaffForCreated = async(email,stafLoginOtp,staffEmployeeId) => {
     try {
+        const staffLoginDashboard = process.env.FRONTEND_URL;
         const subject = "Account Created - Flow Changer Agency";
         const text = `Hello,\n\nYour account has been created. Please login your dashboard.\n\nBest Regards,\nFlow Changer Agency`;
 
         const message = `
             <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                 <h3 style="color: #000000;">Dear Team Members,</h3>
-                <p>Your account has been created please go your dashboard and login.</p>
+                <p>Your account has been created please go to your dashboard and login for provided bellow in link.</p>
+                <p>Dashboard Link: <a href="${staffLoginDashboard}">${staffLoginDashboard}</a></p>
+                <p>Staff Employee Id: ${staffEmployeeId}</p>
+                <p>OTP: ${stafLoginOtp}</p>
                 <p>Thank you for being a part of Flow Changer Agency.</p>
                 <br>
                 <p>Best Regards,<br>Flow Changer Agency</p>

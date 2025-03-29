@@ -7,6 +7,14 @@ import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 
 // create staff
+function generateRandomString() {
+  const chars = '0123456789';
+  let result = '';
+  for (let i = 0; i < 5; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
 const createStaff = async (req, res, next) => {
   try {
     const adminCheck = await checkAdmin(req.userId);
@@ -54,7 +62,7 @@ const createStaff = async (req, res, next) => {
 
     const admin = await checkAdmin(req.userId);
 
-    const uniqueEmployeeId = `FLOW#-${new Date().getTime()}-${uuidv4().replace(/-/g, "").substring(0, 5)}`;
+    const uniqueEmployeeId = generateRandomString();
     const staffData = await prisma.user.create({
       data: {
         firstName: validation.firstName,
@@ -65,10 +73,10 @@ const createStaff = async (req, res, next) => {
         profileImage: req?.file?.path === undefined ? null : req.file.path,
         role: "STAFF",
         email: validation.officialMail,
-        otp: validation.otp,
         adminId: req.userId,
         StaffDetails: {
           create: {
+            loginOtp: validation.loginOtp,
             Admin: {
               connect: {
                 id: admin.user.adminDetails.id,
@@ -110,10 +118,11 @@ const createStaff = async (req, res, next) => {
       }
     });
     const staffOfficialEmail = staffData.email;
+    const staffEmployeeId = staffData.StaffDetails.employeeId;
+    const stafLoginOtp = staffData.StaffDetails.loginOtp;
     if(staffOfficialEmail){
-      await sendMailtoStaffForCreated(staffOfficialEmail);
+      await sendMailtoStaffForCreated(staffOfficialEmail, staffEmployeeId, stafLoginOtp);
     }
-    console.log("staffOfficialEmail " , staffOfficialEmail);
     return res.status(201).json({ status: 201, message: "Staff created successfully", data: staffData });
 
   } catch (error) {
