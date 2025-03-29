@@ -140,7 +140,7 @@ const createAttendance = async (req, res, next) => {
         if (!staff) {
             return res.status(404).json({ message: "Staff not found" });
         }
-        console.log(date)
+        // console.log(date)
         // Convert date strings to Date objects for comparison
         const dateOfJoining = new Date(staff.dateOfJoining);
         const attendanceDate = new Date(date);
@@ -170,17 +170,18 @@ const createAttendance = async (req, res, next) => {
                 return res.status(400).json({ message: "Invalid status provided." });
             }
         }
+        let allAttendance = await prisma.attendanceStaff.findMany();
 
-        // console.log(attendanceStatus)
-        let existingAttendance = await prisma.attendanceStaff.findFirst({
-            where: { staffId: staffId, date: date }
-        });
+        let matchingAttendance = allAttendance.filter(attendance =>
+            attendance.staffId === staffId && attendance.date === date
+        );
+        let existingAttendance = matchingAttendance[0];
+        // console.log("existingAttendance" , existingAttendance)
         let attendanceEntry;
-
         if (existingAttendance) {
             attendanceEntry = await prisma.attendanceStaff.update({
                 where: { id: existingAttendance.id },
-                data: { status: attendanceStatus, startTime, endTime, shift }
+                data: { status: attendanceStatus, startTime, endTime, shift, date: date }
             });
         }
         else {
@@ -204,9 +205,9 @@ const createAttendance = async (req, res, next) => {
             await deleteFine(prisma, staffId, date);
             await deleteOvertime(prisma, staffId, date)
 
-            console.log("Updated Attendance Entry:", attendanceEntry);
+            // console.log("Updated Attendance Entry:", attendanceEntry);
         } else {
-            console.log("New Attendance Entry:", attendanceEntry);
+            // console.log("New Attendance Entry:", attendanceEntry);
         }
         if (attendanceEntry && status === "PRESENT") {
             // Proceed with Fine Calculation after creating or updating the attendance entry
@@ -228,8 +229,8 @@ const createAttendance = async (req, res, next) => {
             const officeEnd = convertTo24HourFormat(officeEndtime || "00:00");
             const staffStart = convertTo24HourFormat(startTime || "00:00");
             const staffEnd = convertTo24HourFormat(endTime || "00:00");
-            console.log(staffStart);
-            console.log(staffEnd)
+            // console.log(staffStart);
+            // console.log(staffEnd)
             let LateCommingTime = 0;
             let EarlyCommingTime = 0;
             let EarlyOutOffice = 0;
@@ -296,23 +297,23 @@ const createAttendance = async (req, res, next) => {
                 if (totalWorkedTime.totalMinutes < officeWorkingHours * 60) {
                     totalFineTime = officeWorkingHours * 60 - totalWorkedTime.totalMinutes;
                 } else if (totalWorkedTime.totalMinutes > officeWorkingHours * 60) {
-                    console.log("totalWorkedTime.totalMinutes", totalWorkedTime.totalMinutes)
-                    console.log("officeWorkingHours * 60", officeWorkingHours * 60)
+                    // console.log("totalWorkedTime.totalMinutes", totalWorkedTime.totalMinutes)
+                    // console.log("officeWorkingHours * 60", officeWorkingHours * 60)
                     totalOvertimeTime = totalWorkedTime.totalMinutes - officeWorkingHours * 60;
                 }
             }
 
-            console.log("LateCommingTime", LateCommingTime);
-            console.log("EarlyCommingTime", EarlyCommingTime);
-            console.log("EarlyOutOffice", EarlyOutOffice);
-            console.log("LateOutOffice", LateOutOffice);
+            // console.log("LateCommingTime", LateCommingTime);
+            // console.log("EarlyCommingTime", EarlyCommingTime);
+            // console.log("EarlyOutOffice", EarlyOutOffice);
+            // console.log("LateOutOffice", LateOutOffice);
 
 
             const PerMinuteSalary = perHourSalary / 60;
             const LateCommingFine = PerMinuteSalary * LateCommingTime;
             const EarlyOutFine = PerMinuteSalary * EarlyOutOffice;
 
-            console.log("EarlyComing", EarlyCommingTime)
+            // console.log("EarlyComing", EarlyCommingTime)
             let OvertimeMinutes;
             let OvertimePay;
             let earlyCommingOvertime;
@@ -331,7 +332,7 @@ const createAttendance = async (req, res, next) => {
 
             // console.log(OvertimeMinutes, OvertimePay, earlyCommingOvertime, lateOutOvertime, totalOvertimePay);
             let TotalFine = LateCommingFine + EarlyOutFine;
-            console.log(LateCommingFine, EarlyOutFine, TotalFine)
+            // console.log(LateCommingFine, EarlyOutFine, TotalFine)
 
             if (salaryDetails) {
                 if (workedHours < officeWorkingHours) {
@@ -369,20 +370,20 @@ const createAttendance = async (req, res, next) => {
                         where: { staffId: staffId, date }
                     });
 
-                    console.log("existing fine", existingFine);
+                    // console.log("existing fine", existingFine);
 
                     if (existingFine) {
-                        console.log("it runs")
-                        console.log(EarlyOutOffice, LateCommingTime);
+                        // console.log("it runs")
+                        // console.log(EarlyOutOffice, LateCommingTime);
                         // Update fine entry
                         await prisma.fine.update({
                             where: { id: existingFine.id },
                             data: {
                                 lateEntryFineHoursTime: convertMinutesToTimeFormat(LateCommingTime),
-                                lateEntryFineAmount: parseFloat(LateCommingFine.toFixed(2)),
+                                lateEntryFineAmount: 1,
                                 lateEntryAmount: parseFloat(LateCommingFine.toFixed(2)),
                                 earlyOutFineHoursTime: convertMinutesToTimeFormat(EarlyOutOffice),
-                                earlyOutFineAmount: parseFloat(EarlyOutFine.toFixed(2)),
+                                earlyOutFineAmount: 1,
                                 earlyOutAmount: parseFloat(EarlyOutFine.toFixed(2)),
                                 totalAmount: parseFloat((TotalFine ? TotalFine : totalFineTime * PerMinuteSalary).toFixed(2)),
                                 date: date,
@@ -414,10 +415,10 @@ const createAttendance = async (req, res, next) => {
                                 adminId: admin.user.adminDetails.id,
 
                                 lateEntryFineHoursTime: convertMinutesToTimeFormat(LateCommingTime),
-                                lateEntryFineAmount: parseFloat(LateCommingFine.toFixed(2)),
+                                lateEntryFineAmount: 1,
                                 lateEntryAmount: parseFloat(LateCommingFine.toFixed(2)),
                                 earlyOutFineHoursTime: convertMinutesToTimeFormat(EarlyOutOffice),
-                                earlyOutFineAmount: parseFloat(EarlyOutFine.toFixed(2)),
+                                earlyOutFineAmount: 1,
                                 earlyOutAmount: parseFloat(EarlyOutFine.toFixed(2)),
                                 totalAmount: parseFloat((TotalFine ? TotalFine : totalFineTime * PerMinuteSalary).toFixed(2)),
                                 // lateEntryFineHoursTime: formatHoursToTime(missingHours),
@@ -615,14 +616,15 @@ const getAttendanceByMonth = async (req, res, next) => {
         const { staffId, type } = req.params;
 
         if (!type) {
-            return res.status(400).json({ message: "type is required as STAFF or ADMIN" });
+            return res.status(400).json({ message: "Type is required as STAFF or ADMIN" });
+        }
+        if (!staffId) {
+            return res.status(400).json({ message: "Staff ID is required!" });
         }
 
         const admin = await checkAdmin(req.userId, type, res);
         if (admin.error) {
-            return res.status(400).json({
-                message: admin.message
-            });
+            return res.status(400).json({ message: admin.message });
         }
 
         const { month, year } = req.query;
@@ -631,103 +633,102 @@ const getAttendanceByMonth = async (req, res, next) => {
             return res.status(400).json({ message: "Month and Year are required" });
         }
 
-        const existsStaffId = await prisma.staffDetails.findFirst({
-            where: {
-                id: staffId,
-                adminId: type === "ADMIN" ? admin.user.adminDetails.id : req.adminId
-            },
-        });
-        if (!existsStaffId) {
-            return res.status(404).json({ message: "Staff not found" });
-        }
-
-        const staff = await prisma.staffDetails.findFirst({
-            where: { id: staffId, adminId: admin.user.adminDetails.id },
-            select: { dateOfJoining: true }
-        });
-
-        // Convert date strings to Date objects for comparison
-        const dateOfJoining = new Date(staff.dateOfJoining);
-        const currentDate = new Date();
-
         // Ensure month and year are numbers
         const monthNum = parseInt(month, 10);
         const yearNum = parseInt(year, 10);
 
-        // Fetch attendance data for the specific month
-        const startDate = `${yearNum}-${monthNum.toString().padStart(2, "0")}-01`;
-        const endDate = new Date(yearNum, monthNum, 0).getDate(); // Get last day of the month
-        const endDateString = `${yearNum}-${monthNum.toString().padStart(2, "0")}-${endDate}`;
+        // Get total days in the requested month
+        const totalDaysInMonth = new Date(yearNum, monthNum, 0).getDate();
 
-        // Fetch all existing attendance for the given staffId between start and end date
+        // Define start and end dates for the requested month (used for querying attendance)
+        let startDate = new Date(yearNum, monthNum - 1, 1);
+        startDate.setHours(0, 0, 0, 0);
+        let endDate = new Date();
+
+        // Fetch staff details
+        const staff = await prisma.staffDetails.findFirst({
+            where: {
+                id: type === "ADMIN" ? staffId : admin.user.StaffDetails.id,
+                adminId: type === "ADMIN" ? admin.user.adminDetails.id : req.adminId
+            },
+            select: { dateOfJoining: true }
+        });
+
+        if (!staff) {
+            return res.status(404).json({ message: "Staff not found" });
+        }
+
+        const dateOfJoining = new Date(staff.dateOfJoining);
+        const currentDate = new Date();
+        // If the requested month is the current month, set endDate as today
+        if (yearNum === currentDate.getFullYear() && monthNum === currentDate.getMonth() + 1) {
+            endDate = currentDate;
+        }
+
+        // Fetch existing attendance records for the staff starting from the date of joining to the current date
         const existingAttendances = await prisma.attendanceStaff.findMany({
             where: {
                 staffId: staffId,
                 adminId: type === "ADMIN" ? admin.user.adminDetails.id : req.adminId,
                 date: {
-                    gte: startDate,
-                    lte: endDateString,
+                    gte: dateOfJoining.toISOString().split("T")[0],  // Start from the date of joining
+                    lte: endDate.toISOString().split("T")[0]  // End at the current date
                 },
             },
+            select: { date: true }
         });
 
-        // Create attendance records for all missing dates
-        let currentDay = new Date(startDate); // Start from the 1st day of the requested month
-        while (currentDay <= currentDate && currentDay <= new Date(endDateString)) {
-            const formattedDate = currentDay.toISOString().split('T')[0]; // Format as 'YYYY-MM-DD'
+        // Create a Set for fast lookup of existing attendance dates
+        const existingDatesSet = new Set(existingAttendances.map(attendance => attendance.date));
+        // Loop through the range from the date of joining to the current date and create attendance records for missing dates
+        let currentDay = new Date(dateOfJoining);  // Start from the date of joining
+        while (currentDay <= endDate) {
+            const formattedDate = currentDay.toISOString().split("T")[0];
 
-            // If the staff member's joining date is later than the current date, skip it
-            if (new Date(staff.dateOfJoining) > currentDay) {
-                currentDay.setDate(currentDay.getDate() + 1); // Move to the next day
+            // Skip if attendance already exists for this date
+            if (existingDatesSet.has(formattedDate)) {
+                currentDay.setDate(currentDay.getDate() + 1);
                 continue;
             }
 
-            // Check if attendance already exists for the current date
-            const existingAttendance = existingAttendances.find(attendance => attendance.date === formattedDate);
+            // Determine default status (Sunday = "WEEK_OFF", otherwise "ABSENT")
+            const status = currentDay.getDay() === 0 ? "WEEK_OFF" : "ABSENT";
 
-            if (!existingAttendance) {
-                // If no attendance exists for this date, create a new record
-                const dayOfWeek = currentDay.getDay(); // 0 for Sunday, 1 for Monday, etc.
-                let status = "ABSENT"; // Default status is 'ABSENT'
+            // Create missing attendance record
+            await prisma.attendanceStaff.create({
+                data: {
+                    staffId: staffId,
+                    adminId: admin.user.adminDetails.id,
+                    date: formattedDate,
+                    status: status,
+                },
+            });
 
-                // If the day is Sunday, set the status to 'WEEK_OFF'
-                if (dayOfWeek === 0) {
-                    status = "WEEK_OFF";
-                }
-
-                // Create a new attendance record
-                await prisma.attendanceStaff.create({
-                    data: {
-                        staffId: staffId,
-                        adminId: admin.user.adminDetails.id,
-                        date: formattedDate,
-                        status: status,
-                    },
-                });
-                console.log(`Created attendance for ${formattedDate} with status ${status}`);
-            }
+            // console.log(`Created attendance for ${formattedDate} with status ${status}`);
 
             // Move to the next day
             currentDay.setDate(currentDay.getDate() + 1);
         }
 
-        // After ensuring attendance is created, now fetch the attendance records for the requested month
+
+        startDate = new Date(yearNum, monthNum - 1, 2);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(yearNum, monthNum, 1);
+        // endDate.setDate(totalDaysInMonth);
+        // Fetch updated attendance records for the requested month (based on params)
         const attendanceRecords = await prisma.attendanceStaff.findMany({
             where: {
                 staffId: staffId,
                 adminId: type === "ADMIN" ? admin.user.adminDetails.id : req.adminId,
                 date: {
-                    gte: startDate,
-                    lte: endDateString,
+                    gte: startDate.toISOString().split("T")[0],
+                    lte: endDate.toISOString().split("T")[0]
                 },
             },
-            orderBy: {
-                date: "asc",
-            },
+            orderBy: { date: "asc" },
         });
-        console.log("attendanceRecords ", attendanceRecords);
 
-        // Count the attendance status types for the requested month
+        // Count occurrences of each status
         const statusCounts = {
             PRESENT: 0,
             WEEK_OFF: 0,
@@ -736,27 +737,23 @@ const getAttendanceByMonth = async (req, res, next) => {
             ABSENT: 0,
         };
 
-        // Loop through attendance records and update status counts
-        attendanceRecords?.forEach(record => {
-            if (record.status === "PRESENT") statusCounts.PRESENT++;
-            if (record.status === "WEEK_OFF") statusCounts.WEEK_OFF++;
-            if (record.status === "PAID_LEAVE") statusCounts.PAID_LEAVE++;
-            if (record.status === "HALF_DAY") statusCounts.HALF_DAY++;
-            if (record.status === "ABSENT") statusCounts.ABSENT++;
+        attendanceRecords.forEach(record => {
+            if (statusCounts.hasOwnProperty(record.status)) {
+                statusCounts[record.status]++;
+            }
         });
 
-        // Send response with attendance records and status counts
+        // Send response
         res.status(200).json({
             message: "Attendance records fetched successfully",
             attendanceRecords,
-            statusCounts: statusCounts, // Include the count of each status type
+            statusCounts,
         });
 
     } catch (error) {
         next(error);
     }
 };
-
 
 // start break and end break
 const startAttendanceBreak = async (req, res, next) => {
