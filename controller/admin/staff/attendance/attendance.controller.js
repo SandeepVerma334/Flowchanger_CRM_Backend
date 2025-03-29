@@ -705,7 +705,10 @@ const getAttendanceByMonth = async (req, res, next) => {
         const existingDatesSet = new Set(existingAttendances.map(attendance => attendance.date));
         // Loop through the range from the date of joining to the current date and create attendance records for missing dates
         let currentDay = new Date(dateOfJoining);  // Start from the date of joining
-        while (currentDay <= endDate) {
+       console.log(" current day ", currentDay);
+        console.log(" end date ", endDate.toISOString().split("T")[0] + "T00:00:00.000Z");
+
+        while (currentDay <= endDate.toISOString().split("T")[0] + "T00:00:00.000Z") {
             const formattedDate = currentDay.toISOString().split("T")[0];
 
             // Skip if attendance already exists for this date
