@@ -758,7 +758,7 @@ const getAttendanceByMonth = async (req, res, next) => {
 
         startDate = new Date(yearNum, monthNum - 1, 1);
         startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(yearNum, monthNum, 1);
+        endDate = new Date(yearNum, monthNum, 0);
         // endDate.setDate(totalDaysInMonth);
         // Fetch updated attendance records for the requested month (based on params)
         const attendanceRecords = await prisma.attendanceStaff.findMany({
