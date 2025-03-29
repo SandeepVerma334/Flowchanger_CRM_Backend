@@ -156,7 +156,7 @@ const getAllStaff = async (req, res, next) => {
             AttendanceStaff: true,
             StaffEducationQualification: true,
             BankDetails: true,
-            SalaryDetails:true,
+            SalaryDetails: true,
           },
         },
       },
@@ -792,4 +792,55 @@ const staffLogin = async (req, res, next) => {
     next(error);
   }
 }
-export { createStaff, getAllStaff, getStaffById, updateStaff, deleteStaff, bulkCreateStaff, bulkUpdateStaff, searchStaff, bulkDeleteStaff, staffLogin };
+
+const getSingleStaffAllData = async (req, res, next) => {
+  try {
+    const admin = await checkAdmin(req.userId, "STAFF", res);
+    if (admin.error) {
+      return res.status(400).json({
+        message: admin.message
+      });
+    }
+    const staff = await prisma.user.findUnique({
+      where: { id: req.userId },
+      include: {
+        StaffDetails: {
+          include: {
+            Branch: true,
+            Department: true,
+            Role: true,
+            Fine: true,
+            Overtime: true,
+            Project: true,
+            task: true,
+            Admin: true,
+            StaffEducationQualification: true,
+            FinancialDetails: true,
+            AttendanceStaff: true,
+            attendanceBreakRecord: true,
+            SalaryDetails: {
+              include: {
+                employerContribution: true,
+                employeeContribution: true,
+                deductions: true,
+                earnings: true
+              }
+            },
+            PaymentHistory: true,
+            BankDetails: true
+          },
+        },
+      },
+    });
+    if (!staff) {
+      return res.status(404).json({ error: "Staff member not found" });
+    }
+
+    return res.status(200).json({ message: "Staff details fetched successfully", data: staff });
+  }
+  catch (error) {
+    next(error);
+  }
+}
+
+export { createStaff, getAllStaff, getStaffById, updateStaff, deleteStaff, bulkCreateStaff, bulkUpdateStaff, searchStaff, bulkDeleteStaff, staffLogin, getSingleStaffAllData };
