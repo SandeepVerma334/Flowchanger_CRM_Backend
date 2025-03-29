@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { sendEmailWithPdf } from "../../../utils/emailService.js";
 
 function generateRandomString() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz123456789';
+  const chars = '0123456789';
   let result = '';
   for (let i = 0; i < 5; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));

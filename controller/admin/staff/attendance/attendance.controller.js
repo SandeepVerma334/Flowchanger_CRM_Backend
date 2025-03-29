@@ -404,10 +404,10 @@ const createAttendance = async (req, res, next) => {
                             where: { id: existingFine.id },
                             data: {
                                 lateEntryFineHoursTime: convertMinutesToTimeFormat(LateCommingTime),
-                                lateEntryFineAmount: parseFloat(LateCommingFine.toFixed(2)),
+                                lateEntryFineAmount: 1,
                                 lateEntryAmount: parseFloat(LateCommingFine.toFixed(2)),
                                 earlyOutFineHoursTime: convertMinutesToTimeFormat(EarlyOutOffice),
-                                earlyOutFineAmount: parseFloat(EarlyOutFine.toFixed(2)),
+                                earlyOutFineAmount: 1,
                                 earlyOutAmount: parseFloat(EarlyOutFine.toFixed(2)),
                                 totalAmount: parseFloat((TotalFine ? TotalFine : totalFineTime * PerMinuteSalary).toFixed(2)),
                                 date: date,
@@ -439,10 +439,10 @@ const createAttendance = async (req, res, next) => {
                                 adminId: admin.user.adminDetails.id,
 
                                 lateEntryFineHoursTime: convertMinutesToTimeFormat(LateCommingTime),
-                                lateEntryFineAmount: parseFloat(LateCommingFine.toFixed(2)),
+                                lateEntryFineAmount: 1,
                                 lateEntryAmount: parseFloat(LateCommingFine.toFixed(2)),
                                 earlyOutFineHoursTime: convertMinutesToTimeFormat(EarlyOutOffice),
-                                earlyOutFineAmount: parseFloat(EarlyOutFine.toFixed(2)),
+                                earlyOutFineAmount: 1,
                                 earlyOutAmount: parseFloat(EarlyOutFine.toFixed(2)),
                                 totalAmount: parseFloat((TotalFine ? TotalFine : totalFineTime * PerMinuteSalary).toFixed(2)),
                                 // lateEntryFineHoursTime: formatHoursToTime(missingHours),
@@ -734,7 +734,12 @@ const getAttendanceByMonth = async (req, res, next) => {
             currentDay.setDate(currentDay.getDate() + 1);
         }
 
-        // After ensuring attendance is created, now fetch the attendance records for the requested month
+
+        startDate = new Date(yearNum, monthNum - 1, 2);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(yearNum, monthNum, 1);
+        // endDate.setDate(totalDaysInMonth);
+        // Fetch updated attendance records for the requested month (based on params)
         const attendanceRecords = await prisma.attendanceStaff.findMany({
             where: {
                 staffId: staffId,
@@ -746,9 +751,8 @@ const getAttendanceByMonth = async (req, res, next) => {
             },
             orderBy: { date: "asc" },
         });
-        console.log("attendanceRecords ", attendanceRecords);
 
-        // Count the attendance status types for the requested month
+        // Count occurrences of each status
         const statusCounts = {
             PRESENT: 0,
             WEEK_OFF: 0,
@@ -757,16 +761,13 @@ const getAttendanceByMonth = async (req, res, next) => {
             ABSENT: 0,
         };
 
-        // Loop through attendance records and update status counts
-        attendanceRecords?.forEach(record => {
-            if (record.status === "PRESENT") statusCounts.PRESENT++;
-            if (record.status === "WEEK_OFF") statusCounts.WEEK_OFF++;
-            if (record.status === "PAID_LEAVE") statusCounts.PAID_LEAVE++;
-            if (record.status === "HALF_DAY") statusCounts.HALF_DAY++;
-            if (record.status === "ABSENT") statusCounts.ABSENT++;
+        attendanceRecords.forEach(record => {
+            if (statusCounts.hasOwnProperty(record.status)) {
+                statusCounts[record.status]++;
+            }
         });
 
-        // Send response with attendance records and status counts
+        // Send response
         res.status(200).json({
             message: "Attendance records fetched successfully",
             attendanceRecords,
@@ -777,7 +778,6 @@ const getAttendanceByMonth = async (req, res, next) => {
         next(error);
     }
 };
-
 
 // start break and end break
 const startAttendanceBreak = async (req, res, next) => {

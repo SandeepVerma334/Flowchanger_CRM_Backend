@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  // directUrl = env("DIRECT_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -936,6 +936,5 @@ model Overtime {
   date                       String?
   applyOvertime              Boolean?         @default(false)
   createdAt                  DateTime         @default(now())
-
   @@unique([staffId, createdAt]) // Ensure one fine per staff per day
 }

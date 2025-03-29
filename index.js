@@ -31,5 +31,5 @@ app.use("/api/", rootRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  autoCreateAttendance();
+  // autoCreateAttendance();
 });
