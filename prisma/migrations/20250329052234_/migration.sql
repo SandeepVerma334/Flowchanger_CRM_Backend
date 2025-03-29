@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "AttendanceStatus" AS ENUM ('PERSENT', 'ABSENT', 'PAID_LEAVE', 'HALF_DAY', 'FINE', 'OVERTIME', 'ON_BREAK', 'HOLIDAY', 'WEEK_OFF');
+CREATE TYPE "AttendanceStatus" AS ENUM ('PRESENT', 'ABSENT', 'PAID_LEAVE', 'HALF_DAY', 'FINE', 'OVERTIME', 'ON_BREAK', 'HOLIDAY', 'WEEK_OFF', 'NOT_DEFINED');
 
 -- CreateEnum
 CREATE TYPE "PaymentType" AS ENUM ('ADVANCE', 'SALARY');
@@ -553,7 +553,7 @@ CREATE TABLE "Task" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "projectId" TEXT,
-    "adminId" TEXT NOT NULL,
+    "adminId" TEXT,
 
     CONSTRAINT "Task_pkey" PRIMARY KEY ("id")
 );
@@ -757,6 +757,7 @@ CREATE TABLE "Fine" (
     "adminId" TEXT NOT NULL,
     "date" TEXT,
     "applyFine" BOOLEAN DEFAULT false,
+    "totalOvertimeHours" TEXT,
 
     CONSTRAINT "Fine_pkey" PRIMARY KEY ("id")
 );
@@ -777,7 +778,8 @@ CREATE TABLE "Overtime" (
     "adminId" TEXT NOT NULL,
     "date" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "applyFine" BOOLEAN DEFAULT false,
+    "applyOvertime" BOOLEAN DEFAULT false,
+    "totalOvertimeHours" TEXT,
 
     CONSTRAINT "Overtime_pkey" PRIMARY KEY ("id")
 );
@@ -1057,6 +1059,9 @@ ALTER TABLE "ClientDetails" ADD CONSTRAINT "ClientDetails_userId_fkey" FOREIGN K
 
 -- AddForeignKey
 ALTER TABLE "Task" ADD CONSTRAINT "Task_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Task" ADD CONSTRAINT "Task_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "AdminDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ProjectPermissions" ADD CONSTRAINT "ProjectPermissions_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;

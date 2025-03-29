@@ -572,7 +572,6 @@ const getAllAttendance = async (req, res, next) => {
     }
 };
 
-
 // get attendance by staff id 
 const getAttendanceByStaffId = async (req, res, next) => {
     try {
@@ -692,8 +691,11 @@ const getAttendanceByMonth = async (req, res, next) => {
             }
 
             // Determine default status (Sunday = "WEEK_OFF", otherwise "ABSENT")
-            const status = currentDay.getDay() === 0 ? "WEEK_OFF" : "ABSENT";
-
+            let status = currentDay.getDay() === 0 ? "WEEK_OFF" : "ABSENT";
+            const cehckCurrentDate = currentDay.toDateString() === new Date().toDateString();
+            if (cehckCurrentDate) {
+                status = "NOT_DEFINED";
+            }
             // Create missing attendance record
             await prisma.attendanceStaff.create({
                 data: {
