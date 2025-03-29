@@ -1,9 +1,5 @@
 -- CreateEnum
-<<<<<<<< HEAD:prisma/migrations/20250326120605_all/migration.sql
 CREATE TYPE "AttendanceStatus" AS ENUM ('PRESENT', 'ABSENT', 'PAID_LEAVE', 'HALF_DAY', 'FINE', 'OVERTIME', 'ON_BREAK', 'HOLIDAY', 'WEEK_OFF');
-========
-CREATE TYPE "AttendanceStatus" AS ENUM ('PRESENT', 'ABSENT', 'PAID_LEAVE', 'HALF_DAY', 'FINE', 'OVERTIME', 'ON_BREAK', 'HOLIDAY', 'WEEK_OFF', 'NOT_DEFINED');
->>>>>>>> cb3ca9c859e5daac782958a578c853e6712d3f39:prisma/migrations/20250329052234_/migration.sql
 
 -- CreateEnum
 CREATE TYPE "PaymentType" AS ENUM ('ADVANCE', 'SALARY');
@@ -790,8 +786,7 @@ CREATE TABLE "Overtime" (
     "date" TEXT,
     "applyOvertime" BOOLEAN DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "applyOvertime" BOOLEAN DEFAULT false,
-    "totalOvertimeHours" TEXT,
+    "applyFine" BOOLEAN DEFAULT false,
 
     CONSTRAINT "Overtime_pkey" PRIMARY KEY ("id")
 );
