@@ -4,6 +4,7 @@ import prisma from "../../../../prisma/prisma.js";
 import { pagination } from "../../../../utils/pagination.js";
 import { late, string } from "zod";
 import { stat } from "fs";
+import getIndiaTime from "../../../../utils/currentDate.js";
 import { create } from "domain";
 // import getIndiaTime from "../../../../utils/currentDate.js";
 import getIndiaTime from "../../../../utils/currentDate.js"
@@ -702,7 +703,6 @@ const getAttendanceByMonth = async (req, res, next) => {
 
         const dateOfJoining = getIndiaTime(staff.dateOfJoining);
         const currentDate = getIndiaTime();
-
         if (yearNum === currentDate.getFullYear() && monthNum === currentDate.getMonth() + 1) {
             endDate = currentDate;
         }
