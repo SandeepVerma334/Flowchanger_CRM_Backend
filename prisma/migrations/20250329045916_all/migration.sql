@@ -1,4 +1,7 @@
 -- CreateEnum
+CREATE TYPE "PunchMethod" AS ENUM ('BIOMETRIC', 'QRSCAN', 'PHOTOCLICK');
+
+-- CreateEnum
 CREATE TYPE "AttendanceStatus" AS ENUM ('PRESENT', 'ABSENT', 'PAID_LEAVE', 'HALF_DAY', 'FINE', 'OVERTIME', 'ON_BREAK', 'HOLIDAY', 'WEEK_OFF');
 
 -- CreateEnum
@@ -22,15 +25,6 @@ CREATE TYPE "UserType" AS ENUM ('ADMIN', 'STAFF', 'CLIENT', 'SUPERADMIN');
 -- CreateEnum
 CREATE TYPE "TransactionStatus" AS ENUM ('PENDING', 'VERIFIED', 'FAILED', 'REFUNDED');
 
--- CreateEnum
-CREATE TYPE "PunchInMethod" AS ENUM ('BIOMETRIC', 'QRSCAN', 'PHOTOCLICK');
-
--- CreateEnum
-CREATE TYPE "PunchOutMethod" AS ENUM ('BIOMETRIC', 'QRSCAN', 'PHOTOCLICK');
-
--- CreateEnum
-CREATE TYPE "punchRecordStatus" AS ENUM ('ABSENT', 'PRESENT');
-
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
@@ -47,6 +41,7 @@ CREATE TABLE "User" (
     "otpExpiresAt" TIMESTAMP(3),
     "packageId" TEXT,
     "adminId" TEXT,
+    "roomId" TEXT,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -84,6 +79,12 @@ CREATE TABLE "AttendanceStaff" (
     "date" TEXT,
     "startTime" TEXT,
     "endTime" TEXT,
+    "punchInMethod" "PunchMethod" DEFAULT 'PHOTOCLICK',
+    "punchOutMethod" "PunchMethod" DEFAULT 'PHOTOCLICK',
+    "punchInLocation" TEXT,
+    "punchOutLocation" TEXT,
+    "punchInPhoto" TEXT,
+    "punchOutPhoto" TEXT,
     "status" "AttendanceStatus" NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -98,14 +99,17 @@ CREATE TABLE "AttendanceStaff" (
 -- CreateTable
 CREATE TABLE "AttendanceBreakRecord" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
-    "startBreak" TEXT,
-    "endBreak" TEXT,
+    "startBreakLocation" TEXT,
+    "endBreakLocation" TEXT,
+    "startBreakPhoto" TEXT,
+    "endBreakPhoto" TEXT,
+    "startBreakTime" TEXT,
+    "endBreakTime" TEXT,
+    "startBreakDate" TEXT,
+    "endBreakDate" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "location" TEXT,
     "attendanceId" TEXT,
-    "startBreakImage" TEXT,
-    "endBreakImage" TEXT,
     "adminId" TEXT NOT NULL,
     "applyBreak" BOOLEAN DEFAULT false,
     "staffId" TEXT,
@@ -701,46 +705,28 @@ CREATE TABLE "Report" (
 );
 
 -- CreateTable
-CREATE TABLE "PunchIn" (
-    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
-    "punchInMethod" "PunchInMethod" DEFAULT 'PHOTOCLICK',
-    "punchInTime" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "punchInDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "biometricData" TEXT,
-    "qrCodeValue" TEXT,
-    "photoUrl" TEXT,
-    "location" TEXT,
-    "approve" TEXT DEFAULT 'Pending',
+CREATE TABLE "ProjectGroup" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "projectId" TEXT,
+    "createdBy" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "PunchIn_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "ProjectGroup_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "PunchOut" (
-    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
-    "punchOutMethod" "PunchOutMethod" DEFAULT 'PHOTOCLICK',
-    "punchOutTime" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "punchOutDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "biometricData" TEXT,
-    "qrCodeValue" TEXT,
-    "photoUrl" TEXT,
-    "location" TEXT,
-    "overtime" TEXT,
+CREATE TABLE "Message" (
+    "id" TEXT NOT NULL,
+    "text" TEXT NOT NULL,
+    "senderId" TEXT,
+    "reciverId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "projectGroupId" TEXT,
+    "userId" TEXT,
 
-    CONSTRAINT "PunchOut_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "PunchRecords" (
-    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
-    "punchDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "isApproved" BOOLEAN NOT NULL DEFAULT false,
-    "punchInId" TEXT,
-    "punchOutId" TEXT,
-    "staffId" TEXT,
-    "status" "punchRecordStatus" NOT NULL DEFAULT 'ABSENT',
-
-    CONSTRAINT "PunchRecords_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Message_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -786,7 +772,6 @@ CREATE TABLE "Overtime" (
     "date" TEXT,
     "applyOvertime" BOOLEAN DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "applyFine" BOOLEAN DEFAULT false,
 
     CONSTRAINT "Overtime_pkey" PRIMARY KEY ("id")
 );
@@ -843,6 +828,9 @@ CREATE TABLE "_ModuleToPackage" (
 CREATE UNIQUE INDEX "StaffDetails_userId_key" ON "StaffDetails"("userId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "StaffDetails_employeeId_key" ON "StaffDetails"("employeeId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Permissions_roleId_key" ON "Permissions"("roleId");
 
 -- CreateIndex
@@ -894,15 +882,6 @@ CREATE UNIQUE INDEX "Module_name_key" ON "Module"("name");
 CREATE UNIQUE INDEX "Transaction_paymentId_key" ON "Transaction"("paymentId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "PunchRecords_punchInId_key" ON "PunchRecords"("punchInId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "PunchRecords_punchOutId_key" ON "PunchRecords"("punchOutId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "PunchRecords_staffId_punchDate_key" ON "PunchRecords"("staffId", "punchDate");
-
--- CreateIndex
 CREATE UNIQUE INDEX "Fine_staffId_createdAt_key" ON "Fine"("staffId", "createdAt");
 
 -- CreateIndex
@@ -928,6 +907,9 @@ CREATE INDEX "_ModuleToPackage_B_index" ON "_ModuleToPackage"("B");
 
 -- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_packageId_fkey" FOREIGN KEY ("packageId") REFERENCES "Package"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "User" ADD CONSTRAINT "User_roomId_fkey" FOREIGN KEY ("roomId") REFERENCES "ProjectGroup"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "StaffDetails" ADD CONSTRAINT "StaffDetails_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1095,13 +1077,16 @@ ALTER TABLE "Discussion" ADD CONSTRAINT "Discussion_userId_fkey" FOREIGN KEY ("u
 ALTER TABLE "Report" ADD CONSTRAINT "Report_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PunchRecords" ADD CONSTRAINT "PunchRecords_punchInId_fkey" FOREIGN KEY ("punchInId") REFERENCES "PunchIn"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ProjectGroup" ADD CONSTRAINT "ProjectGroup_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PunchRecords" ADD CONSTRAINT "PunchRecords_punchOutId_fkey" FOREIGN KEY ("punchOutId") REFERENCES "PunchOut"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Message" ADD CONSTRAINT "Message_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PunchRecords" ADD CONSTRAINT "PunchRecords_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Message" ADD CONSTRAINT "Message_reciverId_fkey" FOREIGN KEY ("reciverId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Message" ADD CONSTRAINT "Message_projectGroupId_fkey" FOREIGN KEY ("projectGroupId") REFERENCES "ProjectGroup"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Fine" ADD CONSTRAINT "Fine_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "StaffDetails"("id") ON DELETE CASCADE ON UPDATE CASCADE;

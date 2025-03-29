@@ -19,7 +19,7 @@ const punchInStaff = async (req, res, next) => {
             }
         })
 
-        if (findAttendance) {
+        if (findAttendance.status !== "ABSENT") {
             return res.status(400).json({ message: "Staff has been punched in at " + findAttendance.date + " on " + findAttendance.startTime });
         }
 
