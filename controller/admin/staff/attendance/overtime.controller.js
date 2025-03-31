@@ -182,7 +182,7 @@ const addOvertimeData = async (req, res, next) => {
                     adminId: admin.user.adminDetails.id,
                     date: staffAttendance.date,
                     applyOvertime,
-                    sendSMStoStaff,
+                    // sendSMStoStaff,
                 },
             });
             // const checkSendSMStoStaffisTrue = await prisma.overtime.findFirst({
@@ -214,7 +214,7 @@ const addOvertimeData = async (req, res, next) => {
                 adminId: admin.user.adminDetails.id,
                 date: staffAttendance.date,
                 applyOvertime,
-                sendSMStoStaff
+                // sendSMStoStaff
             },
         });
         // const checkSendSMStoStaffisTrue = await prisma.overtime.findFirst({
