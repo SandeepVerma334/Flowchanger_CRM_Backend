@@ -60,10 +60,9 @@ const getSpecificStaffPayroll = async (req, res, next) => {
         });
 
 
-        console.log(isStaff);
 
         let totalWorkingHours = Number(admin.officeWorkinghours || 8);
-        const officeStartTime = admin.userofficeStartTime;
+        const officeStartTime = admin.officeStartTime;
         const officeEndtime = admin.officeEndtime;
 
         if (officeStartTime && officeEndtime) {
@@ -109,7 +108,7 @@ const getSpecificStaffPayroll = async (req, res, next) => {
 
         let attendance = await prisma.attendanceStaff.findMany({
             where: {
-                staffId: req.userId,
+                staffId: isStaff.user.StaffDetails.id,
                 date: {
                     gte: startDate,
                     lte: endDate,
@@ -126,7 +125,7 @@ const getSpecificStaffPayroll = async (req, res, next) => {
         });
 
         const salary = await prisma.salaryDetail.findFirst({
-            where: { staffId: req.userId },
+            where: { staffId: isStaff.user.StaffDetails.id },
             orderBy: {
                 createdAt: "desc"  // Ordering by newest first
             }
@@ -153,7 +152,22 @@ const getSpecificStaffPayroll = async (req, res, next) => {
         let totalBreakAmount = 0;
         let totalApplyBreakAmount = 0;
         let totalAbsent = 0;
+        let currentDate = 1;
 
+        const nowDate = new Date().getDate();
+
+        if ((nowDate.getMonth() + 1 == month && nowDate.getFullYear() == year || attendance.length == totalDays)) {
+            while (currentDate <= nowDate.getDate()) {
+
+                const formattedDate = `${year}-${formattedMonth}-${currentDate.toString().padStart(2, '0')}`;
+
+                if (new Date(formattedDate).getDay() === 0) {
+                    totalWeekOff += 1;
+                }
+
+                currentDate++;
+            }
+        }
         attendance = attendance.map(record => {
             const startTime = new Date(`${record.date} ${record.startTime}`);
             const endTime = new Date(`${record.date} ${record.endTime}`);
@@ -163,7 +177,7 @@ const getSpecificStaffPayroll = async (req, res, next) => {
                 totalHoursWorked += dailyTotalHours; // Convert milliseconds to hours
             }
 
-            if (record.status === "WEEK_OFF") totalWeekOff += 1;
+            // if (record.status === "WEEK_OFF") totalWeekOff += 1;
             if (record.status === "PRESENT") totalPresent += 1;
             if (record.status === "HALF_DAY") totalHalfDay += 1;
             if (record.status === "PAID_LEAVE") totalPaidLeave += 1;
@@ -204,7 +218,7 @@ const getSpecificStaffPayroll = async (req, res, next) => {
 
         const existingPayment = await prisma.paymentHistory.findFirst({
             where: {
-                staffId,
+                staffId: isStaff.user.StaffDetails.id,
                 adminId: req.userId,
                 date: {
                     gte: new Date(startDate),
@@ -223,7 +237,7 @@ const getSpecificStaffPayroll = async (req, res, next) => {
                 data: {
                     date: new Date(`${year}-${formattedMonth}-${totalDays}`),
                     SalaryDetails: { connect: { id: salary.id } },
-                    staff: { connect: { id: staffId } },
+                    staff: { connect: { id: isStaff.user.StaffDetails.id } },
                     admin: { connect: { id: req.userId } },
                     amount: parseFloat(payableSalary.toFixed(2))
                 }
@@ -417,7 +431,19 @@ const getMultipleStaffPayroll = async (req, res, next) => {
             let totalBreakAmount = 0;
             let totalApplyBreakAmount = 0;
             let totalAbsent = 0;
+            let currentDate = 1;
+            const nowDate = new Date();
+            if ((nowDate.getMonth() + 1 == month && nowDate.getFullYear() == year) || attendance.length === totalDays) {
+                while (currentDate <= nowDate.getDate()) {
+                    const formattedDate = `${year}-${formattedMonth}-${currentDate.toString().padStart(2, '0')}`;
 
+                    if (new Date(formattedDate).getDay() === 0) {
+                        totalWeekOff += 1;
+                    }
+
+                    currentDate++;
+                }
+            }
             attendance = attendance.map(record => {
                 const startTime = new Date(`${record.date} ${record.startTime}`);
                 const endTime = new Date(`${record.date} ${record.endTime}`);
@@ -427,7 +453,7 @@ const getMultipleStaffPayroll = async (req, res, next) => {
                     totalHoursWorked += dailyTotalHours; // Convert milliseconds to hours
                 }
 
-                if (record.status === "WEEK_OFF") totalWeekOff += 1;
+                // if (record.status === "WEEK_OFF") totalWeekOff += 1;
                 if (record.status === "PRESENT") totalPresent += 1;
                 if (record.status === "HALF_DAY") totalHalfDay += 1;
                 if (record.status === "PAID_LEAVE") totalPaidLeave += 1;
