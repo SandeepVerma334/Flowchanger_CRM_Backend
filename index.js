@@ -28,7 +28,11 @@ app.use(express.static("public"));
 
 app.use("/api/", rootRouter);
 
+// setTimeout(() => {
+//   console.log("⏳ Scheduling Attendance Marking...");
+//   autoCreateAttendance();
+// }, 10000); // 10 seconds delay
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  // autoCreateAttendance();
 });

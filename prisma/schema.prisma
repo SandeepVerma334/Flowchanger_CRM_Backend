@@ -59,7 +59,7 @@ model StaffDetails {
   degreeCertificate String?
   dateOfJoining     DateTime?   @default(now())
   dateOfBirth       String?
-  employeeId        String?
+  employeeId        String?     @unique
   maritalStatus     String?
   cityOfresidence   String?
   address           String?
@@ -545,6 +545,7 @@ model BankDetails {
 
 model ClientDetails {
   id               String        @id @default(dbgenerated("gen_random_uuid()"))
+  clientId         String?       @unique
   group            String
   currency         String
   defaultLanguage  String

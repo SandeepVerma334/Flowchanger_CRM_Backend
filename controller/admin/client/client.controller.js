@@ -4,6 +4,16 @@ import checkAdmin from "../../../utils/adminChecks.js";
 import bcrypt from 'bcrypt';
 import { pagination } from "../../../utils/pagination.js";
 import { sendEmailWithPdf } from "../../../utils/emailService.js";
+import jwt from 'jsonwebtoken';
+
+function generateRandomString() {
+    const chars = '0123456789';
+    let result = '';
+    for (let i = 0; i < 5; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
 
 const createClient = async (req, res, next) => {
     try {
@@ -25,6 +35,7 @@ const createClient = async (req, res, next) => {
             return res.status(400).json({ message: "Client with this email already exists" });
         }
         const hashedPassword = await bcrypt.hash(password, 10);
+        const uniqueClientId = generateRandomString();
         const client = await prisma.user.create({
             data: {
                 email: email,
@@ -36,6 +47,7 @@ const createClient = async (req, res, next) => {
                 ClientDetails: {
                     create: {
                         adminId: admin.user.adminDetails.id,
+                        clientId: uniqueClientId,
                         ...restValidation
                     }
                 }
@@ -44,7 +56,7 @@ const createClient = async (req, res, next) => {
                 ClientDetails: true
             }
         })
-        await sendEmailWithPdf(email, validatedData.name, password, validatedData.panNumber, `${process.env.CLIENT_URL}/login`);
+        await sendEmailWithPdf(email, uniqueClientId, validatedData.name, password, validatedData.panNumber, `${process.env.CLIENT_URL}/login`);
         res.status(201).json({
             message: "Client created successfully",
             data: client
@@ -245,5 +257,72 @@ const bulkDeleteClient = async (req, res, next) => {
     }
 };
 
+// login client 
+const loginClient = async (req, res, next) => {
+    try {
+        const { clientId, password } = req.body;
 
-export { createClient, getClients, updateClient, getClientById, searchClientByName, deleteClient, bulkDeleteClient };
+        const client = await prisma.clientDetails.findFirst({
+            where: {
+                clientId: clientId
+            },
+            include: {
+                user: true
+            }
+        });
+        console.log("client Data ", client.user.password);
+        if (!client) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        const isMatchPassword = await bcrypt.compare(password, client.user.password);
+        console.log(isMatchPassword)
+        if (!isMatchPassword) {
+            return res.status(401).json({ message: "Invalid password" });
+        }
+        // if (client.password !== password) {
+        //     return res.status(401).json({ message: "Invalid password" });
+        // }
+
+        const token = jwt.sign({ id: client.user.id, adminId: client.adminId }, process.env.JWT_SECRET, { expiresIn: '7d' }); // Generate JWT token with user ID    
+
+        res.status(200).json({
+            message: "Login successfuly",
+            token,
+            data: client  // Send token in response
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+// get all data for clients
+
+const getAllSingleClientData = async (req, res, next) => {
+    try {
+        const checkClient = await checkAdmin(req.userId, "CLIENT")
+        if (checkClient.error) {
+            return res.status(401).json(checkClient.message);
+        }
+        console.log("checkClient", checkClient)
+        const client = await prisma.clientDetails.findFirst({
+            where: {
+                id: checkClient.user.ClientDetails.id,
+            },
+            include: {
+                user: {
+                    include: {
+                        Discussion: true,
+                        Note:true,
+                    },
+                },
+                Project: true,
+                adminDetails: true
+            }
+        })
+        return res.status(200).json({ message: "Data found successfully", data: client });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export { createClient, getClients, updateClient, getClientById, searchClientByName, deleteClient, bulkDeleteClient, loginClient, getAllSingleClientData };

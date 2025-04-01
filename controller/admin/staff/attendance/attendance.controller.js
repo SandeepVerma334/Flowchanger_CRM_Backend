@@ -237,6 +237,7 @@ const createAttendance = async (req, res, next) => {
                 where: { staffId: staffId }
 
             });
+            console.log(salaryDetails);
             const monthDays = new Date(attendanceDate.getFullYear(), attendanceDate.getMonth() + 1, 0).getDate();
             let ctcAmount = 0;
             if (salaryDetails) {
@@ -281,6 +282,7 @@ const createAttendance = async (req, res, next) => {
             if (officeStartTime && officeEndtime) {
 
                 // Staff Late or Early Arrival Calculation
+                officeWorkingHours = calculateWorkedHours(officeStartTime, officeEndtime);
                 if (staffStart > officeStart) {
                     let diff = getTimeDifference(officeStart, staffStart);
                     LateCommingTime = diff.totalMinutes;
@@ -322,6 +324,8 @@ const createAttendance = async (req, res, next) => {
                 }
             }
 
+            console.log(officeWorkingHours);
+
             // console.log("LateCommingTime", LateCommingTime);
             // console.log("EarlyCommingTime", EarlyCommingTime);
             // console.log("EarlyOutOffice", EarlyOutOffice);
@@ -353,10 +357,11 @@ const createAttendance = async (req, res, next) => {
             let TotalFine = LateCommingFine + EarlyOutFine;
             // console.log(LateCommingFine, EarlyOutFine, TotalFine)
 
+            console.log(salaryDetails)
             if (salaryDetails) {
                 if (workedHours < officeWorkingHours) {
 
-                    // console.log("sldjfldsjfklsd");
+                    console.log("sldjfldsjfklsd");
                     const missingHours = officeWorkingHours - workedHours;
                     const fineAmount = missingHours * perHourSalary;
 
@@ -640,12 +645,15 @@ const getAttendanceByMonth = async (req, res, next) => {
             return res.status(400).json({ message: "Staff ID is required!" });
         }
 
+
         const admin = await checkAdmin(req.userId, type, res);
         if (admin.error) {
             return res.status(400).json({ message: admin.message });
         }
+        console.log(staffId, admin?.user?.StaffDetails?.id)
 
         const { month, year } = req.query;
+
 
         if (!month || !year) {
             return res.status(400).json({ message: "Month and Year are required" });
@@ -661,8 +669,12 @@ const getAttendanceByMonth = async (req, res, next) => {
         // Define start and end dates for the requested month (used for querying attendance)
         let startDate = getIndiaTime(`${yearNum}-${monthNum}-01`);
         let endDate = getIndiaTime();
-        console.log(" start date ", startDate.setHours(0, 0, 0, 0), " end date ", endDate.setHours(0, 0, 0, 0));
 
+        if (type === "STAFF" && staffId !== admin?.user?.StaffDetails?.id) {
+            return res.status(404).json({
+                message: "Invalid staffID or staff token",
+            });
+        }
         // Fetch staff details
         const staff = await prisma.staffDetails.findFirst({
             where: {
@@ -699,20 +711,16 @@ const getAttendanceByMonth = async (req, res, next) => {
         const existingDatesSet = new Set(existingAttendances.map(attendance => attendance.date));
 
         let currentDay = new Date(dateOfJoining);
-
+        console.log(endDate);
         if (existingAttendances.length < (getDateDifference(currentDay, endDate) + 1)) {
             while (currentDay <= endDate) {
                 const formattedDate = currentDay.toISOString().split("T")[0];
-                // console.log(" formatted date ", formattedDate);
 
                 // // Skip if attendance already exists for this date
                 if (existingDatesSet.has(formattedDate)) {
                     currentDate.setDate(currentDate.getDate() + 1);
                     continue;
                 }
-
-                // if(existingDatesSet)
-
 
                 // Determine default status (Sunday = "WEEK_OFF", otherwise "ABSENT")
                 let status = currentDay.getDay() === 0 ? "WEEK_OFF" : "ABSENT";
@@ -724,7 +732,7 @@ const getAttendanceByMonth = async (req, res, next) => {
                 await prisma.attendanceStaff.create({
                     data: {
                         staffId: staffId,
-                        adminId: admin.user.adminDetails.id,
+                        adminId: type === "ADMIN" ? admin.user.adminDetails.id : req.adminId,
                         date: formattedDate,
                         status: status,
                     },
@@ -733,7 +741,7 @@ const getAttendanceByMonth = async (req, res, next) => {
             }
         }
 
-        startDate = new Date(yearNum, monthNum-1, 2, 0, 0, 0, 0);
+        startDate = new Date(yearNum, monthNum - 1, 2, 0, 0, 0, 0);
         startDate.setHours(0, 0, 0, 0);
         endDate = new Date(yearNum, monthNum, 1);
         console.log(startDate, endDate)
@@ -777,6 +785,11 @@ const getAttendanceByMonth = async (req, res, next) => {
         next(error);
     }
 };
+
+// get all Attendance by month for App APi
+const getAttendanceByMonthStaffIdForApp = async (req, res, next) => {
+
+}
 
 // start break and end break
 const startAttendanceBreak = async (req, res, next) => {
@@ -1037,16 +1050,14 @@ const getAllAttendanceByDate = async (req, res, next) => {
         }
 
         // Convert date to 'YYYY-MM-DD' string format if 'date' field is stored as a string
-        const formattedDate = parsedDate.toISOString().split('T')[0]; // '2024-12-15'
+        const formattedDate = parsedDate.toISOString().split('T')[0];
 
         let officeWorkingHours = admin.user.adminDetails.officeWorkinghours;
         const officeStartTime = admin.user.adminDetails.officeStartTime;
         const officeEndtime = admin.user.adminDetails.officeEndtime;
-
         if (officeStartTime && officeEndtime) {
             officeWorkingHours = calculateWorkedHours(officeStartTime, officeEndtime);
         }
-
 
         const attendance = await pagination(prisma.user, {
             page, limit,
@@ -1067,8 +1078,6 @@ const getAllAttendanceByDate = async (req, res, next) => {
                         },
                     },
                 },
-                // attendanceBreakRecord: true,
-                // fine: true
             },
         });
         console.log(formattedDate);

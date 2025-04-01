@@ -836,6 +836,9 @@ CREATE TABLE "_ModuleToPackage" (
 CREATE UNIQUE INDEX "StaffDetails_userId_key" ON "StaffDetails"("userId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "StaffDetails_employeeId_key" ON "StaffDetails"("employeeId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Permissions_roleId_key" ON "Permissions"("roleId");
 
 -- CreateIndex
