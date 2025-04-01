@@ -71,7 +71,7 @@ const getSpecificStaffPayroll = async (req, res, next) => {
 
         const { month, year } = req.params;
 
-        
+
         if (!month || !year) {
             return res.status(400).json({ message: "Month and year are required" });
         }
@@ -293,7 +293,7 @@ const getMultipleStaffPayroll = async (req, res, next) => {
 
         const admin = await checkAdmin(req.userId);
 
-        if (admin.error) { 
+        if (admin.error) {
             return res.status(401).json({ message: admin.message });
         }
 
