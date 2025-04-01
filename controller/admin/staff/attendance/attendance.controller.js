@@ -1276,6 +1276,7 @@ const countStaffAttendance = async (req, res, next) => {
     try {
         const { date } = req.params;
         const admin = await checkAdmin(req.userId, "ADMIN", res);
+
         if (admin.error) {
             return res.status(400).json({ message: admin.message });
         }
@@ -1310,8 +1311,8 @@ const countStaffAttendance = async (req, res, next) => {
                     totalAbsent,
                     totalPaidLeave,
                     totalHalfDay,
-                    totalFineTime: 0,
-                    totalOvertimeTime: 0,
+                    totalFineTime: "00:00",
+                    totalOvertimeTime: "00:00",
                 }
             });
         }
@@ -1364,7 +1365,12 @@ const countStaffAttendance = async (req, res, next) => {
             });
         });
 
-
+        // Convert minutes to HH:MM format
+        const formatMinutesToTime = (totalMinutes) => {
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        };
 
         res.status(200).json({
             message: "Attendance count fetched successfully",
@@ -1374,14 +1380,15 @@ const countStaffAttendance = async (req, res, next) => {
                 totalAbsent,
                 totalPaidLeave,
                 totalHalfDay,
-                totalFineTime: totalFineMinutes ? parseFloat((totalFineMinutes / 60).toFixed(2)) : 0,
-                totalOvertimeTime: totalOvertimeMinutes ? parseFloat((totalOvertimeMinutes / 60).toFixed(2)) : 0,
+                totalFineTime: formatMinutesToTime(totalFineMinutes),
+                totalOvertimeTime: formatMinutesToTime(totalOvertimeMinutes),
             }
         });
     } catch (error) {
         next(error);
     }
 };
+
 export {
     createAttendance, getAllAttendance, getAttendanceByStaffId, startAttendanceBreak, countStaffAttendance,
     endAttendanceBreak, getAttendanceByMonth, halfDayAttendance, getAllAttendanceByDate, getAllStartBreakRecord, getAllEndBreakRecord
