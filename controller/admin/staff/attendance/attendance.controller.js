@@ -260,6 +260,7 @@ const createAttendance = async (req, res, next) => {
                 where: { staffId: staffId }
 
             });
+            console.log(salaryDetails);
             const monthDays = new Date(attendanceDate.getFullYear(), attendanceDate.getMonth() + 1, 0).getDate();
             let ctcAmount = 0;
             if (salaryDetails) {
@@ -304,6 +305,7 @@ const createAttendance = async (req, res, next) => {
             if (officeStartTime && officeEndtime) {
 
                 // Staff Late or Early Arrival Calculation
+                officeWorkingHours = calculateWorkedHours(officeStartTime, officeEndtime);
                 if (staffStart > officeStart) {
                     let diff = getTimeDifference(officeStart, staffStart);
                     LateCommingTime = diff.totalMinutes;
@@ -345,6 +347,8 @@ const createAttendance = async (req, res, next) => {
                 }
             }
 
+            console.log(officeWorkingHours);
+
             // console.log("LateCommingTime", LateCommingTime);
             // console.log("EarlyCommingTime", EarlyCommingTime);
             // console.log("EarlyOutOffice", EarlyOutOffice);
@@ -376,10 +380,11 @@ const createAttendance = async (req, res, next) => {
             let TotalFine = LateCommingFine + EarlyOutFine;
             // console.log(LateCommingFine, EarlyOutFine, TotalFine)
 
+            console.log(salaryDetails)
             if (salaryDetails) {
                 if (workedHours < officeWorkingHours) {
 
-                    // console.log("sldjfldsjfklsd");
+                    console.log("sldjfldsjfklsd");
                     const missingHours = officeWorkingHours - workedHours;
                     const fineAmount = missingHours * perHourSalary;
 
