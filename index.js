@@ -26,11 +26,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-// API Routes
-app.use("/api/", rootRouter);
-(async () => {
-  await autoCreateAttendance();
-})();
+setTimeout(() => {
+  console.log("⏳ Scheduling Attendance Marking...");
+  autoCreateAttendance();
+}, 10000); // 10 seconds delay
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   
