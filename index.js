@@ -7,7 +7,7 @@ import path from "path";
 import { createServer } from "http";
 // Load environment variables
 import cron from "node-cron";
-// import autoCreateAttendance from "./utils/autoAttendanceMarkAdminsStaff.js";
+import autoCreateAttendance from "./utils/autoAttendanceMarkAdminsStaff.js";
 
 config();
 
@@ -28,7 +28,9 @@ app.use(express.static("public"));
 
 // API Routes
 app.use("/api/", rootRouter);
-
+(async () => {
+  await autoCreateAttendance();
+})();
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   
