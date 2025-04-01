@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authorizationMiddleware } from "../../middleware/auth.js";
-import { bulkDeleteClient, countClients, createClient, deleteClient, getClientById, getClients, searchClientByName, updateClient,getAllSingleClientData, loginClient } from "../../controller/admin/client/client.controller.js";
+import { bulkDeleteClient, createClient, deleteClient, getClientById, getClients, searchClientByName, updateClient, loginClient, getAllSingleClientData } from "../../controller/admin/client/client.controller.js";
 import errorHandler from "../../middleware/errorhandler.js";
 const clientRouter = Router();
 
@@ -8,7 +8,6 @@ clientRouter.post("/", authorizationMiddleware, createClient);
 clientRouter.get("/", authorizationMiddleware, getClients);
 clientRouter.put("/login", loginClient);
 clientRouter.get("/single", authorizationMiddleware, getAllSingleClientData);
-clientRouter.get("/count", authorizationMiddleware, countClients);
 clientRouter.get("/search", authorizationMiddleware, searchClientByName);
 clientRouter.delete("/delete/:id", authorizationMiddleware, deleteClient);
 clientRouter.delete("/bulk-delete", authorizationMiddleware, bulkDeleteClient);

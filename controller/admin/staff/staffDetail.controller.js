@@ -311,7 +311,6 @@ const updateStaff = async (req, res, next) => {
   }
 };
 
-
 // Delete Staff by ID
 const deleteStaff = async (req, res, next) => {
   const { id } = req.params; // 'id' represents the user's id

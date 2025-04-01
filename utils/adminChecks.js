@@ -8,6 +8,7 @@ const checkAdmin = async (userId, role = "ADMIN") => {
             include: {
                 adminDetails: role === "ADMIN",
                 StaffDetails: role === "STAFF",
+                ClientDetails: role === "CLIENT"
             }
         });
 

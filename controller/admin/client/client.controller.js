@@ -4,6 +4,16 @@ import checkAdmin from "../../../utils/adminChecks.js";
 import bcrypt from 'bcrypt';
 import { pagination } from "../../../utils/pagination.js";
 import { sendEmailWithPdf } from "../../../utils/emailService.js";
+import jwt from 'jsonwebtoken';
+
+function generateRandomString() {
+    const chars = '0123456789';
+    let result = '';
+    for (let i = 0; i < 5; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
 
 const createClient = async (req, res, next) => {
     try {
@@ -25,6 +35,7 @@ const createClient = async (req, res, next) => {
             return res.status(400).json({ message: "Client with this email already exists" });
         }
         const hashedPassword = await bcrypt.hash(password, 10);
+        const uniqueClientId = generateRandomString();
         const client = await prisma.user.create({
             data: {
                 email: email,
@@ -36,6 +47,7 @@ const createClient = async (req, res, next) => {
                 ClientDetails: {
                     create: {
                         adminId: admin.user.adminDetails.id,
+                        clientId: uniqueClientId,
                         ...restValidation
                     }
                 }
@@ -44,7 +56,7 @@ const createClient = async (req, res, next) => {
                 ClientDetails: true
             }
         })
-        await sendEmailWithPdf(email, validatedData.name, password, validatedData.panNumber, `${process.env.CLIENT_URL}/login`);
+        await sendEmailWithPdf(email, uniqueClientId, validatedData.name, password, validatedData.panNumber, `${process.env.CLIENT_URL}/login`);
         res.status(201).json({
             message: "Client created successfully",
             data: client
@@ -247,23 +259,6 @@ const bulkDeleteClient = async (req, res, next) => {
     }
 };
 
-const countClients = async (req, res, next) => {
-    try {
-        const admin = await checkAdmin(req.userId);
-        if (admin.error) {
-            return res.status(401).json(admin.message);
-        }
-        const count = await prisma.user.count({
-            where: {
-                role: "CLIENT",
-            }
-        });
-        res.status(200).json({ message: "Total client count successfully", count });
-    } catch (error) {
-        next(error);
-    }
-}
-
 // login client 
 const loginClient = async (req, res, next) => {
     try {
@@ -332,4 +327,4 @@ const getAllSingleClientData = async (req, res, next) => {
     }
 }
 
-export { createClient, getClients, updateClient, getClientById, searchClientByName, deleteClient, bulkDeleteClient, countClients , loginClient, getAllSingleClientData  };
+export { createClient, getClients, updateClient, getClientById, searchClientByName, deleteClient, bulkDeleteClient, loginClient, getAllSingleClientData };

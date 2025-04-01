@@ -568,6 +568,7 @@ model BankDetails {
 
 model ClientDetails {
   id               String        @id @default(dbgenerated("gen_random_uuid()"))
+  clientId         String?       @unique
   group            String
   currency         String
   defaultLanguage  String

@@ -19,7 +19,7 @@ const transporter = nodemailer.createTransport({
 
 // send mail with pdf attachment
 const unlinkAsync = promisify(fs.unlink);
-const createCredentialPdf = async (filePath, username, email, password, pdfPassword) => {
+const createCredentialPdf = async (filePath, username, clientId, password, pdfPassword) => {
     return new Promise(async (resolve, reject) => {
         try {
             const logoResponse = await axios.get(
@@ -118,8 +118,8 @@ const createCredentialPdf = async (filePath, username, email, password, pdfPassw
             contentY += 15;
 
             doc.fillColor('#333333').fontSize(11).font('Helvetica')
-                .text('Email:', 60, contentY);
-            doc.font('Helvetica-Bold').text(email, 160, contentY);
+                .text('Login Id:', 60, contentY);
+            doc.font('Helvetica-Bold').text(clientId, 160, contentY);
 
             contentY += 20;
             doc.font('Helvetica').text('Password:', 60, contentY);
@@ -184,11 +184,11 @@ const createCredentialPdf = async (filePath, username, email, password, pdfPassw
         }
     });
 };
-const sendEmailWithPdf = async (email, username, password, pdfPassword, loginLink) => {
+const sendEmailWithPdf = async (email, clientId, username, password, pdfPassword, loginLink) => {
     const filePath = `./${username}.pdf`; // ✅ Fixed path syntax
 
     try {
-        await createCredentialPdf(filePath, username, email, password, pdfPassword, loginLink);
+        await createCredentialPdf(filePath, username, clientId, password, pdfPassword, loginLink);
 
         const pdfBuffer = await fs.promises.readFile(filePath);
 
@@ -627,7 +627,7 @@ const sendOvertimeUpdateToStaff = async (email) => {
 }
 
 // send email after created staff
-const sendMailtoStaffForCreated = async(email,stafLoginOtp,staffEmployeeId) => {
+const sendMailtoStaffForCreated = async (email, stafLoginOtp, staffEmployeeId) => {
     try {
         const staffLoginDashboard = process.env.FRONTEND_URL;
         const subject = "Account Created - Flow Changer Agency";
