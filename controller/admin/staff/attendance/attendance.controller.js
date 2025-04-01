@@ -778,6 +778,17 @@ const getAttendanceByMonth = async (req, res, next) => {
                     lte: endDate.toISOString().split("T")[0]
                 },
             },
+            include: {
+                staffDetails: {
+                    include: {
+                        User: true
+                    }
+                },
+                attendanceBreakRecord: true,
+                fine: true,
+                overtime: true,
+                SalaryDetail: true,
+            },
             orderBy: { date: "asc" },
         });
 
