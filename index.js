@@ -25,7 +25,7 @@ app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
-
+app.use("/api/", rootRouter);
 setTimeout(() => {
   console.log("⏳ Scheduling Attendance Marking...");
   autoCreateAttendance();
