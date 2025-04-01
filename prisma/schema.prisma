@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  // directUrl = env("DIRECT_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -568,9 +568,9 @@ model BankDetails {
 
 model ClientDetails {
   id               String        @id @default(dbgenerated("gen_random_uuid()"))
-  clientId         String?       @unique
   group            String
   currency         String
+  clientId         String?       @unique
   defaultLanguage  String
   organizationName String
   website          String
