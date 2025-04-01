@@ -16,16 +16,6 @@ function generateRandomString() {
   return result;
 }
 
-
-// create staff
-function generateRandomString() {
-  const chars = '0123456789';
-  let result = '';
-  for (let i = 0; i < 5; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
 const createStaff = async (req, res, next) => {
   try {
     const adminCheck = await checkAdmin(req.userId);

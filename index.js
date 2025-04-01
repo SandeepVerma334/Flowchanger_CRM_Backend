@@ -7,7 +7,7 @@ import path from "path";
 import { createServer } from "http";
 // Load environment variables
 import cron from "node-cron";
-import autoCreateAttendance from "./utils/autoAttendanceMarkAdminsStaff.js";
+// import autoCreateAttendance from "./utils/autoAttendanceMarkAdminsStaff.js";
 
 config();
 
@@ -25,11 +25,12 @@ app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
-
-// API Routes
 app.use("/api/", rootRouter);
-
+// setTimeout(() => {
+//   console.log("⏳ Scheduling Attendance Marking...");
+//   autoCreateAttendance();
+// }, 10000); // 10 seconds delay
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  // autoCreateAttendance();
+  
 });
