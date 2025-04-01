@@ -90,14 +90,10 @@ const punchOutStaff = async (req, res, next) => {
         })
 
 
-        console.log(findAttendance)
         if (!findAttendance) {
             return res.status(400).json({ message: "Staff has not punch in first. " });
         }
 
-        // if (findAttendance.endTime) {
-        //     return res.status(400).json({ message: "Staff has been punched out at " + findAttendance.date + " on " + findAttendance.endTime });
-        // }
 
         const attendance = await prisma.attendanceStaff.update({
             where: {

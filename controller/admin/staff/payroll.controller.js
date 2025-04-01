@@ -71,7 +71,7 @@ const getSpecificStaffPayroll = async (req, res, next) => {
 
         const { month, year } = req.params;
 
-        
+
         if (!month || !year) {
             return res.status(400).json({ message: "Month and year are required" });
         }
@@ -153,6 +153,25 @@ const getSpecificStaffPayroll = async (req, res, next) => {
         let totalApplyBreakAmount = 0;
         let totalAbsent = 0;
 
+        if (attendance.length === 0) {
+            let currentDate = new Date();
+
+            let startingDate = 1;
+
+            if (month == dateOfJoining.getMonth() + 1 && year == dateOfJoining.getFullYear()) {
+                startingDate = dateOfJoining.getDate();
+            }
+
+            const endingDate = currentDate.getMonth() + 1 == month && currentDate.getFullYear() == year ? currentDate.getDate() : totalDays;
+
+            for (let i = startingDate; i <= endingDate; i++) {
+                const formattedDate = `${year}-${formattedMonth}-${i.toString().padStart(2, '0')}`;
+                if (new Date(formattedDate).getDay() === 0) {
+                    totalWeekOff += 1;
+                }
+            }
+        }
+
         attendance = attendance.map(record => {
             const startTime = new Date(`${record.date} ${record.startTime}`);
             const endTime = new Date(`${record.date} ${record.endTime}`);
@@ -162,7 +181,7 @@ const getSpecificStaffPayroll = async (req, res, next) => {
                 totalHoursWorked += dailyTotalHours; // Convert milliseconds to hours
             }
 
-            if (record.status === "WEEK_OFF") totalWeekOff += 1;
+            // if (record.status === "WEEK_OFF") totalWeekOff += 1;
             if (record.status === "PRESENT") totalPresent += 1;
             if (record.status === "HALF_DAY") totalHalfDay += 1;
             if (record.status === "PAID_LEAVE") totalPaidLeave += 1;
@@ -274,8 +293,6 @@ const getMultipleStaffPayroll = async (req, res, next) => {
 
         const admin = await checkAdmin(req.userId);
 
-
-
         if (admin.error) {
             return res.status(401).json({ message: admin.message });
         }
@@ -362,7 +379,7 @@ const getMultipleStaffPayroll = async (req, res, next) => {
                     staffId,
                     bankName: BankDetails[0]?.bankName || "N/A",
                     employeeId,
-                    message: "Staff joined after the selected month"
+                    message: "Staff joined on " + dateOfJoining.toISOString().split('T')[0]
                 };
             }
 
@@ -416,6 +433,25 @@ const getMultipleStaffPayroll = async (req, res, next) => {
             let totalBreakAmount = 0;
             let totalApplyBreakAmount = 0;
             let totalAbsent = 0;
+
+            if (attendance.length === 0) {
+                let currentDate = new Date();
+
+                let startingDate = 1;
+                if (month == dateOfJoining.getMonth() + 1 && year == dateOfJoining.getFullYear()) {
+                    startingDate = dateOfJoining.getDate();
+                }
+
+                const endingDate = currentDate.getMonth() + 1 == month && currentDate.getFullYear() == year ? currentDate.getDate() : totalDays;
+
+                for (let i = startingDate; i <= endingDate; i++) {
+                    const formattedDate = `${year}-${formattedMonth}-${i.toString().padStart(2, '0')}`;
+                    if (new Date(formattedDate).getDay() === 0) {
+                        totalWeekOff += 1;
+                    }
+                }
+            }
+
 
             attendance = attendance.map(record => {
                 const startTime = new Date(`${record.date} ${record.startTime}`);
@@ -517,7 +553,6 @@ const getMultipleStaffPayroll = async (req, res, next) => {
                     }
                 })
             }
-
 
             return {
                 name: ((User?.firstName || "") + " " + (User?.lastName || "")) || "N/A",

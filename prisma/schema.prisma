@@ -937,5 +937,6 @@ model Overtime {
   date                       String?
   applyOvertime              Boolean?         @default(false)
   createdAt                  DateTime         @default(now())
+
   @@unique([staffId, createdAt]) // Ensure one fine per staff per day
 }
