@@ -786,7 +786,7 @@ const getAttendanceByMonth = async (req, res, next) => {
                 },
                 attendanceBreakRecord: true,
                 fine: true,
-                overtime: true,
+                overTime: true,
                 SalaryDetail: true,
             },
             orderBy: { date: "asc" },
