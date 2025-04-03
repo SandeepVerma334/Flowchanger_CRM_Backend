@@ -281,7 +281,7 @@ const idSchema = z.string().uuid("Invalid UUID format");
 
 const roleNameSchema = z
   .string()
-  .regex(/^[a-zA-Z\s]+$/, "Role name can only contain alphabets and spaces");
+  .optional();
 
 const newRoleSchema = z.object({
   roleName: roleNameSchema.min(2, "role name is required"),
