@@ -279,9 +279,7 @@ const allPermissionSchema = z.object({
 
 const idSchema = z.string().uuid("Invalid UUID format");
 
-const roleNameSchema = z
-  .string()
-  .optional();
+const roleNameSchema = z.string();
 
 const newRoleSchema = z.object({
   roleName: roleNameSchema.min(2, "role name is required"),
