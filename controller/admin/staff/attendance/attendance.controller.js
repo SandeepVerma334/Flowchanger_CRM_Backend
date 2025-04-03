@@ -669,6 +669,28 @@ const getAttendanceByMonth = async (req, res, next) => {
         const admin = await checkAdmin(req.userId, type, res);
         if (admin.error) return res.status(400).json({ message: admin.message });
 
+        let officeStartTime;
+        let officeEndtime;
+        if (type === "STAFF") {
+            const adminDetails = await prisma.adminDetails.findUnique({
+                where: {
+                    id: admin.user.StaffDetails.adminId,
+                },
+            });
+
+            // console.log(adminDetails);
+
+            if (!adminDetails) {
+                return res.status(404).json({ message: "Admin details not found" });
+            }
+
+            officeStartTime = adminDetails.officeStartTime;
+            officeEndtime = adminDetails.officeEndtime;
+        }
+        else {
+            officeStartTime = admin.user.adminDetails.officeStartTime;
+            officeEndtime = admin.user.adminDetails.officeEndtime;
+        }
         const monthNum = parseInt(month, 10);
         const yearNum = parseInt(year, 10);
 
@@ -717,7 +739,7 @@ const getAttendanceByMonth = async (req, res, next) => {
                     staffId,
                     adminId: type === "ADMIN" ? admin.user.adminDetails.id : req.adminId,
                     date: formattedDate,
-                    status: tempDate.getDay() === 0 ? "WEEK_OFF" : (tempDate.getDate()===(new Date()).getDate() && tempDate.getMonth()===(new Date()).getMonth()) ? "NOT_DEFINED" : "ABSENT"
+                    status: tempDate.getDay() === 0 ? "WEEK_OFF" : (tempDate.getDate() === (new Date()).getDate() && tempDate.getMonth() === (new Date()).getMonth()) ? "NOT_DEFINED" : "ABSENT"
                 });
             }
 
@@ -742,22 +764,38 @@ const getAttendanceByMonth = async (req, res, next) => {
             include: {
                 staffDetails: {
                     include: {
-                        User: true
-                    }
+                        User: true,
+                        SalaryDetails: true,
+                    },
                 },
                 attendanceBreakRecord: true,
                 fine: true,
                 overTime: true,
-                SalaryDetail: true,
+                // SalaryDetails: true,
             },
             orderBy: { date: "asc" },
         });
 
-        // *Count Attendance Types*
+
+        const workedHours = calculateWorkedHours(officeStartTime, officeEndtime);
+
+        // Get today's date
+        
+        // Modify attendanceRecords directly to add perMinuteSalary
+        attendanceRecords.forEach(record => {
+            if (record.staffDetails?.SalaryDetails?.length > 0) {
+                const latestSalary = record.staffDetails.SalaryDetails.slice(-1)[0]?.ctcAmount || 0; // Get latest salary
+                record.staffDetails.perMinuteSalary = calculatePerMinuteSalary(latestSalary, currentDate, workedHours); // ✅ Directly add to staffDetails
+            } else {
+                record.staffDetails.perMinuteSalary = 0; // If no salary details exist, set to 0
+            }
+        });
         const statusCounts = attendanceRecords.reduce((counts, record) => {
             counts[record.status] = (counts[record.status] || 0) + 1;
             return counts;
         }, { PRESENT: 0, WEEK_OFF: 0, PAID_LEAVE: 0, HALF_DAY: 0, ABSENT: 0 });
+
+
 
         res.status(200).json({
             message: "Attendance records fetched successfully",
