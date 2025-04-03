@@ -660,45 +660,26 @@ const getAttendanceByStaffId = async (req, res, next) => {
 const getAttendanceByMonth = async (req, res, next) => {
     try {
         const { staffId, type } = req.params;
-
-        if (!type) {
-            return res.status(400).json({ message: "Type is required as STAFF or ADMIN" });
-        }
-        if (!staffId) {
-            return res.status(400).json({ message: "Staff ID is required!" });
-        }
-
-
-        const admin = await checkAdmin(req.userId, type, res);
-        if (admin.error) {
-            return res.status(400).json({ message: admin.message });
-        }
-        console.log(staffId, admin?.user?.StaffDetails?.id)
-
         const { month, year } = req.query;
 
+        if (!type) return res.status(400).json({ message: "Type is required as STAFF or ADMIN" });
+        if (!staffId) return res.status(400).json({ message: "Staff ID is required!" });
+        if (!month || !year) return res.status(400).json({ message: "Month and Year are required" });
 
-        if (!month || !year) {
-            return res.status(400).json({ message: "Month and Year are required" });
-        }
+        const admin = await checkAdmin(req.userId, type, res);
+        if (admin.error) return res.status(400).json({ message: admin.message });
 
-        // Ensure month and year are numbers
         const monthNum = parseInt(month, 10);
         const yearNum = parseInt(year, 10);
 
-        // Get total days in the requested month
-        const totalDaysInMonth = new Date(yearNum, monthNum, 0).getDate();
+        // const startDate = new Date(`${yearNum}-${monthNum}-01`);
+        // const endDate = new Date(yearNum, monthNum + 1, 1); 
+        const formattedMonth = String(monthNum).padStart(2, '0');
+        const startDate = `${yearNum}-${formattedMonth}-01`;
 
-        // Define start and end dates for the requested month (used for querying attendance)
-        let startDate = getIndiaTime(`${yearNum}-${monthNum}-01`);
-        let endDate = getIndiaTime();
+        const totalDays = new Date(yearNum, monthNum, 0).getDate();
+        const endDate = `${yearNum}-${formattedMonth}-${String(totalDays).padStart(2, '0')}`;
 
-        if (type === "STAFF" && staffId !== admin?.user?.StaffDetails?.id) {
-            return res.status(404).json({
-                message: "Invalid staffID or staff token",
-            });
-        }
-        // Fetch staff details
         const staff = await prisma.staffDetails.findFirst({
             where: {
                 id: type === "ADMIN" ? staffId : admin.user.StaffDetails.id,
@@ -707,76 +688,56 @@ const getAttendanceByMonth = async (req, res, next) => {
             select: { dateOfJoining: true }
         });
 
-        if (!staff) {
-            return res.status(404).json({ message: "Staff not found" });
-        }
+        if (!staff) return res.status(404).json({ message: "Staff not found" });
 
-        const dateOfJoining = getIndiaTime(staff.dateOfJoining);
-        const currentDate = getIndiaTime();
-        if (yearNum === currentDate.getFullYear() && monthNum === currentDate.getMonth() + 1) {
-            endDate = currentDate;
-        }
+        const dateOfJoining = (new Date(staff.dateOfJoining)).toISOString().split("T")[0];
+        const currentDate = new Date().toISOString().split("T")[0];
 
-        // Fetch existing attendance records for the staff starting from the date of joining to the current date
+        const validStartDate = dateOfJoining > startDate ? dateOfJoining : startDate;
+        const validEndDate = currentDate < endDate ? currentDate : endDate;
+
         const existingAttendances = await prisma.attendanceStaff.findMany({
             where: {
-                staffId: staffId,
+                staffId,
                 adminId: type === "ADMIN" ? admin.user.adminDetails.id : req.adminId,
-                date: {
-                    gte: dateOfJoining.toISOString().split("T")[0],  // Start from the date of joining
-                    lte: endDate.toISOString().split("T")[0]  // End at the current date
-                },
+                date: { gte: validStartDate, lte: validEndDate },
             },
             select: { date: true }
         });
 
-        const existingDatesSet = new Set(existingAttendances.map(attendance => attendance.date));
+        const existingDatesSet = new Set(existingAttendances.map(a => (new Date(a.date)).toISOString().split("T")[0]));
 
-        let currentDay = new Date(dateOfJoining);
-        console.log(endDate);
-        if (existingAttendances.length < (getDateDifference(currentDay, endDate) + 1)) {
-            while (currentDay <= endDate) {
-                const formattedDate = currentDay.toISOString().split("T")[0];
+        let missingAttendances = [];
+        let tempDate = new Date(validStartDate);
+        while (tempDate <= new Date(validEndDate)) {
+            const formattedDate = tempDate.toISOString().split("T")[0];
 
-                // // Skip if attendance already exists for this date
-                if (existingDatesSet.has(formattedDate)) {
-                    currentDate.setDate(currentDate.getDate() + 1);
-                    continue;
-                }
-
-                // Determine default status (Sunday = "WEEK_OFF", otherwise "ABSENT")
-                let status = currentDay.getDay() === 0 ? "WEEK_OFF" : "ABSENT";
-                const cehckCurrentDate = currentDay.toDateString() === new Date().toDateString();
-                if (cehckCurrentDate) {
-                    status = "NOT_DEFINED";
-                }
-                // Create missing attendance record
-                await prisma.attendanceStaff.create({
-                    data: {
-                        staffId: staffId,
-                        adminId: type === "ADMIN" ? admin.user.adminDetails.id : req.adminId,
-                        date: formattedDate,
-                        status: status,
-                    },
+            if (!existingDatesSet.has(formattedDate)) {
+                missingAttendances.push({
+                    staffId,
+                    adminId: type === "ADMIN" ? admin.user.adminDetails.id : req.adminId,
+                    date: formattedDate,
+                    status: tempDate.getDay() === 0 ? "WEEK_OFF" : (tempDate.getDate()===(new Date()).getDate() && tempDate.getMonth()===(new Date()).getMonth()) ? "NOT_DEFINED" : "ABSENT"
                 });
-                currentDay.setDate(currentDay.getDate() + 1);
             }
+
+            tempDate.setDate(tempDate.getDate() + 1);
         }
 
-        startDate = new Date(yearNum, monthNum - 1, 2, 0, 0, 0, 0);
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(yearNum, monthNum, 1);
-        console.log(startDate, endDate)
-        // Fetch updated attendance records for the requested month (based on params)
+        // *Batch Insert Missing Attendance*
+        if (missingAttendances.length > 0) {
+            await prisma.attendanceStaff.createMany({
+                data: missingAttendances,
+                skipDuplicates: true // Avoid errors for already existing records
+            });
+        }
 
+        // *Fetch Attendance for Response*
         const attendanceRecords = await prisma.attendanceStaff.findMany({
             where: {
-                staffId: staffId,
+                staffId,
                 adminId: type === "ADMIN" ? admin.user.adminDetails.id : req.adminId,
-                date: {
-                    gte: startDate.toISOString().split("T")[0],
-                    lte: endDate.toISOString().split("T")[0]
-                },
+                date: { gte: validStartDate, lte: validEndDate }
             },
             include: {
                 staffDetails: {
@@ -792,23 +753,13 @@ const getAttendanceByMonth = async (req, res, next) => {
             orderBy: { date: "asc" },
         });
 
-        // Count occurrences of each status
-        const statusCounts = {
-            PRESENT: 0,
-            WEEK_OFF: 0,
-            PAID_LEAVE: 0,
-            HALF_DAY: 0,
-            ABSENT: 0,
-        };
+        // *Count Attendance Types*
+        const statusCounts = attendanceRecords.reduce((counts, record) => {
+            counts[record.status] = (counts[record.status] || 0) + 1;
+            return counts;
+        }, { PRESENT: 0, WEEK_OFF: 0, PAID_LEAVE: 0, HALF_DAY: 0, ABSENT: 0 });
 
-        attendanceRecords.forEach(record => {
-            if (statusCounts.hasOwnProperty(record.status)) {
-                statusCounts[record.status]++;
-            }
-        });
-
-        // Send response
-        return res.status(200).json({
+        res.status(200).json({
             message: "Attendance records fetched successfully",
             attendanceRecords,
             statusCounts,
@@ -818,7 +769,6 @@ const getAttendanceByMonth = async (req, res, next) => {
         next(error);
     }
 };
-
 // get all Attendance by month for App APi
 const getAttendanceByMonthStaffIdForApp = async (req, res, next) => {
 
