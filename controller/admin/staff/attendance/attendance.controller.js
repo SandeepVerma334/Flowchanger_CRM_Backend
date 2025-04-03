@@ -808,7 +808,7 @@ const getAttendanceByMonth = async (req, res, next) => {
         });
 
         // Send response
-        res.status(200).json({
+        return res.status(200).json({
             message: "Attendance records fetched successfully",
             attendanceRecords,
             statusCounts,
