@@ -531,7 +531,7 @@ const getMultipleStaffPayroll = async (req, res, next) => {
             if (existingPayment) {
                 await prisma.paymentHistory.update({
                     where: { id: existingPayment.id },
-                    data: { amount: payableSalary }
+                    data: { amount: parseFloat(payableSalary.toFixed(2)) }
                 });
             } else {
                 await prisma.paymentHistory.create({
@@ -540,7 +540,7 @@ const getMultipleStaffPayroll = async (req, res, next) => {
                         SalaryDetails: { connect: { id: salary.id } },
                         staff: { connect: { id: staffId } },
                         admin: { connect: { id: req.userId } },
-                        amount: payableSalary
+                        amount: parseFloat(payableSalary.toFixed(2)),
                     }
                 });
             }
@@ -619,7 +619,10 @@ const getPaymentHistory = async (req, res, next) => {
                 updatedAt: true,
                 type: true,
                 status: true
-            }
+            },
+            orderBy: {
+                date: "desc",
+            },
         });
         res.status(200).json({ message: "Payment history fetched successfully", ...paymentHistory });
     } catch (error) {
