@@ -243,7 +243,8 @@ const getSpecificStaffPayroll = async (req, res, next) => {
                     SalaryDetails: { connect: { id: salary.id } },
                     staff: { connect: { id: isStaff.user.StaffDetails.id } },
                     admin: { connect: { id: req.userId } },
-                    amount: parseFloat(payableSalary.toFixed(2))
+                    amount: parseFloat(payableSalary.toFixed(2)),
+                    date:endDate,
                 }
             });
         }
