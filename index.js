@@ -38,6 +38,7 @@ app.use("/api/", rootRouter);
 //   autoCreateAttendance();
 // }, 10000); // 10 seconds delay
 
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
