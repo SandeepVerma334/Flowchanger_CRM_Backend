@@ -24,7 +24,7 @@ jobs:
         name: Deploy to dokku
         uses: idoberko2/dokku-deploy-github-action@v1.0.1
         with:
-          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
           dokku-host: "13.127.245.149"
           ssh-port: "22"
           app-name: "crm-backend"
@@ -36,7 +36,7 @@ jobs:
         with:
           host: "13.235.77.169"
           username: ubuntu
-          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          key: ${{ secrets.EC2_SSH_KEY }}
           port: "22"
           script: |
             sudo dokku cleanup
