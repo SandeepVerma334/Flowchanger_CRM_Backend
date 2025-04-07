@@ -241,7 +241,7 @@ const createORUpdateSalary = async (req, res, next) => {
 
 
         if (!findStaff) return res.status(404).json({ message: "Staff not found" });
-
+        console.log(effectiveDate);
         const ineffectiveDate = new Date(effectiveDate);
         const joiningDate = new Date(findStaff?.dateOfJoining);
         const currentDate = new Date();
@@ -250,9 +250,9 @@ const createORUpdateSalary = async (req, res, next) => {
         if (ineffectiveDate < joiningDate) {
             return res.status(400).json({ message: "Effective date cannot be less than joining date" });
         }
-        if (ineffectiveDate > currentDate) {
-            return res.status(400).json({ message: "Effective date cannot be greater than the current date" });
-        }
+        // if (ineffectiveDate > currentDate) {
+        //     return res.status(400).json({ message: "Effective date cannot be greater than the current date" });
+        // }
 
 
         // Find existing salary by effectiveDate

@@ -243,7 +243,8 @@ const getSpecificStaffPayroll = async (req, res, next) => {
                     SalaryDetails: { connect: { id: salary.id } },
                     staff: { connect: { id: isStaff.user.StaffDetails.id } },
                     admin: { connect: { id: req.userId } },
-                    amount: parseFloat(payableSalary.toFixed(2))
+                    amount: parseFloat(payableSalary.toFixed(2)),
+                    date: endDate,
                 }
             });
         }
@@ -520,8 +521,8 @@ const getMultipleStaffPayroll = async (req, res, next) => {
                     staffId,
                     adminId: req.userId,
                     date: {
-                        gte: new Date(startDate), // After or equal to the start of the month
-                        lte: new Date(endDate),   // Before or equal to the end of the month
+                        gte: startDate, // After or equal to the start of the month
+                        lte: endDate,   // Before or equal to the end of the month
                     }
                 }
             });
@@ -530,15 +531,16 @@ const getMultipleStaffPayroll = async (req, res, next) => {
             if (existingPayment) {
                 await prisma.paymentHistory.update({
                     where: { id: existingPayment.id },
-                    data: { amount: payableSalary }
+                    data: { amount: parseFloat(payableSalary.toFixed(2)) }
                 });
             } else {
                 await prisma.paymentHistory.create({
                     data: {
+                        date: endDate,
                         SalaryDetails: { connect: { id: salary.id } },
                         staff: { connect: { id: staffId } },
                         admin: { connect: { id: req.userId } },
-                        amount: payableSalary
+                        amount: parseFloat(payableSalary.toFixed(2)),
                     }
                 });
             }
@@ -617,7 +619,10 @@ const getPaymentHistory = async (req, res, next) => {
                 updatedAt: true,
                 type: true,
                 status: true
-            }
+            },
+            orderBy: {
+                date: "desc",
+            },
         });
         res.status(200).json({ message: "Payment history fetched successfully", ...paymentHistory });
     } catch (error) {

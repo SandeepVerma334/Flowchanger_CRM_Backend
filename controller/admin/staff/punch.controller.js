@@ -471,7 +471,7 @@ const punchInStaff = async (req, res, next) => {
             return res.status(403).json({ message: "You are not staff" });
         }
 
-        const { date, punchInMethod, location, startTime } = req.body;
+        const { date, punchInMethod, location, startTime, shift } = req.body;
 
         const punchInPhoto = req.file.path ? req.file.path : null;
         const findAttendance = await prisma.attendanceStaff.findFirst({
@@ -488,6 +488,7 @@ const punchInStaff = async (req, res, next) => {
                     id: findAttendance.id
                 },
                 data: {
+                    shift: shift,
                     startTime: startTime,
                     date: date,
                     status: "PRESENT",
@@ -501,6 +502,7 @@ const punchInStaff = async (req, res, next) => {
         else {
             attendance = await prisma.attendanceStaff.create({
                 data: {
+                    shift: shift,
                     startTime: startTime,
                     date: date,
                     status: "PRESENT",

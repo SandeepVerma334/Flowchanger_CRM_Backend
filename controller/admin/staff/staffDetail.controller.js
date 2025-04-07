@@ -67,7 +67,7 @@ const createStaff = async (req, res, next) => {
     const staffData = await prisma.user.create({
       data: {
         firstName: validation.firstName,
-        lastName: validation.lastName,
+        lastName: validation.lastName || "",
         password: validation.password,
         mobile: validation.mobile,
         mobile2: validation.mobile2,
@@ -246,7 +246,7 @@ const updateStaff = async (req, res, next) => {
       where: { id: id },
       data: {
         firstName: validation.data.firstName,
-        lastName: validation.data.lastName,
+        lastName: validation.data.lastName || "",
         password: validation.data.password,
         mobile: validation.data.mobile,
         mobile2: validation.data.mobile2,
